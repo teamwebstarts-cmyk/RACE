@@ -1,0 +1,12 @@
+{
+  "name": "race",
+  "version": "1.0.0",
+  "private": true,
+  "description": "RACE Service — mobile + web (team repo structure)",
+  "scripts": {
+    "dev:mobile": "cd \"mobile application\" && npm start",
+    "ios": "cd \"mobile application\" && npm run ios",
+    "android": "cd \"mobile application\" && npm run android",
+    "dev:web": "cd \"web application\" && npm run dev"
+  }
+}
