@@ -1,11 +1,15 @@
-import { StatusBar } from 'expo-status-bar';
-import HomeScreen from './src/screens/HomeScreen';
+import React from 'react';
+import { StatusBar } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+
+import AppNavigator from './src/navigation/AppNavigator';
+import { colors } from './src/theme';
 
 export default function App() {
   return (
-    <>
-      <HomeScreen />
-      <StatusBar style="auto" />
-    </>
+    <SafeAreaProvider>
+      <StatusBar barStyle="light-content" backgroundColor={colors.surfaceDark} />
+      <AppNavigator />
+    </SafeAreaProvider>
   );
 }

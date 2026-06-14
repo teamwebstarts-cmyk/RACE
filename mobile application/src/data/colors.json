@@ -1,0 +1,17 @@
+{
+  "primary": "#FFC326",
+  "primaryDark": "#E6A800",
+  "secondary": "#00BAC6",
+  "accentOrange": "#F4A115",
+  "accentRed": "#E7003E",
+  "background": "#FFFFFF",
+  "backgroundMuted": "#F0F0F0",
+  "backgroundSoft": "#F5F5F5",
+  "surfaceDark": "#232323",
+  "surfaceDarker": "#181818",
+  "text": "#787878",
+  "textDark": "#232323",
+  "textLight": "#FDFDFD",
+  "textMuted": "#B4B4B4",
+  "border": "#B4B4B4"
+}

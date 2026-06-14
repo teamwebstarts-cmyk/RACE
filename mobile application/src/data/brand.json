@@ -1,0 +1,38 @@
+{
+  "name": "RACE Service",
+  "productName": "Towy",
+  "website": "https://raceservice.in",
+  "tagline": "We provide highest quality towing services",
+  "description": "Fast, courteous and inexpensive towing and roadside assistance in India.",
+  "location": "Bhubaneswar, Odisha",
+  "phone": "+91 8249475731",
+  "phoneRaw": "8249475731",
+  "email": "raceservices2022@gmail.com",
+  "company": "Saiprahallad Services Pvt Ltd",
+  "highlights": [
+    {
+      "id": "arrival",
+      "value": "30 min",
+      "label": "or less arrival",
+      "icon": "⏱️"
+    },
+    {
+      "id": "phone",
+      "value": "+91 8249475731",
+      "label": "Call anytime",
+      "icon": "📞"
+    },
+    {
+      "id": "support",
+      "value": "Live 24/7",
+      "label": "Towing Service",
+      "icon": "🛟"
+    }
+  ],
+  "features": [
+    "Short arrival time of 30 minutes or less",
+    "Honest competitive prices — zero hidden fees",
+    "Friendly and professional service",
+    "Available 24 hours a day, 7 days a week"
+  ]
+}
