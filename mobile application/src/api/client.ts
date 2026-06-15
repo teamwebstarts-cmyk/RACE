@@ -1,6 +1,6 @@
 import { API_CONFIG, API_ENDPOINTS } from '../config/api';
 
-async function request(path) {
+async function request<T>(path: string): Promise<T> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), API_CONFIG.timeoutMs);
 
@@ -14,22 +14,22 @@ async function request(path) {
       throw new Error(`API error: ${response.status}`);
     }
 
-    return response.json();
+    return response.json() as Promise<T>;
   } finally {
     clearTimeout(timeout);
   }
 }
 
-export async function checkApiHealth() {
+export async function checkApiHealth(): Promise<unknown> {
   return request(API_ENDPOINTS.health);
 }
 
-export async function fetchServiceCatalog() {
-  const result = await request(API_ENDPOINTS.services);
+export async function fetchServiceCatalog(): Promise<unknown> {
+  const result = await request<{ data: unknown }>(API_ENDPOINTS.services);
   return result.data;
 }
 
-export async function fetchBrand() {
-  const result = await request(API_ENDPOINTS.brand);
+export async function fetchBrand(): Promise<unknown> {
+  const result = await request<{ data: unknown }>(API_ENDPOINTS.brand);
   return result.data;
 }

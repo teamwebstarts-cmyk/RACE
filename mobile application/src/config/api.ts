@@ -9,10 +9,10 @@ const DEV_API_HOST = Platform.select({
 export const API_CONFIG = {
   baseUrl: `http://${DEV_API_HOST}:3000`,
   timeoutMs: 8000,
-};
+} as const;
 
 export const API_ENDPOINTS = {
   health: '/health',
   brand: '/api/v1/brand',
   services: '/api/v1/services',
-};
+} as const;

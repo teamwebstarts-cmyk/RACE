@@ -1,6 +1,8 @@
-# RACE Service — Mobile Application
+# RACE Service — Mobile Application (React Native + TypeScript)
 
 Expo customer app aligned with [team GitHub repo](https://github.com/teamwebstarts-cmyk/RACE/tree/master).
+
+Built with **React Native**, **Expo**, and **TypeScript** — typed navigation, components, and service catalog models.
 
 ## Customer Home Screen Services
 
@@ -25,10 +27,11 @@ Scan QR with **Expo Go** on iPhone, or press `i` for simulator (needs Xcode).
 
 ```
 src/
+├── types/          # Brand, Service, navigation param lists
 ├── data/           # brand.json, colors.json, services.json
 ├── assets/images/  # RACE logo + category icons
-├── screens/        # Home, ServiceList, SelectService
-├── components/     # Service cards, Hero, BrandLogo
-├── navigation/     # Tabs + stack
+├── screens/        # Home, ServiceList, SelectService (.tsx)
+├── components/     # Service cards, Hero, BrandLogo (.tsx)
+├── navigation/     # Tabs + stack (.tsx)
 └── theme/          # RACE colors (#FFC326, #232323)
 ```

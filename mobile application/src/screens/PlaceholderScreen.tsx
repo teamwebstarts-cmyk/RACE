@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Linking, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import PrimaryButton from '../components/ui/PrimaryButton';
@@ -7,17 +7,33 @@ import BrandLogo from '../components/ui/BrandLogo';
 import Screen, { ScreenContent } from '../components/ui/Screen';
 import { brand, colors, spacing, typography } from '../theme';
 
-export default function PlaceholderScreen({ title, subtitle }) {
+interface PlaceholderScreenProps {
+  title: string;
+  subtitle: string;
+  actionLabel?: string;
+}
+
+export default function PlaceholderScreen({
+  title,
+  subtitle,
+  actionLabel,
+}: PlaceholderScreenProps) {
+  const handleAction = () => {
+    Linking.openURL(`tel:${brand.phoneRaw}`);
+  };
+
   return (
     <Screen>
       <SafeAreaView style={styles.safeArea}>
         <ScreenContent style={styles.content}>
           <View style={styles.card}>
             <BrandLogo size="medium" style={styles.logo} />
-            <Text style={styles.badge}>{brand.productName}</Text>
+            <Text style={styles.badge}>{brand.name}</Text>
             <Text style={styles.title}>{title}</Text>
             <Text style={styles.subtitle}>{subtitle}</Text>
-            <PrimaryButton label="Coming Soon" disabled />
+            {actionLabel ? (
+              <PrimaryButton label={actionLabel} onPress={handleAction} />
+            ) : null}
           </View>
         </ScreenContent>
       </SafeAreaView>

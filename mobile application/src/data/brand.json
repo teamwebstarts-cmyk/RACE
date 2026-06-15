@@ -1,6 +1,6 @@
 {
   "name": "RACE Service",
-  "productName": "Towy",
+  "productName": "RACE",
   "website": "https://raceservice.in",
   "tagline": "We provide highest quality towing services",
   "description": "Fast, courteous and inexpensive towing and roadside assistance in India.",
@@ -14,19 +14,19 @@
       "id": "arrival",
       "value": "30 min",
       "label": "or less arrival",
-      "icon": "⏱️"
+      "icon": "clock"
     },
     {
       "id": "phone",
       "value": "+91 8249475731",
       "label": "Call anytime",
-      "icon": "📞"
+      "icon": "phone"
     },
     {
       "id": "support",
       "value": "Live 24/7",
       "label": "Towing Service",
-      "icon": "🛟"
+      "icon": "live"
     }
   ],
   "features": [

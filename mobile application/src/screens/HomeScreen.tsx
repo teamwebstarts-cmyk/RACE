@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-import { checkApiHealth, fetchServiceCatalog } from '../api/client';
 import ServiceCategoryCard from '../components/ServiceCategoryCard';
 import AppHeader from '../components/ui/AppHeader';
 import FeatureList from '../components/ui/FeatureList';
@@ -11,27 +11,13 @@ import HighlightCard from '../components/ui/HighlightCard';
 import LocationBar from '../components/ui/LocationBar';
 import Screen, { ScreenContent, SectionTitle } from '../components/ui/Screen';
 import { SERVICE_CATEGORIES } from '../constants/services';
+import type { HomeStackParamList } from '../types/navigation';
 import { brand, colors, layout, spacing, typography } from '../theme';
 
-export default function HomeScreen({ navigation }) {
-  const [apiStatus, setApiStatus] = useState('checking');
-  const [categories, setCategories] = useState(SERVICE_CATEGORIES);
+type Props = NativeStackScreenProps<HomeStackParamList, 'HomeMain'>;
 
-  useEffect(() => {
-    checkApiHealth()
-      .then(() => {
-        setApiStatus('online');
-        return fetchServiceCatalog();
-      })
-      .then(catalog => {
-        if (catalog?.length) {
-          setCategories(catalog);
-        }
-      })
-      .catch(() => {
-        setApiStatus('offline');
-      });
-  }, []);
+export default function HomeScreen({ navigation }: Props) {
+  const categories = SERVICE_CATEGORIES;
 
   const totalServices = categories.reduce(
     (count, category) => count + category.services.length,
@@ -47,23 +33,9 @@ export default function HomeScreen({ navigation }) {
           <ScreenContent>
             <AppHeader brand={brand} />
 
-            <View style={styles.statusRow}>
-              {apiStatus === 'checking' ? (
-                <ActivityIndicator size="small" color={colors.primary} />
-              ) : (
-                <View
-                  style={[
-                    styles.statusDot,
-                    apiStatus === 'online' ? styles.online : styles.offline,
-                  ]}
-                />
-              )}
-              <Text style={styles.statusText}>
-                API {apiStatus === 'checking' ? 'connecting...' : apiStatus}
-                {' · '}
-                {categories.length} categories · {totalServices} services
-              </Text>
-            </View>
+            <Text style={styles.catalogMeta}>
+              {categories.length} categories · {totalServices} services
+            </Text>
 
             <HeroBanner brand={brand} />
 
@@ -85,7 +57,7 @@ export default function HomeScreen({ navigation }) {
             <SectionTitle
               title="our"
               highlight="services"
-              subtitle="All available services — tap a category to see details."
+              subtitle="Tap a category to browse and book."
             />
 
             <View style={styles.grid}>
@@ -116,28 +88,11 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: layout.sectionGap,
   },
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: spacing.sm,
-  },
-  online: {
-    backgroundColor: colors.success,
-  },
-  offline: {
-    backgroundColor: colors.error,
-  },
-  statusText: {
-    flex: 1,
+  catalogMeta: {
     fontSize: typography.sizes.sm,
     color: colors.text,
     fontWeight: typography.weights.semibold,
+    marginBottom: spacing.md,
   },
   highlights: {
     flexDirection: 'row',

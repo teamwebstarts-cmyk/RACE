@@ -2,9 +2,14 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { colors, radius, spacing, typography } from '../../theme';
+import type { Brand } from '../../types/models';
 import BrandLogo from './BrandLogo';
 
-export default function AppHeader({ brand }) {
+interface AppHeaderProps {
+  brand: Brand;
+}
+
+export default function AppHeader({ brand }: AppHeaderProps) {
   return (
     <View style={styles.header}>
       <BrandLogo size="small" />

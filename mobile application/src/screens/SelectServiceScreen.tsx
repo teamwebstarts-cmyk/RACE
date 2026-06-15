@@ -1,14 +1,22 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Linking, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import PrimaryButton from '../components/ui/PrimaryButton';
 import BrandLogo from '../components/ui/BrandLogo';
 import Screen, { ScreenContent } from '../components/ui/Screen';
+import type { HomeStackParamList } from '../types/navigation';
 import { brand, colors, spacing, typography } from '../theme';
 
-export default function SelectServiceScreen({ route }) {
+type Props = NativeStackScreenProps<HomeStackParamList, 'SelectService'>;
+
+export default function SelectServiceScreen({ route }: Props) {
   const { serviceLabel, serviceDescription } = route.params;
+
+  const handleBook = () => {
+    Linking.openURL(`tel:${brand.phoneRaw}`);
+  };
 
   return (
     <Screen>
@@ -22,10 +30,11 @@ export default function SelectServiceScreen({ route }) {
               <Text style={styles.description}>{serviceDescription}</Text>
             ) : null}
             <Text style={styles.subtitle}>
-              Booking flow coming in the next sprint. Live 24/7 support at{' '}
-              {brand.phone}.
+              Available 24/7 across Bhubaneswar and Odisha. Call now to confirm
+              your booking.
             </Text>
-            <PrimaryButton label="Book Now" disabled />
+            <PrimaryButton label="Call to Book" onPress={handleBook} />
+            <Text style={styles.phone}>{brand.phone}</Text>
           </View>
         </ScreenContent>
       </SafeAreaView>
@@ -77,5 +86,11 @@ const styles = StyleSheet.create({
     lineHeight: typography.lineHeights.normal,
     marginBottom: spacing.xl,
     textAlign: 'center',
+  },
+  phone: {
+    marginTop: spacing.md,
+    fontSize: typography.sizes.md,
+    color: colors.primary,
+    fontWeight: typography.weights.bold,
   },
 });

@@ -82,8 +82,7 @@
     "id": "future",
     "title": "Future Services",
     "icon": "⭐",
-    "comingSoon": true,
-    "description": "Upcoming RACE Service offerings — launching soon across the platform.",
+    "description": "Additional RACE Service offerings for your vehicle and travel needs.",
     "services": [
       {
         "id": "car_wash",

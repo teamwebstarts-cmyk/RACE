@@ -3,7 +3,11 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { colors, radius, spacing, typography } from '../../theme';
 
-export default function FeatureList({ features }) {
+interface FeatureListProps {
+  features: string[];
+}
+
+export default function FeatureList({ features }: FeatureListProps) {
   return (
     <View style={styles.wrap}>
       {features.map(feature => (

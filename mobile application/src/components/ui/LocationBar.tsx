@@ -3,7 +3,11 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { colors, radius, spacing, typography } from '../../theme';
 
-export default function LocationBar({ location }) {
+interface LocationBarProps {
+  location: string;
+}
+
+export default function LocationBar({ location }: LocationBarProps) {
   return (
     <View style={styles.wrap}>
       <Text style={styles.label}>Service location</Text>

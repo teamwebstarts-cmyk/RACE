@@ -1,14 +1,18 @@
 import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import ServiceItemCard from '../components/ServiceItemCard';
 import Screen, { ScreenContent } from '../components/ui/Screen';
 import ServiceIcon from '../components/ui/ServiceIcon';
 import { getCategoryById } from '../constants/services';
+import type { HomeStackParamList } from '../types/navigation';
 import { colors, getCategoryTheme, radius, spacing, typography } from '../theme';
 
-export default function ServiceListScreen({ route, navigation }) {
+type Props = NativeStackScreenProps<HomeStackParamList, 'ServiceList'>;
+
+export default function ServiceListScreen({ route, navigation }: Props) {
   const { categoryId } = route.params;
   const category = getCategoryById(categoryId);
   const theme = getCategoryTheme(categoryId);
@@ -47,9 +51,7 @@ export default function ServiceListScreen({ route, navigation }) {
               </Text>
               <Text style={styles.heroSubtitle}>
                 {category.description ||
-                  (category.comingSoon
-                    ? 'These services are coming soon to the RACE Service app.'
-                    : 'Choose a service to continue booking with Towy.')}
+                  'Select a service below to book with RACE Service.'}
               </Text>
             </View>
 
@@ -58,17 +60,14 @@ export default function ServiceListScreen({ route, navigation }) {
                 key={service.id}
                 service={service}
                 accent={theme.accent}
-                disabled={category.comingSoon}
-                onPress={() => {
-                  if (!category.comingSoon) {
-                    navigation.navigate('SelectService', {
-                      categoryId: category.id,
-                      serviceId: service.id,
-                      serviceLabel: service.label,
-                      serviceDescription: service.description,
-                    });
-                  }
-                }}
+                onPress={() =>
+                  navigation.navigate('SelectService', {
+                    categoryId: category.id,
+                    serviceId: service.id,
+                    serviceLabel: service.label,
+                    serviceDescription: service.description,
+                  })
+                }
               />
             ))}
           </ScreenContent>

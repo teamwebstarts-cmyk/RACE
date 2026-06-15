@@ -2,37 +2,37 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors, radius, spacing, typography } from '../theme';
+import type { Service } from '../types/models';
+
+interface ServiceItemCardProps {
+  service: Service;
+  accent: string;
+  onPress: () => void;
+}
 
 export default function ServiceItemCard({
   service,
   accent,
-  disabled,
   onPress,
-}) {
+}: ServiceItemCardProps) {
   return (
     <Pressable
-      disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
         styles.card,
         { borderLeftColor: accent },
-        disabled && styles.disabled,
-        pressed && !disabled && styles.pressed,
+        pressed && styles.pressed,
       ]}>
       <View style={[styles.dot, { backgroundColor: accent }]} />
       <View style={styles.content}>
-        <Text style={[styles.label, disabled && styles.disabledText]}>
-          {service.label}
-        </Text>
+        <Text style={styles.label}>{service.label}</Text>
         {service.description ? (
           <Text style={styles.description} numberOfLines={2}>
             {service.description}
           </Text>
         ) : null}
       </View>
-      <Text style={[styles.action, disabled && styles.disabledAction]}>
-        {disabled ? 'Soon' : '›'}
-      </Text>
+      <Text style={styles.action}>›</Text>
     </Pressable>
   );
 }
@@ -51,9 +51,6 @@ const styles = StyleSheet.create({
   },
   pressed: {
     backgroundColor: colors.backgroundSoft,
-  },
-  disabled: {
-    opacity: 0.7,
   },
   dot: {
     width: 10,
@@ -75,17 +72,10 @@ const styles = StyleSheet.create({
     color: colors.text,
     lineHeight: typography.lineHeights.tight,
   },
-  disabledText: {
-    color: colors.text,
-  },
   action: {
     fontSize: typography.sizes.xl,
     color: colors.primary,
     fontWeight: typography.weights.bold,
     marginLeft: spacing.sm,
-  },
-  disabledAction: {
-    fontSize: typography.sizes.sm,
-    color: colors.textMuted,
   },
 });

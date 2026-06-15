@@ -1,6 +1,7 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { StyleSheet, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
@@ -9,15 +10,16 @@ import PlaceholderScreen from '../screens/PlaceholderScreen';
 import SelectServiceScreen from '../screens/SelectServiceScreen';
 import ServiceListScreen from '../screens/ServiceListScreen';
 import BrandLogo from '../components/ui/BrandLogo';
-import { brand, colors, typography } from '../theme';
+import type { HomeStackParamList, RootTabParamList } from '../types/navigation';
+import { colors, typography } from '../theme';
 
-const Tab = createBottomTabNavigator();
-const HomeStack = createNativeStackNavigator();
+const Tab = createBottomTabNavigator<RootTabParamList>();
+const HomeStack = createNativeStackNavigator<HomeStackParamList>();
 
 const stackScreenOptions = {
   headerStyle: { backgroundColor: colors.surfaceDark },
   headerTitle: () => <BrandLogo size="small" />,
-  headerTitleAlign: 'center',
+  headerTitleAlign: 'center' as const,
   headerTintColor: colors.primary,
   headerShadowVisible: false,
   headerBackTitleVisible: false,
@@ -36,7 +38,7 @@ function HomeStackNavigator() {
         name="ServiceList"
         component={ServiceListScreen}
         options={({ route }) => ({
-          headerTitle: route.params?.categoryTitle || 'Services',
+          headerTitle: route.params.categoryTitle || 'Services',
           headerTitleStyle: {
             fontWeight: typography.weights.bold,
             color: colors.textLight,
@@ -58,16 +60,30 @@ function HomeStackNavigator() {
   );
 }
 
-function TabIcon({ label, focused }) {
-  const icons = {
-    Home: '🏠',
-    Bookings: '📋',
-    Profile: '👤',
-  };
+const TAB_ICONS: Record<
+  keyof RootTabParamList,
+  { focused: keyof typeof Ionicons.glyphMap; default: keyof typeof Ionicons.glyphMap }
+> = {
+  Home: { focused: 'home', default: 'home-outline' },
+  Bookings: { focused: 'calendar', default: 'calendar-outline' },
+  Profile: { focused: 'person', default: 'person-outline' },
+};
+
+interface TabIconProps {
+  routeName: keyof RootTabParamList;
+  focused: boolean;
+}
+
+function TabIcon({ routeName, focused }: TabIconProps) {
+  const icons = TAB_ICONS[routeName];
 
   return (
     <View style={[tabIconStyles.wrap, focused && tabIconStyles.active]}>
-      <Text style={tabIconStyles.icon}>{icons[label]}</Text>
+      <Ionicons
+        name={focused ? icons.focused : icons.default}
+        size={20}
+        color={focused ? colors.primary : colors.text}
+      />
     </View>
   );
 }
@@ -81,16 +97,15 @@ const tabIconStyles = StyleSheet.create({
     justifyContent: 'center',
   },
   active: {
-    backgroundColor: colors.surfaceDark,
-  },
-  icon: {
-    fontSize: 16,
+    backgroundColor: colors.surfaceDarker,
   },
 });
 
 const navigationTheme = {
+  ...DefaultTheme,
   dark: true,
   colors: {
+    ...DefaultTheme.colors,
     primary: colors.primary,
     background: colors.backgroundSoft,
     card: colors.surfaceDark,
@@ -120,20 +135,21 @@ export default function AppNavigator() {
             fontWeight: typography.weights.semibold,
           },
           tabBarIcon: ({ focused }) => (
-            <TabIcon label={route.name} focused={focused} />
+            <TabIcon routeName={route.name} focused={focused} />
           ),
         })}>
         <Tab.Screen
           name="Home"
           component={HomeStackNavigator}
-          options={{ title: brand.productName }}
+          options={{ title: 'Home' }}
         />
         <Tab.Screen
           name="Bookings"
           children={() => (
             <PlaceholderScreen
-              title="Bookings"
-              subtitle="Your booking history will appear here."
+              title="My Bookings"
+              subtitle="You have no active bookings. Call RACE Service to schedule towing, drivers, or roadside help."
+              actionLabel="Call to Book"
             />
           )}
         />
@@ -141,8 +157,9 @@ export default function AppNavigator() {
           name="Profile"
           children={() => (
             <PlaceholderScreen
-              title="Profile"
-              subtitle="Account settings and profile details will appear here."
+              title="My Profile"
+              subtitle="Sign in to manage your account, saved vehicles, and booking history."
+              actionLabel="Call Support"
             />
           )}
         />

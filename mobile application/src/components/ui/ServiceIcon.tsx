@@ -1,10 +1,21 @@
 import React from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text } from 'react-native';
 
 import { categoryIcons } from '../../assets';
+import type { CategoryId } from '../../types/models';
 
-export default function ServiceIcon({ categoryId, emoji, size = 28 }) {
-  const iconSource = categoryIcons[categoryId];
+interface ServiceIconProps {
+  categoryId: string;
+  emoji: string;
+  size?: number;
+}
+
+export default function ServiceIcon({
+  categoryId,
+  emoji,
+  size = 28,
+}: ServiceIconProps) {
+  const iconSource = categoryIcons[categoryId as CategoryId];
 
   if (iconSource) {
     return (

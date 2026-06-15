@@ -2,9 +2,18 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors, getCategoryTheme, radius, spacing, typography } from '../theme';
+import type { ServiceCategory } from '../types/models';
 import ServiceIcon from './ui/ServiceIcon';
 
-export default function ServiceCategoryCard({ category, onPress }) {
+interface ServiceCategoryCardProps {
+  category: ServiceCategory;
+  onPress: () => void;
+}
+
+export default function ServiceCategoryCard({
+  category,
+  onPress,
+}: ServiceCategoryCardProps) {
   const theme = getCategoryTheme(category.id);
 
   return (
@@ -19,11 +28,6 @@ export default function ServiceCategoryCard({ category, onPress }) {
         <View style={[styles.iconWrap, { backgroundColor: theme.iconBackground }]}>
           <ServiceIcon categoryId={category.id} emoji={category.icon} size={26} />
         </View>
-        {category.comingSoon ? (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>Soon</Text>
-          </View>
-        ) : null}
       </View>
 
       <Text style={[styles.title, { color: theme.accent }]}>{category.title}</Text>
@@ -67,18 +71,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  badge: {
-    backgroundColor: colors.surfaceDark,
-    borderRadius: radius.pill,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
-  },
-  badgeText: {
-    color: colors.primary,
-    fontSize: typography.sizes.xs,
-    fontWeight: typography.weights.bold,
-    textTransform: 'uppercase',
   },
   title: {
     fontSize: typography.sizes.md,
