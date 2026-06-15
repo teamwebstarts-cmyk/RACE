@@ -1,0 +1,194 @@
+{
+  "info": {
+    "name": "RACE Backend API",
+    "description": "RACE Service — Phase 1 APIs (Health, Services, Brand, OTP Auth, Profile, Vehicles)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "accessToken", "value": "" },
+    { "key": "vehicleId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET Health",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/health"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Public",
+      "item": [
+        {
+          "name": "GET Services",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/services"
+          }
+        },
+        {
+          "name": "GET Brand",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/brand"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "POST Send OTP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mobileNumber\": \"9876543210\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/send-otp"
+          }
+        },
+        {
+          "name": "POST Verify OTP",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.success && json.data.accessToken) {",
+                  "  pm.collectionVariables.set('accessToken', json.data.accessToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mobileNumber\": \"9876543210\",\n  \"otp\": \"123456\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/verify-otp"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Profile",
+      "item": [
+        {
+          "name": "GET Profile",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/profile"
+          }
+        },
+        {
+          "name": "PUT Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"gender\": \"male\",\n  \"dateOfBirth\": \"1990-01-15\",\n  \"emergencyContact\": {\n    \"name\": \"Jane Doe\",\n    \"mobileNumber\": \"9876543211\",\n    \"relationship\": \"spouse\"\n  },\n  \"address\": {\n    \"line1\": \"123 Main Street\",\n    \"city\": \"Bhubaneswar\",\n    \"state\": \"Odisha\",\n    \"pincode\": \"751001\",\n    \"country\": \"India\"\n  }\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/profile"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Vehicles",
+      "item": [
+        {
+          "name": "POST Vehicle",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.success && json.data.id) {",
+                  "  pm.collectionVariables.set('vehicleId', json.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vehicleType\": \"car\",\n  \"vehicleNumber\": \"OD02AB1234\",\n  \"brand\": \"Hyundai\",\n  \"model\": \"i20\",\n  \"color\": \"White\",\n  \"fuelType\": \"petrol\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/vehicles"
+          }
+        },
+        {
+          "name": "GET Vehicles",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/vehicles"
+          }
+        },
+        {
+          "name": "GET Vehicle By ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/vehicles/{{vehicleId}}"
+          }
+        },
+        {
+          "name": "PUT Vehicle",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"color\": \"Black\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/vehicles/{{vehicleId}}"
+          }
+        },
+        {
+          "name": "GET Verify Vehicle QR",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/vehicles/{{vehicleId}}/verify"
+          }
+        },
+        {
+          "name": "DELETE Vehicle",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/vehicles/{{vehicleId}}"
+          }
+        }
+      ]
+    }
+  ]
+}

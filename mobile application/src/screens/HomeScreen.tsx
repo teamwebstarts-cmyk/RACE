@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -10,19 +10,30 @@ import HeroBanner from '../components/ui/HeroBanner';
 import HighlightCard from '../components/ui/HighlightCard';
 import LocationBar from '../components/ui/LocationBar';
 import Screen, { ScreenContent, SectionTitle } from '../components/ui/Screen';
-import { SERVICE_CATEGORIES } from '../constants/services';
+import { useBrandQuery, useServicesQuery } from '../services/catalog/useCatalogQueries';
 import type { HomeStackParamList } from '../types/navigation';
-import { brand, colors, layout, spacing, typography } from '../theme';
+import { colors, layout, spacing, typography } from '../theme';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'HomeMain'>;
 
 export default function HomeScreen({ navigation }: Props) {
-  const categories = SERVICE_CATEGORIES;
+  const { data: brand, isLoading: brandLoading } = useBrandQuery();
+  const { data: categories = [], isLoading: servicesLoading } = useServicesQuery();
 
   const totalServices = categories.reduce(
     (count, category) => count + category.services.length,
     0,
   );
+
+  if (brandLoading || servicesLoading || !brand) {
+    return (
+      <Screen>
+        <View style={styles.loader}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </Screen>
+    );
+  }
 
   return (
     <Screen>
@@ -40,7 +51,7 @@ export default function HomeScreen({ navigation }: Props) {
             <HeroBanner brand={brand} />
 
             <View style={styles.highlights}>
-              {brand.highlights.map(item => (
+              {brand.highlights.map((item) => (
                 <HighlightCard key={item.id} item={item} />
               ))}
             </View>
@@ -61,7 +72,7 @@ export default function HomeScreen({ navigation }: Props) {
             />
 
             <View style={styles.grid}>
-              {categories.map(category => (
+              {categories.map((category) => (
                 <ServiceCategoryCard
                   key={category.id}
                   category={category}
@@ -84,6 +95,11 @@ export default function HomeScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
+  },
+  loader: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   scrollContent: {
     paddingBottom: layout.sectionGap,

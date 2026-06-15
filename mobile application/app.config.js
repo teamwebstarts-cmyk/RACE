@@ -17,6 +17,7 @@ module.exports = {
     },
     android: {
       package: 'com.racecar.customer',
+      usesCleartextTraffic: true,
       adaptiveIcon: {
         foregroundImage: './src/assets/images/logo.png',
         backgroundColor: '#232323',
@@ -24,5 +25,8 @@ module.exports = {
     },
     scheme: 'race-customer',
     plugins: ['expo-asset', 'expo-font'],
+    extra: {
+      apiUrl: process.env.EXPO_PUBLIC_API_URL ?? 'http://192.168.1.7:3000',
+    },
   },
 };
