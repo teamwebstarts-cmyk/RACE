@@ -7,7 +7,8 @@ import BrandLogo from '../components/ui/BrandLogo';
 import PrimaryButton from '../components/ui/PrimaryButton';
 import Screen, { ScreenContent } from '../components/ui/Screen';
 import { useAppDispatch, useAppSelector } from '../redux/hooks';
-import { completeProfileSuccess, logout } from '../redux/auth/authSlice';
+import { logout, updateUser } from '../redux/auth/authSlice';
+import { resetOnboarding } from '../redux/onboarding/onboardingSlice';
 import { getProfile } from '../services/auth/authApi';
 import type { ProfileStackParamList } from '../types/navigation';
 import { colors, spacing, typography } from '../theme';
@@ -20,7 +21,7 @@ export default function ProfileScreen({ navigation }: Props) {
 
   useEffect(() => {
     void getProfile()
-      .then((profile) => dispatch(completeProfileSuccess(profile)))
+      .then((profile) => dispatch(updateUser(profile)))
       .catch(() => undefined);
   }, [dispatch]);
 
@@ -42,8 +43,19 @@ export default function ProfileScreen({ navigation }: Props) {
               label="My Vehicles"
               onPress={() => navigation.navigate('MyVehicles')}
             />
+            <PrimaryButton
+              label="Partner With RACE"
+              onPress={() => navigation.navigate('VendorTypeSelect')}
+            />
             <View style={styles.spacer} />
-            <PrimaryButton label="Logout" onPress={() => dispatch(logout())} variant="outline" />
+            <PrimaryButton
+              label="Logout"
+              onPress={() => {
+                dispatch(logout());
+                dispatch(resetOnboarding());
+              }}
+              variant="outline"
+            />
           </View>
         </ScreenContent>
       </SafeAreaView>

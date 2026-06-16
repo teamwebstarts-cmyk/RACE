@@ -1,14 +1,46 @@
 import { API_ENDPOINTS } from '../../config/api';
 import type {
   ApiSuccessResponse,
+  AuthUser,
   CompleteProfileRequest,
   SendOtpRequest,
   SendOtpResponse,
   VerifyOtpRequest,
   VerifyOtpResponse,
-  AuthUser,
 } from '../../types/auth';
 import { apiClient } from '../api/apiClient';
+
+export interface ProfileResponse {
+  id: string;
+  mobileNumber: string;
+  fullName?: string;
+  email?: string;
+  gender?: string;
+  dateOfBirth?: string;
+  emergencyContact?: AuthUser['emergencyContact'];
+  address?: AuthUser['address'];
+  profilePhoto?: string;
+  isVerified: boolean;
+  isProfileCompleted: boolean;
+  role: string;
+}
+
+function mapProfileToAuthUser(profile: ProfileResponse): AuthUser {
+  return {
+    id: profile.id,
+    mobileNumber: profile.mobileNumber,
+    role: profile.role,
+    isVerified: profile.isVerified,
+    isProfileCompleted: profile.isProfileCompleted,
+    fullName: profile.fullName,
+    email: profile.email,
+    gender: profile.gender,
+    dateOfBirth: profile.dateOfBirth,
+    emergencyContact: profile.emergencyContact,
+    address: profile.address,
+    profilePhoto: profile.profilePhoto,
+  };
+}
 
 export async function sendOtp(payload: SendOtpRequest): Promise<SendOtpResponse> {
   const { data } = await apiClient.post<ApiSuccessResponse<SendOtpResponse>>(
@@ -27,14 +59,16 @@ export async function verifyOtp(payload: VerifyOtpRequest): Promise<VerifyOtpRes
 }
 
 export async function completeProfile(payload: CompleteProfileRequest): Promise<AuthUser> {
-  const { data } = await apiClient.put<ApiSuccessResponse<AuthUser>>(
+  const { data } = await apiClient.put<ApiSuccessResponse<ProfileResponse>>(
     API_ENDPOINTS.profileComplete,
     payload,
   );
-  return data.data;
+  return mapProfileToAuthUser(data.data);
 }
 
 export async function getProfile(): Promise<AuthUser> {
-  const { data } = await apiClient.get<ApiSuccessResponse<AuthUser>>(API_ENDPOINTS.profile);
-  return data.data;
+  const { data } = await apiClient.get<ApiSuccessResponse<ProfileResponse>>(
+    API_ENDPOINTS.profile,
+  );
+  return mapProfileToAuthUser(data.data);
 }

@@ -1,5 +1,7 @@
 import { NotFoundError } from '../../shared/utils/errors';
-import { generateVehicleQrCode } from '../../shared/utils/qrCode';
+import { generateVehicleQrCode, getVehicleQrPayload } from '../../shared/utils/qrCode';
+import { userRepository } from '../users/user.repository';
+import { vehicleQrRepository } from './vehicle-qr.repository';
 import { vehicleRepository } from './vehicle.repository';
 import type { IVehicle } from './vehicle.model';
 import type {
@@ -42,6 +44,13 @@ export class VehicleService {
     const qrCode = await generateVehicleQrCode(vehicle.id);
     vehicle.qrCode = qrCode;
     await vehicle.save();
+
+    await vehicleQrRepository.upsertForVehicle({
+      vehicleId: vehicle.id,
+      customerId,
+      payloadUrl: getVehicleQrPayload(vehicle.id),
+      qrImageDataUrl: qrCode,
+    });
 
     return mapVehicle(vehicle);
   }
@@ -94,6 +103,10 @@ export class VehicleService {
       return { valid: false as const, vehicleId };
     }
 
+    await vehicleQrRepository.recordScan(vehicleId);
+
+    const owner = await userRepository.findById(vehicle.customerId.toString());
+
     return {
       valid: true as const,
       vehicleId,
@@ -103,6 +116,25 @@ export class VehicleService {
       vehicleType: vehicle.vehicleType,
       fuelType: vehicle.fuelType,
       color: vehicle.color,
+      ownerName: owner?.fullName,
+      ownerMobile: owner?.mobileNumber,
+      emergencyName: owner?.emergencyContact?.name,
+      emergencyMobile: owner?.emergencyContact?.mobileNumber,
+      emergencyRelationship: owner?.emergencyContact?.relationship,
+    };
+  }
+
+  async getQrMetadata(vehicleId: string) {
+    const qr = await vehicleQrRepository.findByVehicleId(vehicleId);
+    if (!qr) {
+      throw new NotFoundError('QR metadata not found');
+    }
+    return {
+      vehicleId: qr.vehicleId.toString(),
+      payloadUrl: qr.payloadUrl,
+      scanCount: qr.scanCount,
+      lastScannedAt: qr.lastScannedAt?.toISOString(),
+      isActive: qr.isActive,
     };
   }
 
@@ -111,8 +143,15 @@ export class VehicleService {
     let updated = 0;
 
     for (const vehicle of vehicles) {
-      vehicle.qrCode = await generateVehicleQrCode(vehicle.id);
+      const qrCode = await generateVehicleQrCode(vehicle.id);
+      vehicle.qrCode = qrCode;
       await vehicle.save();
+      await vehicleQrRepository.upsertForVehicle({
+        vehicleId: vehicle.id,
+        customerId: vehicle.customerId.toString(),
+        payloadUrl: getVehicleQrPayload(vehicle.id),
+        qrImageDataUrl: qrCode,
+      });
       updated += 1;
     }
 

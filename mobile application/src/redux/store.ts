@@ -12,6 +12,7 @@ import {
 } from 'redux-persist';
 
 import authReducer from './auth/authSlice';
+import onboardingReducer from './onboarding/onboardingSlice';
 
 const authPersistConfig = {
   key: 'auth',
@@ -19,9 +20,16 @@ const authPersistConfig = {
   whitelist: ['user', 'accessToken', 'refreshToken', 'isAuthenticated', 'onboardingRequired'],
 };
 
+const onboardingPersistConfig = {
+  key: 'onboarding',
+  storage: AsyncStorage,
+  whitelist: ['vehicleOnboardingRequired', 'profileDraft', 'currentStep'],
+};
+
 export const store = configureStore({
   reducer: {
     auth: persistReducer(authPersistConfig, authReducer),
+    onboarding: persistReducer(onboardingPersistConfig, onboardingReducer),
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

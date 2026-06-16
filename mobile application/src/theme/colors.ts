@@ -27,13 +27,19 @@ const categoryThemes: Record<CategoryId, CategoryTheme> = {
 export const colors = {
   ...sharedColors,
   surface: sharedColors.background,
+  card: sharedColors.surfaceCard ?? '#1A1A1A',
   textInverse: '#FFFFFF',
-  borderLight: 'rgba(0, 0, 0, 0.06)',
-  success: '#0EA012',
-  warning: sharedColors.primary,
+  subtext: sharedColors.textMuted,
+  borderLight: 'rgba(255, 255, 255, 0.08)',
+  success: '#16A34A',
+  warning: sharedColors.secondary,
   error: sharedColors.accentRed,
-  overlay: 'rgba(35, 35, 35, 0.92)',
-  shadow: 'rgba(0, 0, 0, 0.12)',
+  overlay: 'rgba(11, 11, 11, 0.92)',
+  shadow: 'rgba(0, 0, 0, 0.35)',
+  glass: {
+    background: sharedColors.glassBackground ?? 'rgba(26, 26, 26, 0.85)',
+    border: sharedColors.glassBorder ?? 'rgba(255, 255, 255, 0.12)',
+  },
   categories: categoryThemes,
 };
 

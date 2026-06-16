@@ -4,8 +4,8 @@ import { asyncHandler } from '../../shared/utils/asyncHandler';
 import { sendSuccess } from '../../shared/utils/apiResponse';
 import { getAuthUser, getParamId } from '../../shared/utils/request';
 import {
+  renderVehicleEmergencyPage,
   renderVehicleNotFoundPage,
-  renderVehicleVerifyPage,
 } from '../../shared/utils/vehicleVerifyPage';
 import { vehicleService } from './vehicle.service';
 
@@ -56,18 +56,28 @@ export class VehicleController {
       return res
         .type('html')
         .send(
-          renderVehicleVerifyPage({
+          renderVehicleEmergencyPage({
             vehicleNumber: result.vehicleNumber,
             brand: result.brand,
             model: result.model,
             vehicleType: result.vehicleType,
             fuelType: result.fuelType,
             color: result.color,
+            ownerName: result.ownerName,
+            ownerMobile: result.ownerMobile,
+            emergencyName: result.emergencyName,
+            emergencyMobile: result.emergencyMobile,
+            emergencyRelationship: result.emergencyRelationship,
           }),
         );
     }
 
     return sendSuccess(res, result);
+  });
+
+  getQrMetadata = asyncHandler(async (req: Request, res: Response) => {
+    const metadata = await vehicleService.getQrMetadata(getParamId(req.params.id));
+    return sendSuccess(res, metadata);
   });
 }
 

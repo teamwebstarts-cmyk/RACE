@@ -9,8 +9,11 @@ import PlaceholderScreen from '../screens/PlaceholderScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import SelectServiceScreen from '../screens/SelectServiceScreen';
 import ServiceListScreen from '../screens/ServiceListScreen';
+import VendorOnboardingScreen from '../screens/vendor/VendorOnboardingScreen';
+import VendorTypeSelectScreen from '../screens/vendor/VendorTypeSelectScreen';
 import AddVehicleScreen from '../screens/vehicles/AddVehicleScreen';
 import VehicleDetailScreen from '../screens/vehicles/VehicleDetailScreen';
+import VehicleQrEmergencyScreen from '../screens/vehicles/VehicleQrEmergencyScreen';
 import VehicleListScreen from '../screens/vehicles/VehicleListScreen';
 import BrandLogo from '../components/ui/BrandLogo';
 import type { HomeStackParamList, ProfileStackParamList, RootTabParamList } from '../types/navigation';
@@ -58,6 +61,14 @@ function HomeStackNavigator() {
             fontWeight: typography.weights.bold,
             color: colors.textLight,
           },
+        }}
+      />
+      <HomeStack.Screen
+        name="VehicleQrEmergency"
+        component={VehicleQrEmergencyScreen}
+        options={{
+          headerTitle: 'Emergency QR',
+          headerTitleStyle: { fontWeight: typography.weights.bold, color: colors.textLight },
         }}
       />
     </HomeStack.Navigator>
@@ -122,6 +133,22 @@ function ProfileStackNavigator() {
         component={VehicleDetailScreen}
         options={{
           headerTitle: 'Vehicle Details',
+          headerTitleStyle: { fontWeight: typography.weights.bold, color: colors.textLight },
+        }}
+      />
+      <ProfileStack.Screen
+        name="VendorTypeSelect"
+        component={VendorTypeSelectScreen}
+        options={{
+          headerTitle: 'Become a Partner',
+          headerTitleStyle: { fontWeight: typography.weights.bold, color: colors.textLight },
+        }}
+      />
+      <ProfileStack.Screen
+        name="VendorOnboarding"
+        component={VendorOnboardingScreen}
+        options={{
+          headerTitle: 'Vendor Registration',
           headerTitleStyle: { fontWeight: typography.weights.bold, color: colors.textLight },
         }}
       />

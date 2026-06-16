@@ -1,4 +1,4 @@
-export type VehicleType = 'car' | 'bike' | 'truck' | 'bus' | 'other';
+export type VehicleType = 'car' | 'bike' | 'ev' | 'truck' | 'auto' | 'bus' | 'other';
 export type FuelType = 'petrol' | 'diesel' | 'cng' | 'electric' | 'hybrid' | 'other';
 
 export interface Vehicle {
@@ -23,6 +23,7 @@ export interface CreateVehicleRequest {
   model: string;
   color?: string;
   fuelType: FuelType;
+  photo?: string;
 }
 
 export type UpdateVehicleRequest = Partial<CreateVehicleRequest>;

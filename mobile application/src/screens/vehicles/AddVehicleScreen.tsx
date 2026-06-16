@@ -24,7 +24,7 @@ import { colors, radius, spacing, typography } from '../../theme';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'AddVehicle'>;
 
-const VEHICLE_TYPES: VehicleType[] = ['car', 'bike', 'truck', 'bus', 'other'];
+const VEHICLE_TYPES: VehicleType[] = ['car', 'bike', 'ev', 'truck', 'auto', 'bus', 'other'];
 const FUEL_TYPES: FuelType[] = ['petrol', 'diesel', 'cng', 'electric', 'hybrid', 'other'];
 
 export default function AddVehicleScreen({ navigation }: Props) {

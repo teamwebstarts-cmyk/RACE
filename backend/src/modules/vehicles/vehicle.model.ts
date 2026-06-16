@@ -1,6 +1,6 @@
 import { Schema, model, type Document, Types } from 'mongoose';
 
-export type VehicleType = 'car' | 'bike' | 'truck' | 'bus' | 'other';
+export type VehicleType = 'car' | 'bike' | 'ev' | 'truck' | 'auto' | 'bus' | 'other';
 export type FuelType = 'petrol' | 'diesel' | 'cng' | 'electric' | 'hybrid' | 'other';
 
 export interface IVehicle extends Document {
@@ -22,7 +22,7 @@ const VehicleSchema = new Schema<IVehicle>(
     customerId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     vehicleType: {
       type: String,
-      enum: ['car', 'bike', 'truck', 'bus', 'other'],
+      enum: ['car', 'bike', 'ev', 'truck', 'auto', 'bus', 'other'],
       required: true,
     },
     vehicleNumber: { type: String, required: true, trim: true, uppercase: true },

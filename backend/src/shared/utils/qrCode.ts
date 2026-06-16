@@ -2,8 +2,12 @@ import QRCode from 'qrcode';
 
 import { env } from '../../configs/env';
 
+export function getVehicleQrPayload(vehicleId: string): string {
+  return `${env.APP_BASE_URL}/api/v1/qr/${vehicleId}`;
+}
+
 export async function generateVehicleQrCode(vehicleId: string): Promise<string> {
-  const payload = `${env.APP_BASE_URL}/api/v1/vehicles/${vehicleId}/verify`;
+  const payload = getVehicleQrPayload(vehicleId);
   return QRCode.toDataURL(payload, {
     errorCorrectionLevel: 'M',
     margin: 2,

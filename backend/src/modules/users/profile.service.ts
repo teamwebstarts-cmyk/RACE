@@ -34,7 +34,10 @@ export class ProfileService {
       fullName: dto.fullName,
       email: dto.email,
       gender: dto.gender,
+      dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : undefined,
       emergencyContact: dto.emergencyContact,
+      address: dto.address,
+      profilePhoto: dto.profilePhoto,
     });
 
     if (!user) {
@@ -49,7 +52,7 @@ export class ProfileService {
       fullName: dto.fullName,
       email: dto.email,
       gender: dto.gender,
-      dateOfBirth: new Date(dto.dateOfBirth),
+      dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : undefined,
       emergencyContact: dto.emergencyContact,
       address: dto.address,
       profilePhoto: dto.profilePhoto,

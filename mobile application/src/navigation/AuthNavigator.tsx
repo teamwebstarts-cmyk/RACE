@@ -3,7 +3,9 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import MobileNumberScreen from '../screens/auth/MobileNumberScreen';
 import OtpVerificationScreen from '../screens/auth/OtpVerificationScreen';
-import ProfileCompletionScreen from '../screens/auth/ProfileCompletionScreen';
+import AddFirstVehicleScreen from '../screens/onboarding/AddFirstVehicleScreen';
+import ProfileWizardScreen from '../screens/onboarding/ProfileWizardScreen';
+import VehicleSuccessScreen from '../screens/onboarding/VehicleSuccessScreen';
 import { useAppSelector } from '../redux/hooks';
 import type { AuthStackParamList } from '../types/navigation';
 import { colors } from '../theme';
@@ -12,13 +14,17 @@ const Stack = createNativeStackNavigator<AuthStackParamList>();
 
 export default function AuthNavigator() {
   const onboardingRequired = useAppSelector((state) => state.auth.onboardingRequired);
+  const vehicleOnboardingRequired = useAppSelector(
+    (state) => state.onboarding.vehicleOnboardingRequired,
+  );
   const accessToken = useAppSelector((state) => state.auth.accessToken);
   const user = useAppSelector((state) => state.auth.user);
 
-  const initialRouteName =
-    accessToken && onboardingRequired && !user?.isProfileCompleted
-      ? 'ProfileCompletion'
-      : 'MobileNumber';
+  const initialRouteName = (() => {
+    if (accessToken && vehicleOnboardingRequired) return 'AddFirstVehicle';
+    if (accessToken && onboardingRequired && !user?.isProfileCompleted) return 'ProfileWizard';
+    return 'MobileNumber';
+  })();
 
   return (
     <Stack.Navigator
@@ -29,7 +35,9 @@ export default function AuthNavigator() {
       }}>
       <Stack.Screen name="MobileNumber" component={MobileNumberScreen} />
       <Stack.Screen name="OtpVerification" component={OtpVerificationScreen} />
-      <Stack.Screen name="ProfileCompletion" component={ProfileCompletionScreen} />
+      <Stack.Screen name="ProfileWizard" component={ProfileWizardScreen} />
+      <Stack.Screen name="AddFirstVehicle" component={AddFirstVehicleScreen} />
+      <Stack.Screen name="VehicleSuccess" component={VehicleSuccessScreen} />
     </Stack.Navigator>
   );
 }

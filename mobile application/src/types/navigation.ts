@@ -1,7 +1,9 @@
 export type AuthStackParamList = {
   MobileNumber: undefined;
   OtpVerification: { mobileNumber: string; devOtp?: string; isExistingUser?: boolean };
-  ProfileCompletion: undefined;
+  ProfileWizard: undefined;
+  AddFirstVehicle: undefined;
+  VehicleSuccess: { vehicleId: string; vehicleNumber: string };
 };
 
 export type HomeStackParamList = {
@@ -16,6 +18,7 @@ export type HomeStackParamList = {
     serviceLabel: string;
     serviceDescription?: string;
   };
+  VehicleQrEmergency: { vehicleId: string };
 };
 
 export type RootTabParamList = {
@@ -29,6 +32,8 @@ export type ProfileStackParamList = {
   MyVehicles: undefined;
   AddVehicle: undefined;
   VehicleDetail: { vehicleId: string };
+  VendorTypeSelect: undefined;
+  VendorOnboarding: { vendorType: import('./auth').VendorType };
 };
 
 export type RootStackParamList = {

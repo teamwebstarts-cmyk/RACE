@@ -55,7 +55,14 @@ const authSlice = createSlice({
     completeProfileSuccess(state, action: PayloadAction<AuthUser>) {
       state.user = action.payload;
       state.onboardingRequired = false;
+      state.loading = false;
+    },
+    completeOnboarding(state, action: PayloadAction<AuthUser | undefined>) {
+      if (action.payload) {
+        state.user = action.payload;
+      }
       state.isAuthenticated = true;
+      state.onboardingRequired = false;
       state.loading = false;
     },
     updateTokens(
@@ -64,6 +71,9 @@ const authSlice = createSlice({
     ) {
       state.accessToken = action.payload.accessToken;
       state.refreshToken = action.payload.refreshToken;
+    },
+    updateUser(state, action: PayloadAction<AuthUser>) {
+      state.user = action.payload;
     },
     logout(state) {
       state.user = null;
@@ -82,6 +92,8 @@ export const {
   setPendingMobileNumber,
   setCredentials,
   completeProfileSuccess,
+  completeOnboarding,
+  updateUser,
   updateTokens,
   logout,
 } = authSlice.actions;

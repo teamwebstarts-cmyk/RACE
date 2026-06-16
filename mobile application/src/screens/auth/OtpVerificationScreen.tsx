@@ -61,7 +61,7 @@ export default function OtpVerificationScreen({ navigation, route }: Props) {
     try {
       const result = await verifyOtpMutation.mutateAsync({ mobileNumber, otp });
       if (result.onboardingRequired && !result.user.isProfileCompleted) {
-        navigation.replace('ProfileCompletion');
+        navigation.replace('ProfileWizard');
       }
       // Returning users: RootNavigator switches to Main automatically
     } catch (err) {
