@@ -9,8 +9,10 @@ import PlaceholderScreen from '../screens/PlaceholderScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import SelectServiceScreen from '../screens/SelectServiceScreen';
 import ServiceListScreen from '../screens/ServiceListScreen';
-import VendorOnboardingScreen from '../screens/vendor/VendorOnboardingScreen';
 import VendorTypeSelectScreen from '../screens/vendor/VendorTypeSelectScreen';
+import VendorWizardScreen from '../screens/vendor/VendorWizardScreen';
+import ReviewSubmissionScreen from '../screens/vendor/ReviewSubmissionScreen';
+import VerificationStatusScreen from '../screens/vendor/VerificationStatusScreen';
 import AddVehicleScreen from '../screens/vehicles/AddVehicleScreen';
 import VehicleDetailScreen from '../screens/vehicles/VehicleDetailScreen';
 import VehicleQrEmergencyScreen from '../screens/vehicles/VehicleQrEmergencyScreen';
@@ -145,10 +147,26 @@ function ProfileStackNavigator() {
         }}
       />
       <ProfileStack.Screen
-        name="VendorOnboarding"
-        component={VendorOnboardingScreen}
+        name="VendorWizard"
+        component={VendorWizardScreen}
         options={{
-          headerTitle: 'Vendor Registration',
+          headerTitle: 'Partner Registration',
+          headerTitleStyle: { fontWeight: typography.weights.bold, color: colors.textLight },
+        }}
+      />
+      <ProfileStack.Screen
+        name="VendorReview"
+        component={ReviewSubmissionScreen}
+        options={{
+          headerTitle: 'Review Submission',
+          headerTitleStyle: { fontWeight: typography.weights.bold, color: colors.textLight },
+        }}
+      />
+      <ProfileStack.Screen
+        name="VendorVerificationStatus"
+        component={VerificationStatusScreen}
+        options={{
+          headerTitle: 'Verification Status',
           headerTitleStyle: { fontWeight: typography.weights.bold, color: colors.textLight },
         }}
       />

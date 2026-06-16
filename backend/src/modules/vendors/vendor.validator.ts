@@ -8,67 +8,162 @@ export const vendorTypeSchema = z.enum([
   'mechanic',
 ]);
 
-export const registerVendorSchema = z.object({
+export const documentTypeSchema = z.enum([
+  'aadhaar',
+  'pan',
+  'gst',
+  'shop_license',
+  'msme',
+  'cancelled_cheque',
+  'commercial_licence',
+  'driving_license',
+  'police_verification',
+  'medical_certificate',
+  'vehicle_insurance',
+  'fitness_certificate',
+  'puc',
+  'commercial_permit',
+  'selfie',
+  'vehicle_photo',
+  'other',
+]);
+
+const bankDetailsSchema = z.object({
+  accountHolderName: z.string().min(2).max(100),
+  accountNumber: z.string().min(6).max(30),
+  ifsc: z.string().regex(/^[A-Z]{4}0[A-Z0-9]{6}$/i, 'Invalid IFSC'),
+  bankName: z.string().min(2).max(100).optional(),
+});
+
+const towVehicleSchema = z.object({
+  registrationNumber: z.string().min(4).max(20),
+  vehicleType: z.string().min(2).max(50),
+  capacity: z.string().max(50).optional(),
+  photos: z.array(z.string().url()).optional(),
+});
+
+const driverProfileSchema = z.object({
+  dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  emergencyContact: z
+    .object({
+      name: z.string().min(2).max(100),
+      mobileNumber: z.string().min(10).max(15),
+      relationship: z.string().max(50).optional(),
+    })
+    .optional(),
+  yearsOfExperience: z.number().min(0).max(50).optional(),
+  vehicleCategories: z.array(z.string().min(1).max(50)).optional(),
+  languages: z.array(z.string().min(1).max(50)).optional(),
+  previousEmployer: z.string().max(150).optional(),
+  referenceContact: z
+    .object({
+      name: z.string().min(2).max(100),
+      mobileNumber: z.string().min(10).max(15),
+    })
+    .optional(),
+  availability: z
+    .object({
+      hourly: z.boolean().optional(),
+      daily: z.boolean().optional(),
+      nightShift: z.boolean().optional(),
+      weekend: z.boolean().optional(),
+    })
+    .optional(),
+});
+
+const documentSchema = z.object({
+  documentType: documentTypeSchema,
+  fileUrl: z.string().url(),
+  fileName: z.string().max(200).optional(),
+});
+
+const baseVendorSchema = z.object({
   vendorType: vendorTypeSchema,
   businessName: z.string().min(2).max(150).optional(),
   ownerName: z.string().min(2).max(100),
   mobileNumber: z.string().min(10).max(15),
   email: z.string().email().optional(),
   address: z.string().min(5).max(300).optional(),
-  towVehicle: z
-    .object({
-      registrationNumber: z.string().min(4).max(20),
-      vehicleType: z.string().min(2).max(50),
-      capacity: z.string().max(50).optional(),
-      photos: z.array(z.string().url()).optional(),
-    })
-    .optional(),
-  bankDetails: z
-    .object({
-      accountHolderName: z.string().min(2).max(100),
-      accountNumber: z.string().min(6).max(30),
-      ifsc: z.string().regex(/^[A-Z]{4}0[A-Z0-9]{6}$/i, 'Invalid IFSC'),
-    })
-    .optional(),
-  documents: z
-    .array(
-      z.object({
-        documentType: z.enum([
-          'aadhaar',
-          'pan',
-          'gst',
-          'msme',
-          'cancelled_cheque',
-          'commercial_licence',
-          'police_verification',
-          'vehicle_insurance',
-          'fitness_certificate',
-          'puc',
-          'selfie',
-          'vehicle_photo',
-          'other',
-        ]),
-        fileUrl: z.string().url(),
-        fileName: z.string().max(200).optional(),
-      }),
-    )
-    .optional(),
+  towVehicle: towVehicleSchema.optional(),
+  bankDetails: bankDetailsSchema.optional(),
+  driverProfile: driverProfileSchema.optional(),
+  documents: z.array(documentSchema).optional(),
+});
+
+export const saveVendorDraftSchema = baseVendorSchema.partial().extend({
+  vendorType: vendorTypeSchema,
+});
+
+export const registerVendorSchema = baseVendorSchema.extend({
   acceptTerms: z.literal(true),
+});
+
+export const updateVendorSchema = baseVendorSchema.partial();
+
+export const uploadDocumentSchema = z.object({
+  documentType: documentTypeSchema,
 });
 
 export const reviewVendorSchema = z.object({
   status: z.enum(['approved', 'rejected', 'changes_requested']),
   reviewNotes: z.string().max(500).optional(),
+  verificationStage: z
+    .enum([
+      'submitted',
+      'document_review',
+      'background_check',
+      'selfie_match',
+      'approved',
+      'rejected',
+    ])
+    .optional(),
 });
 
+export const adminListVendorsSchema = z.object({
+  status: z
+    .enum(['pending', 'under_review', 'approved', 'rejected', 'changes_requested', 'draft'])
+    .optional(),
+  verificationStage: z
+    .enum([
+      'submitted',
+      'document_review',
+      'background_check',
+      'selfie_match',
+      'approved',
+      'rejected',
+    ])
+    .optional(),
+});
+
+export const reviewDocumentSchema = z.object({
+  verificationStatus: z.enum(['approved', 'rejected', 'resubmission_required', 'under_review']),
+  reviewNotes: z.string().max(500).optional(),
+});
+
+export type SaveVendorDraftDto = z.infer<typeof saveVendorDraftSchema>;
 export type RegisterVendorDto = z.infer<typeof registerVendorSchema>;
+export type UpdateVendorDto = z.infer<typeof updateVendorSchema>;
+export type UploadDocumentDto = z.infer<typeof uploadDocumentSchema>;
 export type ReviewVendorDto = z.infer<typeof reviewVendorSchema>;
+export type ReviewDocumentDto = z.infer<typeof reviewDocumentSchema>;
+
+export interface VendorDocumentDto {
+  id: string;
+  documentType: string;
+  fileUrl: string;
+  fileName?: string;
+  mimeType?: string;
+  verificationStatus: string;
+  reviewNotes?: string;
+  uploadedAt: string;
+}
 
 export interface VendorResponseDto {
   id: string;
   userId: string;
   vendorType: string;
   status: string;
+  verificationStage: string;
   businessName?: string;
   ownerName?: string;
   mobileNumber: string;
@@ -84,6 +179,26 @@ export interface VendorResponseDto {
     accountHolderName: string;
     accountNumber: string;
     ifsc: string;
+    bankName?: string;
+  };
+  driverProfile?: {
+    dateOfBirth?: string;
+    emergencyContact?: {
+      name: string;
+      mobileNumber: string;
+      relationship?: string;
+    };
+    yearsOfExperience?: number;
+    vehicleCategories?: string[];
+    languages?: string[];
+    previousEmployer?: string;
+    referenceContact?: { name: string; mobileNumber: string };
+    availability?: {
+      hourly?: boolean;
+      daily?: boolean;
+      nightShift?: boolean;
+      weekend?: boolean;
+    };
   };
   reviewNotes?: string;
   statusHistory: Array<{
@@ -91,12 +206,35 @@ export interface VendorResponseDto {
     note?: string;
     changedAt: string;
   }>;
-  documents: Array<{
-    documentType: string;
-    fileUrl: string;
-    fileName?: string;
-    uploadedAt: string;
-  }>;
+  documents: VendorDocumentDto[];
   submittedAt?: string;
   approvedAt?: string;
+  createdAt: string;
+  updatedAt: string;
 }
+
+/** Required documents per vendor type for submission validation */
+export const REQUIRED_DOCUMENTS: Record<string, string[]> = {
+  towing_company: ['aadhaar', 'pan', 'cancelled_cheque', 'selfie'],
+  tow_truck_driver: [
+    'aadhaar',
+    'pan',
+    'driving_license',
+    'selfie',
+    'police_verification',
+    'medical_certificate',
+    'vehicle_insurance',
+    'fitness_certificate',
+    'puc',
+  ],
+  full_time_driver: [
+    'aadhaar',
+    'pan',
+    'driving_license',
+    'selfie',
+    'police_verification',
+    'medical_certificate',
+  ],
+  part_time_driver: ['aadhaar', 'pan', 'driving_license', 'selfie'],
+  mechanic: ['aadhaar', 'pan', 'selfie'],
+};

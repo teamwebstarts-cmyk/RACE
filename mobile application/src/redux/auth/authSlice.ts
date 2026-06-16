@@ -10,6 +10,8 @@ export interface AuthState {
   loading: boolean;
   onboardingRequired: boolean;
   pendingMobileNumber: string | null;
+  /** When true, an approved vendor sees the customer app instead of the partner app. */
+  useCustomerExperience: boolean;
 }
 
 const initialState: AuthState = {
@@ -20,6 +22,7 @@ const initialState: AuthState = {
   loading: false,
   onboardingRequired: false,
   pendingMobileNumber: null,
+  useCustomerExperience: false,
 };
 
 const authSlice = createSlice({
@@ -75,6 +78,9 @@ const authSlice = createSlice({
     updateUser(state, action: PayloadAction<AuthUser>) {
       state.user = action.payload;
     },
+    setUseCustomerExperience(state, action: PayloadAction<boolean>) {
+      state.useCustomerExperience = action.payload;
+    },
     logout(state) {
       state.user = null;
       state.accessToken = null;
@@ -83,6 +89,7 @@ const authSlice = createSlice({
       state.loading = false;
       state.onboardingRequired = false;
       state.pendingMobileNumber = null;
+      state.useCustomerExperience = false;
     },
   },
 });
@@ -94,6 +101,7 @@ export const {
   completeProfileSuccess,
   completeOnboarding,
   updateUser,
+  setUseCustomerExperience,
   updateTokens,
   logout,
 } = authSlice.actions;

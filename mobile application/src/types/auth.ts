@@ -1,7 +1,7 @@
 export interface AuthUser {
   id: string;
   mobileNumber: string;
-  role: string;
+  role: 'customer' | 'vendor' | 'admin';
   isVerified: boolean;
   isProfileCompleted: boolean;
   fullName?: string;

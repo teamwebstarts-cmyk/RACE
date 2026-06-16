@@ -1,0 +1,15 @@
+---
+description: Keep all work off master until final merge
+alwaysApply: true
+---
+
+# Git branch workflow
+
+- **Never commit directly to `master`.** All ongoing work stays on feature/test branches until the user explicitly asks to merge or finalize.
+- **Default branch for commits:** `test/onboarding-and-vehicles` (or another active feature branch the user names).
+- Before any commit, verify the current branch with `git branch --show-current`. If on `master`, create or switch to a feature branch first:
+  ```bash
+  git checkout -b test/<feature-name>
+  ```
+- Push feature branches to `origin`; do not push commits to `master` unless the user explicitly requests a final merge/release.
+- When the user says work is done and asks to finalize, they may merge the feature branch into `master` via PR or explicit instruction.

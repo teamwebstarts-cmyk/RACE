@@ -5,7 +5,10 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import AuthNavigator from './AuthNavigator';
 import MainNavigator from './MainNavigator';
+import PartnerNavigator from './PartnerNavigator';
+import { useAuthSessionSync } from '../hooks/useAuthSessionSync';
 import { useAppSelector } from '../redux/hooks';
+import { shouldUsePartnerExperience } from '../utils/roleRouting';
 import type { RootStackParamList } from '../types/navigation';
 import { colors } from '../theme';
 
@@ -26,17 +29,25 @@ const navigationTheme = {
 };
 
 export default function RootNavigator() {
+  useAuthSessionSync();
+
+  const user = useAppSelector((state) => state.auth.user);
+  const useCustomerExperience = useAppSelector((state) => state.auth.useCustomerExperience);
   const isAuthenticated = useAppSelector(
     (state) => state.auth.isAuthenticated && Boolean(state.auth.accessToken),
   );
 
+  const showPartner = isAuthenticated && shouldUsePartnerExperience(user, useCustomerExperience);
+
   return (
     <NavigationContainer theme={navigationTheme}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {isAuthenticated ? (
-          <Stack.Screen name="Main" component={MainNavigator} />
-        ) : (
+        {!isAuthenticated ? (
           <Stack.Screen name="Auth" component={AuthNavigator} />
+        ) : showPartner ? (
+          <Stack.Screen name="Partner" component={PartnerNavigator} />
+        ) : (
+          <Stack.Screen name="Main" component={MainNavigator} />
         )}
       </Stack.Navigator>
     </NavigationContainer>

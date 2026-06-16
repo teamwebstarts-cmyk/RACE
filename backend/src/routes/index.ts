@@ -8,6 +8,7 @@ import serviceRoutes from '../modules/services/service.routes';
 import vehicleRoutes from '../modules/vehicles/vehicle.routes';
 import qrRoutes from '../modules/vehicles/qr.routes';
 import vendorRoutes from '../modules/vendors/vendor.routes';
+import adminVendorRoutes from '../modules/vendors/admin-vendor.routes';
 
 const router = Router();
 
@@ -18,5 +19,6 @@ router.use(`${env.API_PREFIX}/profile`, profileRoutes);
 router.use(`${env.API_PREFIX}/vehicles`, vehicleRoutes);
 router.use(`${env.API_PREFIX}/qr`, qrRoutes);
 router.use(`${env.API_PREFIX}/vendor`, vendorRoutes);
+router.use(`${env.API_PREFIX}/admin/vendors`, adminVendorRoutes);
 
 export default router;

@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import axios from 'axios';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -18,6 +19,7 @@ import GlassCard from '../../components/ui/GlassCard';
 import PrimaryButton from '../../components/ui/PrimaryButton';
 import ProgressStepper from '../../components/ui/ProgressStepper';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
+import { completeOnboarding } from '../../redux/auth/authSlice';
 import { setCurrentStep, setProfileDraft, startVehicleOnboarding } from '../../redux/onboarding/onboardingSlice';
 import {
   getApiErrorMessage,
@@ -25,6 +27,7 @@ import {
 } from '../../services/auth/useAuthMutations';
 import type { AuthStackParamList } from '../../types/navigation';
 import type { CompleteProfileRequest } from '../../types/auth';
+import { isVendorRole } from '../../utils/roleRouting';
 import { colors, radius, spacing, typography } from '../../theme';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'ProfileWizard'>;
@@ -44,14 +47,29 @@ const GENDERS: CompleteProfileRequest['gender'][] = [
   'prefer_not_to_say',
 ];
 
+function resetToLogin(navigation: Props['navigation']) {
+  navigation.reset({
+    index: 0,
+    routes: [{ name: 'MobileNumber' }],
+  });
+}
+
 export default function ProfileWizardScreen({ navigation }: Props) {
   const dispatch = useAppDispatch();
   const loading = useAppSelector((state) => state.auth.loading);
+  const accessToken = useAppSelector((state) => state.auth.accessToken);
   const draft = useAppSelector((state) => state.onboarding.profileDraft);
   const currentStep = useAppSelector((state) => state.onboarding.currentStep);
 
   const [error, setError] = useState('');
   const completeProfileMutation = useCompleteProfileMutation();
+
+  useEffect(() => {
+    if (!accessToken) {
+      setError('Your session expired. Please log in again.');
+      resetToLogin(navigation);
+    }
+  }, [accessToken, navigation]);
 
   const form = useMemo(
     () => ({
@@ -125,6 +143,13 @@ export default function ProfileWizardScreen({ navigation }: Props) {
 
   const handleSubmit = async () => {
     setError('');
+
+    if (!accessToken) {
+      setError('Your session expired. Please log in again.');
+      resetToLogin(navigation);
+      return;
+    }
+
     const payload: CompleteProfileRequest = {
       fullName: form.fullName.trim(),
       email: form.email.trim(),
@@ -146,10 +171,19 @@ export default function ProfileWizardScreen({ navigation }: Props) {
     };
 
     try {
-      await completeProfileMutation.mutateAsync(payload);
+      const updatedUser = await completeProfileMutation.mutateAsync(payload);
+      if (isVendorRole(updatedUser)) {
+        dispatch(completeOnboarding(updatedUser));
+        return;
+      }
       dispatch(startVehicleOnboarding());
       navigation.replace('AddFirstVehicle');
     } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.status === 401) {
+        setError('Your session expired. Please log in again.');
+        resetToLogin(navigation);
+        return;
+      }
       setError(getApiErrorMessage(err, 'Unable to save profile'));
     }
   };

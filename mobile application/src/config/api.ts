@@ -25,5 +25,10 @@ export const API_ENDPOINTS = {
   profileComplete: '/api/v1/profile/complete',
   vehicles: '/api/v1/vehicles',
   vendorRegister: '/api/v1/vendor/register',
+  vendorDraft: '/api/v1/vendor/draft',
+  vendorUpdate: '/api/v1/vendor/update',
+  vendorProfile: '/api/v1/vendor/profile',
   vendorStatus: '/api/v1/vendor/status',
+  vendorUploadDocument: '/api/v1/vendor/upload-document',
+  vendorSelfie: '/api/v1/vendor/selfie',
 } as const;

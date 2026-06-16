@@ -7,6 +7,7 @@ import AddFirstVehicleScreen from '../screens/onboarding/AddFirstVehicleScreen';
 import ProfileWizardScreen from '../screens/onboarding/ProfileWizardScreen';
 import VehicleSuccessScreen from '../screens/onboarding/VehicleSuccessScreen';
 import { useAppSelector } from '../redux/hooks';
+import { isVendorRole } from '../utils/roleRouting';
 import type { AuthStackParamList } from '../types/navigation';
 import { colors } from '../theme';
 
@@ -21,7 +22,7 @@ export default function AuthNavigator() {
   const user = useAppSelector((state) => state.auth.user);
 
   const initialRouteName = (() => {
-    if (accessToken && vehicleOnboardingRequired) return 'AddFirstVehicle';
+    if (accessToken && vehicleOnboardingRequired && !isVendorRole(user)) return 'AddFirstVehicle';
     if (accessToken && onboardingRequired && !user?.isProfileCompleted) return 'ProfileWizard';
     return 'MobileNumber';
   })();

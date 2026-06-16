@@ -24,7 +24,17 @@ module.exports = {
       },
     },
     scheme: 'race-customer',
-    plugins: ['expo-asset', 'expo-font'],
+    plugins: [
+      'expo-asset',
+      'expo-font',
+      [
+        'expo-image-picker',
+        {
+          photosPermission: 'Allow RACE to access your photos for document upload.',
+          cameraPermission: 'Allow RACE to use your camera for selfie verification.',
+        },
+      ],
+    ],
     extra: {
       apiUrl: process.env.EXPO_PUBLIC_API_URL ?? 'http://192.168.1.7:3000',
     },

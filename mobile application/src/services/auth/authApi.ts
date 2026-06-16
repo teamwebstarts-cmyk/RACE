@@ -26,10 +26,11 @@ export interface ProfileResponse {
 }
 
 function mapProfileToAuthUser(profile: ProfileResponse): AuthUser {
+  const role = profile.role as AuthUser['role'];
   return {
     id: profile.id,
     mobileNumber: profile.mobileNumber,
-    role: profile.role,
+    role: role === 'vendor' || role === 'admin' ? role : 'customer',
     isVerified: profile.isVerified,
     isProfileCompleted: profile.isProfileCompleted,
     fullName: profile.fullName,

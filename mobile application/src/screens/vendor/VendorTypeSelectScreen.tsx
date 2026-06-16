@@ -4,38 +4,62 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import GlassCard from '../../components/ui/GlassCard';
+import PrimaryButton from '../../components/ui/PrimaryButton';
+import { VENDOR_TYPE_CONFIGS } from '../../data/vendorWizardConfig';
+import { useVendorStatusQuery } from '../../services/vendor/useVendorMutations';
 import type { ProfileStackParamList } from '../../types/navigation';
-import type { VendorType } from '../../types/auth';
 import { colors, radius, spacing, typography } from '../../theme';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'VendorTypeSelect'>;
 
-const VENDOR_TYPES: Array<{ id: VendorType; title: string; subtitle: string }> = [
-  { id: 'towing_company', title: 'Towing Company', subtitle: 'Fleet operators and towing businesses' },
-  { id: 'tow_truck_driver', title: 'Tow Truck Driver', subtitle: 'Independent tow truck operators' },
-  { id: 'full_time_driver', title: 'Full Time Driver', subtitle: 'On-demand professional drivers' },
-  { id: 'part_time_driver', title: 'Part Time Driver', subtitle: 'Flexible driving partners' },
-  { id: 'mechanic', title: 'Mechanic Partner', subtitle: 'Roadside mechanic services (coming soon)' },
-];
+export default function SelectVendorTypeScreen({ navigation }: Props) {
+  const { data: existingVendor } = useVendorStatusQuery();
 
-export default function VendorTypeSelectScreen({ navigation }: Props) {
+  const handleSelect = (vendorType: (typeof VENDOR_TYPE_CONFIGS)[number]['type']) => {
+    if (vendorType === 'mechanic') return;
+    navigation.navigate('VendorWizard', { vendorType });
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>Partner With RACE</Text>
-        <Text style={styles.subtitle}>Choose your onboarding path</Text>
+        <Text style={styles.subtitle}>Select your account type to begin onboarding</Text>
 
-        {VENDOR_TYPES.map((item) => (
-          <TouchableOpacity
-            key={item.id}
-            onPress={() => navigation.navigate('VendorOnboarding', { vendorType: item.id })}
-            disabled={item.id === 'mechanic'}>
-            <GlassCard style={[styles.card, item.id === 'mechanic' && styles.disabled]}>
-              <Text style={styles.cardTitle}>{item.title}</Text>
-              <Text style={styles.cardSubtitle}>{item.subtitle}</Text>
-            </GlassCard>
-          </TouchableOpacity>
-        ))}
+        {existingVendor && existingVendor.status !== 'draft' ? (
+          <GlassCard style={styles.statusCard}>
+            <Text style={styles.statusTitle}>Existing Application</Text>
+            <Text style={styles.statusText}>
+              Status: {existingVendor.status.replace(/_/g, ' ')}
+            </Text>
+            <PrimaryButton
+              label="View Verification Status"
+              onPress={() => navigation.navigate('VendorVerificationStatus')}
+            />
+          </GlassCard>
+        ) : null}
+
+        {VENDOR_TYPE_CONFIGS.map((item) => {
+          const disabled = item.type === 'mechanic';
+          return (
+            <TouchableOpacity
+              key={item.type}
+              onPress={() => handleSelect(item.type)}
+              disabled={disabled}
+              activeOpacity={0.85}>
+              <GlassCard style={[styles.card, disabled && styles.disabled]}>
+                <View style={styles.cardHeader}>
+                  <Text style={styles.emoji}>{item.emoji}</Text>
+                  <View style={styles.cardText}>
+                    <Text style={styles.cardTitle}>{item.title}</Text>
+                    <Text style={styles.cardSubtitle}>{item.subtitle}</Text>
+                  </View>
+                </View>
+                <Text style={styles.stepsHint}>{item.steps.length} step onboarding</Text>
+              </GlassCard>
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
     </SafeAreaView>
   );
@@ -43,11 +67,27 @@ export default function VendorTypeSelectScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.surfaceDarker },
-  content: { padding: spacing.lg },
-  title: { color: colors.textLight, fontSize: typography.sizes.xxl, fontWeight: typography.weights.bold },
-  subtitle: { color: colors.subtext, marginBottom: spacing.lg },
+  content: { padding: spacing.lg, paddingBottom: spacing.xxl },
+  title: {
+    color: colors.textLight,
+    fontSize: typography.sizes.xxl,
+    fontWeight: typography.weights.bold,
+  },
+  subtitle: { color: colors.subtext, marginBottom: spacing.lg, marginTop: spacing.xs },
+  statusCard: { marginBottom: spacing.lg },
+  statusTitle: { color: colors.textLight, fontWeight: typography.weights.bold, marginBottom: spacing.xs },
+  statusText: { color: colors.subtext, marginBottom: spacing.md, textTransform: 'capitalize' },
   card: { marginBottom: spacing.md },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  emoji: { fontSize: 32 },
+  cardText: { flex: 1 },
   cardTitle: { color: colors.textLight, fontSize: typography.sizes.lg, fontWeight: typography.weights.bold },
   cardSubtitle: { color: colors.subtext, marginTop: spacing.xs },
-  disabled: { opacity: 0.5 },
+  stepsHint: {
+    color: colors.primary,
+    marginTop: spacing.md,
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
+  },
+  disabled: { opacity: 0.45 },
 });

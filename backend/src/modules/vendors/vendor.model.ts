@@ -10,14 +10,24 @@ export type VendorType =
 export type VendorStatus =
   | 'draft'
   | 'pending'
+  | 'under_review'
   | 'approved'
   | 'rejected'
   | 'changes_requested';
+
+export type VerificationStage =
+  | 'submitted'
+  | 'document_review'
+  | 'background_check'
+  | 'selfie_match'
+  | 'approved'
+  | 'rejected';
 
 export interface IVendorBankDetails {
   accountHolderName: string;
   accountNumber: string;
   ifsc: string;
+  bankName?: string;
 }
 
 export interface IVendorTowVehicle {
@@ -27,10 +37,34 @@ export interface IVendorTowVehicle {
   photos?: string[];
 }
 
+export interface IVendorDriverProfile {
+  dateOfBirth?: string;
+  emergencyContact?: {
+    name: string;
+    mobileNumber: string;
+    relationship?: string;
+  };
+  yearsOfExperience?: number;
+  vehicleCategories?: string[];
+  languages?: string[];
+  previousEmployer?: string;
+  referenceContact?: {
+    name: string;
+    mobileNumber: string;
+  };
+  availability?: {
+    hourly?: boolean;
+    daily?: boolean;
+    nightShift?: boolean;
+    weekend?: boolean;
+  };
+}
+
 export interface IVendor extends Document {
   userId: Types.ObjectId;
   vendorType: VendorType;
   status: VendorStatus;
+  verificationStage: VerificationStage;
   businessName?: string;
   ownerName?: string;
   mobileNumber: string;
@@ -38,9 +72,10 @@ export interface IVendor extends Document {
   address?: string;
   towVehicle?: IVendorTowVehicle;
   bankDetails?: IVendorBankDetails;
+  driverProfile?: IVendorDriverProfile;
   reviewNotes?: string;
   statusHistory: Array<{
-    status: VendorStatus;
+    status: VendorStatus | VerificationStage;
     note?: string;
     changedAt: Date;
   }>;
@@ -66,8 +101,20 @@ const VendorSchema = new Schema<IVendor>(
     },
     status: {
       type: String,
-      enum: ['draft', 'pending', 'approved', 'rejected', 'changes_requested'],
+      enum: ['draft', 'pending', 'under_review', 'approved', 'rejected', 'changes_requested'],
       default: 'draft',
+    },
+    verificationStage: {
+      type: String,
+      enum: [
+        'submitted',
+        'document_review',
+        'background_check',
+        'selfie_match',
+        'approved',
+        'rejected',
+      ],
+      default: 'submitted',
     },
     businessName: { type: String, trim: true },
     ownerName: { type: String, trim: true },
@@ -84,15 +131,34 @@ const VendorSchema = new Schema<IVendor>(
       accountHolderName: String,
       accountNumber: String,
       ifsc: String,
+      bankName: String,
+    },
+    driverProfile: {
+      dateOfBirth: String,
+      emergencyContact: {
+        name: String,
+        mobileNumber: String,
+        relationship: String,
+      },
+      yearsOfExperience: Number,
+      vehicleCategories: [String],
+      languages: [String],
+      previousEmployer: String,
+      referenceContact: {
+        name: String,
+        mobileNumber: String,
+      },
+      availability: {
+        hourly: Boolean,
+        daily: Boolean,
+        nightShift: Boolean,
+        weekend: Boolean,
+      },
     },
     reviewNotes: { type: String },
     statusHistory: [
       {
-        status: {
-          type: String,
-          enum: ['draft', 'pending', 'approved', 'rejected', 'changes_requested'],
-          required: true,
-        },
+        status: { type: String, required: true },
         note: String,
         changedAt: { type: Date, default: Date.now },
       },
@@ -102,5 +168,8 @@ const VendorSchema = new Schema<IVendor>(
   },
   { timestamps: true },
 );
+
+VendorSchema.index({ status: 1, submittedAt: -1 });
+VendorSchema.index({ verificationStage: 1 });
 
 export const VendorModel = model<IVendor>('Vendor', VendorSchema);

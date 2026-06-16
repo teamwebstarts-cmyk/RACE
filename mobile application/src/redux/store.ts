@@ -13,11 +13,12 @@ import {
 
 import authReducer from './auth/authSlice';
 import onboardingReducer from './onboarding/onboardingSlice';
+import vendorOnboardingReducer from './vendor/vendorOnboardingSlice';
 
 const authPersistConfig = {
   key: 'auth',
   storage: AsyncStorage,
-  whitelist: ['user', 'accessToken', 'refreshToken', 'isAuthenticated', 'onboardingRequired'],
+  whitelist: ['user', 'accessToken', 'refreshToken', 'isAuthenticated', 'onboardingRequired', 'useCustomerExperience'],
 };
 
 const onboardingPersistConfig = {
@@ -26,10 +27,17 @@ const onboardingPersistConfig = {
   whitelist: ['vehicleOnboardingRequired', 'profileDraft', 'currentStep'],
 };
 
+const vendorOnboardingPersistConfig = {
+  key: 'vendorOnboarding',
+  storage: AsyncStorage,
+  whitelist: ['activeVendorType', 'currentStep', 'draft'],
+};
+
 export const store = configureStore({
   reducer: {
     auth: persistReducer(authPersistConfig, authReducer),
     onboarding: persistReducer(onboardingPersistConfig, onboardingReducer),
+    vendorOnboarding: persistReducer(vendorOnboardingPersistConfig, vendorOnboardingReducer),
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

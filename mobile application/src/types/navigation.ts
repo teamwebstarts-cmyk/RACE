@@ -33,10 +33,24 @@ export type ProfileStackParamList = {
   AddVehicle: undefined;
   VehicleDetail: { vehicleId: string };
   VendorTypeSelect: undefined;
-  VendorOnboarding: { vendorType: import('./auth').VendorType };
+  VendorWizard: { vendorType: import('./vendor').VendorType };
+  VendorReview: { vendorType: import('./vendor').VendorType };
+  VendorVerificationStatus: undefined;
 };
 
 export type RootStackParamList = {
   Auth: undefined;
   Main: undefined;
+  Partner: undefined;
+};
+
+export type PartnerTabParamList = {
+  PartnerHome: undefined;
+  PartnerJobs: undefined;
+  PartnerAccount: undefined;
+};
+
+export type PartnerAccountStackParamList = {
+  PartnerAccountMain: undefined;
+  VendorVerificationStatus: undefined;
 };

@@ -3,7 +3,7 @@ import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import { API_CONFIG, API_ENDPOINTS } from '../../config/api';
 import type { ApiErrorResponse, ApiSuccessResponse } from '../../types/auth';
 import { store } from '../../redux/store';
-import { logout, updateTokens } from '../../redux/auth/authSlice';
+import { logout, updateTokens, updateUser } from '../../redux/auth/authSlice';
 
 export const apiClient = axios.create({
   baseURL: API_CONFIG.baseUrl,
@@ -16,8 +16,13 @@ export const apiClient = axios.create({
 
 apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const token = store.getState().auth.accessToken;
-  if (token && config.headers) {
-    config.headers.Authorization = `Bearer ${token}`;
+  if (token) {
+    if (typeof config.headers?.set === 'function') {
+      config.headers.set('Authorization', `Bearer ${token}`);
+    } else {
+      config.headers = config.headers ?? {};
+      config.headers.Authorization = `Bearer ${token}`;
+    }
   }
   return config;
 });
@@ -67,10 +72,14 @@ apiClient.interceptors.response.use(
       const response = await axios.post<ApiSuccessResponse<{
         accessToken: string;
         refreshToken: string;
+        user: import('../../types/auth').AuthUser;
       }>>(`${API_CONFIG.baseUrl}${API_ENDPOINTS.refreshToken}`, { refreshToken });
 
-      const { accessToken, refreshToken: newRefreshToken } = response.data.data;
+      const { accessToken, refreshToken: newRefreshToken, user } = response.data.data;
       store.dispatch(updateTokens({ accessToken, refreshToken: newRefreshToken }));
+      if (user) {
+        store.dispatch(updateUser(user));
+      }
       processQueue(accessToken);
 
       if (originalRequest.headers) {

@@ -7,9 +7,11 @@ import BrandLogo from '../components/ui/BrandLogo';
 import PrimaryButton from '../components/ui/PrimaryButton';
 import Screen, { ScreenContent } from '../components/ui/Screen';
 import { useAppDispatch, useAppSelector } from '../redux/hooks';
-import { logout, updateUser } from '../redux/auth/authSlice';
+import { logout, setUseCustomerExperience, updateUser } from '../redux/auth/authSlice';
 import { resetOnboarding } from '../redux/onboarding/onboardingSlice';
+import { resetVendorWizard } from '../redux/vendor/vendorOnboardingSlice';
 import { getProfile } from '../services/auth/authApi';
+import { canAccessPartnerExperience } from '../utils/roleRouting';
 import type { ProfileStackParamList } from '../types/navigation';
 import { colors, spacing, typography } from '../theme';
 
@@ -18,6 +20,7 @@ type Props = NativeStackScreenProps<ProfileStackParamList, 'ProfileMain'>;
 export default function ProfileScreen({ navigation }: Props) {
   const dispatch = useAppDispatch();
   const user = useAppSelector((state) => state.auth.user);
+  const useCustomerExperience = useAppSelector((state) => state.auth.useCustomerExperience);
 
   useEffect(() => {
     void getProfile()
@@ -47,12 +50,19 @@ export default function ProfileScreen({ navigation }: Props) {
               label="Partner With RACE"
               onPress={() => navigation.navigate('VendorTypeSelect')}
             />
+            {canAccessPartnerExperience(user) && useCustomerExperience ? (
+              <PrimaryButton
+                label="Partner Dashboard"
+                onPress={() => dispatch(setUseCustomerExperience(false))}
+              />
+            ) : null}
             <View style={styles.spacer} />
             <PrimaryButton
               label="Logout"
               onPress={() => {
                 dispatch(logout());
                 dispatch(resetOnboarding());
+                dispatch(resetVendorWizard());
               }}
               variant="outline"
             />
