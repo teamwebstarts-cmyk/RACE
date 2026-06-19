@@ -20,71 +20,18 @@ export interface ProfileState {
   subscription: UserSubscription;
 }
 
-const defaultNotificationPreferences: NotificationPreference[] = [
-  {
-    id: 'booking_updates',
-    title: 'Booking Updates',
-    description: 'Status changes, driver assigned, and arrival alerts',
-    enabled: true,
-    category: 'booking',
-  },
-  {
-    id: 'offers',
-    title: 'Offers & Promotions',
-    description: 'Discounts and seasonal deals',
-    enabled: true,
-    category: 'offers',
-  },
-  {
-    id: 'subscription',
-    title: 'Subscription Alerts',
-    description: 'Renewal reminders and plan benefits',
-    enabled: true,
-    category: 'subscription',
-  },
-];
-
 const initialState: ProfileState = {
-  savedLocations: [
-    {
-      id: 'loc_home',
-      type: 'home',
-      label: 'Home',
-      address: '123, MG Road, Bhubaneswar, Odisha',
-    },
-    {
-      id: 'loc_office',
-      type: 'office',
-      label: 'Office',
-      address: 'Infocity, Patia, Bhubaneswar',
-    },
-  ],
-  paymentMethods: [
-    {
-      id: 'pm_card_1',
-      type: 'card',
-      label: 'Visa',
-      details: '•••• •••• •••• 4242',
-      isDefault: true,
-      provider: 'Rahul Kumar',
-    },
-    {
-      id: 'pm_upi_1',
-      type: 'upi',
-      label: 'Google Pay',
-      details: 'rahul@oksbi',
-      provider: 'UPI',
-    },
-  ],
-  wallet: { balance: 1250, currency: 'INR' },
-  notificationPreferences: defaultNotificationPreferences,
+  savedLocations: [],
+  paymentMethods: [],
+  wallet: { balance: 0, currency: 'INR' },
+  notificationPreferences: [],
   notifications: [],
   settings: {
     language: 'English',
     darkMode: true,
     pushEnabled: true,
   },
-  subscription: { planId: 'basic', status: 'none' },
+  subscription: { planId: '', status: 'none' },
 };
 
 const profileSlice = createSlice({

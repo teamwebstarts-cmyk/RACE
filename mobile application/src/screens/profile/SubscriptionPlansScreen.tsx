@@ -1,15 +1,20 @@
 import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import SubscriptionCard from '../../components/subscription/SubscriptionCard';
+import LoadingState from '../../components/ui/LoadingState';
 import Screen, { ScreenContent } from '../../components/ui/Screen';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
-import { setSubscription } from '../../redux/profile/profileSlice';
 import { setBillingPeriod } from '../../redux/subscriptions/subscriptionsSlice';
+import {
+  useCurrentSubscriptionQuery,
+  useSubscribeMutation,
+  useSubscriptionPlansQuery,
+} from '../../services/subscriptions/useSubscriptionQueries';
+import { getApiErrorMessage } from '../../services/api/apiClient';
 import type { ProfileStackParamList } from '../../types/navigation';
-import type { SubscriptionPlanId } from '../../types/profile';
 import { colors, spacing, typography } from '../../theme';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'SubscriptionPlans'>;
@@ -18,11 +23,34 @@ export default function SubscriptionPlansScreen({ navigation }: Props) {
   const dispatch = useAppDispatch();
   const plans = useAppSelector((state) => state.subscriptions.plans);
   const billingPeriod = useAppSelector((state) => state.subscriptions.billingPeriod);
+  const { isLoading } = useSubscriptionPlansQuery(billingPeriod);
+  useCurrentSubscriptionQuery();
+  const subscribe = useSubscribeMutation();
 
-  const handleSelect = (planId: SubscriptionPlanId) => {
-    dispatch(setSubscription({ planId, status: 'active', expiresAt: new Date(Date.now() + 30 * 86400000).toISOString() }));
-    navigation.goBack();
+  const handleSelect = (planSlug: string, actionType?: string) => {
+    if (actionType === 'contact') {
+      Alert.alert('Corporate Plan', 'Please contact RACE support to activate corporate billing.');
+      return;
+    }
+
+    subscribe.mutate(
+      { planSlug, billingCycle: billingPeriod },
+      {
+        onSuccess: () => navigation.goBack(),
+        onError: (error) => {
+          Alert.alert('Subscription failed', getApiErrorMessage(error));
+        },
+      },
+    );
   };
+
+  if (isLoading && plans.length === 0) {
+    return (
+      <Screen>
+        <LoadingState message="Loading subscription plans..." />
+      </Screen>
+    );
+  }
 
   return (
     <Screen>
@@ -50,7 +78,11 @@ export default function SubscriptionPlansScreen({ navigation }: Props) {
             </View>
 
             {plans.map((plan) => (
-              <SubscriptionCard key={plan.id} plan={plan} onSelect={() => handleSelect(plan.id)} />
+              <SubscriptionCard
+                key={plan.id}
+                plan={plan}
+                onSelect={() => handleSelect(plan.slug ?? plan.id, plan.actionType)}
+              />
             ))}
 
             <Text style={styles.disclaimer}>

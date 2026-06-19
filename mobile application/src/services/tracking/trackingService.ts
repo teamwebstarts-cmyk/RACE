@@ -1,7 +1,9 @@
 /**
- * Socket-ready tracking service stub.
- * Replace connect/disconnect with a real WebSocket client when backend is ready.
+ * Polls backend tracking endpoint; falls back to simulated updates if API unavailable.
  */
+import { getBookingTracking } from '../bookings/bookingApi';
+import type { BookingStatus } from '../../types/booking';
+
 export interface TrackingUpdate {
   bookingId: string;
   latitude: number;
@@ -23,17 +25,34 @@ class TrackingService {
     this.listeners.get(bookingId)!.add(listener);
 
     if (!this.intervals.has(bookingId)) {
-      let eta = 25;
-      const interval = setInterval(() => {
-        eta = Math.max(1, eta - 1);
-        const update: TrackingUpdate = {
+      const poll = async () => {
+        const tracking = await getBookingTracking(bookingId);
+        if (tracking) {
+          const update: TrackingUpdate = {
+            bookingId,
+            latitude: tracking.driverLocation?.latitude ?? 20.2961,
+            longitude: tracking.driverLocation?.longitude ?? 85.8245,
+            etaMinutes: tracking.etaMinutes,
+            status: tracking.status,
+          };
+          this.listeners.get(bookingId)?.forEach((cb) => cb(update));
+          return;
+        }
+
+        // Fallback simulation when API unreachable
+        const fallback: TrackingUpdate = {
           bookingId,
           latitude: 20.2961 + Math.random() * 0.01,
           longitude: 85.8245 + Math.random() * 0.01,
-          etaMinutes: eta,
-          status: eta > 5 ? 'EN_ROUTE' : 'ARRIVED',
+          etaMinutes: 15,
+          status: 'EN_ROUTE' as BookingStatus,
         };
-        this.listeners.get(bookingId)?.forEach((cb) => cb(update));
+        this.listeners.get(bookingId)?.forEach((cb) => cb(fallback));
+      };
+
+      void poll();
+      const interval = setInterval(() => {
+        void poll();
       }, 5000);
       this.intervals.set(bookingId, interval);
     }
@@ -50,7 +69,7 @@ class TrackingService {
   }
 
   connect(_url?: string): void {
-    // Future: WebSocket connection
+    // Reserved for future WebSocket
   }
 
   disconnect(): void {

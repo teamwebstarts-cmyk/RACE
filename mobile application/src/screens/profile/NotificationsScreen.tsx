@@ -3,17 +3,30 @@ import { ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
+import LoadingState from '../../components/ui/LoadingState';
 import Screen, { Card, ScreenContent } from '../../components/ui/Screen';
-import { useAppDispatch, useAppSelector } from '../../redux/hooks';
-import { toggleNotificationPreference } from '../../redux/profile/profileSlice';
+import { useAppSelector } from '../../redux/hooks';
+import {
+  useNotificationPrefsQuery,
+  useUpdateNotificationPrefMutation,
+} from '../../services/profile/useProfileQueries';
 import type { ProfileStackParamList } from '../../types/navigation';
 import { colors, spacing, typography } from '../../theme';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'Notifications'>;
 
 export default function NotificationsScreen({}: Props) {
-  const dispatch = useAppDispatch();
+  const { isLoading } = useNotificationPrefsQuery();
+  const updatePref = useUpdateNotificationPrefMutation();
   const preferences = useAppSelector((state) => state.profile.notificationPreferences);
+
+  if (isLoading && preferences.length === 0) {
+    return (
+      <Screen>
+        <LoadingState message="Loading notification settings..." />
+      </Screen>
+    );
+  }
 
   return (
     <Screen>
@@ -30,8 +43,9 @@ export default function NotificationsScreen({}: Props) {
                   </View>
                   <Switch
                     value={pref.enabled}
-                    onValueChange={() => {
-                      dispatch(toggleNotificationPreference(pref.id));
+                    disabled={updatePref.isPending}
+                    onValueChange={(enabled) => {
+                      updatePref.mutate({ prefId: pref.id, enabled });
                     }}
                     trackColor={{ true: colors.primary, false: colors.border }}
                   />

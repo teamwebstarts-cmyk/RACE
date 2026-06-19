@@ -48,20 +48,24 @@ export interface AppSettings {
   pushEnabled: boolean;
 }
 
-export type SubscriptionPlanId = 'basic' | 'premium' | 'family';
+export type SubscriptionPlanId = string;
 
 export interface SubscriptionPlan {
   id: SubscriptionPlanId;
+  slug?: string;
   name: string;
   price: number;
   period: 'monthly' | 'yearly';
   features: Array<{ label: string; included: boolean }>;
   popular?: boolean;
   description?: string;
+  category?: string;
+  actionType?: string;
 }
 
 export interface UserSubscription {
   planId: SubscriptionPlanId;
-  status: 'active' | 'expired' | 'none';
+  planName?: string;
+  status: 'active' | 'expired' | 'none' | 'cancelled';
   expiresAt?: string;
 }

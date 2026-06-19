@@ -4,17 +4,29 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 
+import LoadingState from '../../components/ui/LoadingState';
 import PrimaryButton from '../../components/ui/PrimaryButton';
 import Screen, { Card, ScreenContent } from '../../components/ui/Screen';
 import { useAppSelector } from '../../redux/hooks';
+import { usePaymentMethodsQuery, useWalletQuery } from '../../services/profile/useProfileQueries';
 import type { ProfileStackParamList } from '../../types/navigation';
 import { colors, spacing, typography } from '../../theme';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'PaymentMethods'>;
 
 export default function PaymentMethodsScreen({}: Props) {
+  const { isLoading: loadingPayments } = usePaymentMethodsQuery();
+  const { isLoading: loadingWallet } = useWalletQuery();
   const wallet = useAppSelector((state) => state.profile.wallet);
   const methods = useAppSelector((state) => state.profile.paymentMethods);
+
+  if ((loadingPayments || loadingWallet) && methods.length === 0) {
+    return (
+      <Screen>
+        <LoadingState message="Loading payment methods..." />
+      </Screen>
+    );
+  }
 
   return (
     <Screen>

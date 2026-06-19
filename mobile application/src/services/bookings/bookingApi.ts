@@ -110,10 +110,31 @@ export async function createBookingApi(payload: CreateBookingRequest): Promise<B
 export async function submitBookingRating(
   bookingId: string,
   payload: SubmitRatingRequest,
-): Promise<void> {
+): Promise<Booking> {
+  const { data } = await apiClient.post<ApiSuccessResponse<Booking>>(
+    API_ENDPOINTS.bookingRating(bookingId),
+    payload,
+  );
+  return data.data;
+}
+
+export interface BookingTracking {
+  bookingId: string;
+  status: string;
+  etaMinutes: number;
+  driver?: Booking['driver'];
+  driverLocation?: { latitude: number; longitude: number };
+  pickup: Booking['pickup'];
+  dropoff?: Booking['dropoff'];
+}
+
+export async function getBookingTracking(bookingId: string): Promise<BookingTracking | null> {
   try {
-    await apiClient.post(API_ENDPOINTS.bookingRating(bookingId), payload);
+    const { data } = await apiClient.get<ApiSuccessResponse<BookingTracking>>(
+      API_ENDPOINTS.tracking(bookingId),
+    );
+    return data.data;
   } catch {
-    // Local-only fallback — rating stored in Redux
+    return null;
   }
 }

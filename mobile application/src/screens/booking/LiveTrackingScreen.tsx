@@ -8,6 +8,7 @@ import PrimaryButton from '../../components/ui/PrimaryButton';
 import Screen, { Card, ScreenContent } from '../../components/ui/Screen';
 import { useAppDispatch } from '../../redux/hooks';
 import { updateBookingStatus } from '../../redux/bookings/bookingsSlice';
+import type { BookingStatus } from '../../types/booking';
 import { useBookingQuery } from '../../services/bookings/useBookingQueries';
 import { trackingService } from '../../services/tracking/trackingService';
 import type { BookingsStackParamList } from '../../types/navigation';
@@ -28,7 +29,7 @@ export default function LiveTrackingScreen({ navigation, route }: Props) {
       dispatch(
         updateBookingStatus({
           id: booking.id,
-          status: update.status as import('../../types/booking').BookingStatus,
+          status: update.status as BookingStatus,
           etaMinutes: update.etaMinutes,
         }),
       );
