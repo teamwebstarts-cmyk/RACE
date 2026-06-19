@@ -1,18 +1,21 @@
 import React from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { NativeStackNavigationProp, NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import DocumentStatusChip from '../../components/vendor/DocumentStatusChip';
 import VerificationTimeline from '../../components/vendor/VerificationTimeline';
 import GlassCard from '../../components/ui/GlassCard';
 import PrimaryButton from '../../components/ui/PrimaryButton';
 import { getVendorConfig } from '../../data/vendorWizardConfig';
+import { useAppDispatch } from '../../redux/hooks';
+import { completeOnboarding } from '../../redux/auth/authSlice';
+import { finishPartnerSignup } from '../../redux/onboarding/onboardingSlice';
 import { useVendorStatusQuery } from '../../services/vendor/useVendorMutations';
-import type { ProfileStackParamList } from '../../types/navigation';
+import type { AuthStackParamList, VendorFlowParamList } from '../../types/navigation';
 import { colors, spacing, typography } from '../../theme';
 
-type Props = NativeStackScreenProps<ProfileStackParamList, 'VendorVerificationStatus'>;
+type Props = NativeStackScreenProps<VendorFlowParamList, 'VendorVerificationStatus'>;
 
 const STATUS_LABELS: Record<string, string> = {
   draft: 'Draft',
@@ -23,8 +26,15 @@ const STATUS_LABELS: Record<string, string> = {
   changes_requested: 'Resubmission Required',
 };
 
-export default function VerificationStatusScreen({ navigation }: Props) {
+export default function VerificationStatusScreen({ navigation, route }: Props) {
+  const dispatch = useAppDispatch();
+  const fromSignup = route.params?.fromSignup ?? false;
   const { data: vendor, isLoading, refetch, isRefetching } = useVendorStatusQuery();
+
+  const handleEnterApp = () => {
+    dispatch(finishPartnerSignup());
+    dispatch(completeOnboarding());
+  };
 
   if (isLoading) {
     return (
@@ -41,7 +51,9 @@ export default function VerificationStatusScreen({ navigation }: Props) {
           <Text style={styles.title}>No Application Found</Text>
           <PrimaryButton
             label="Start Partner Registration"
-            onPress={() => navigation.navigate('VendorTypeSelect')}
+            onPress={() =>
+              (navigation as NativeStackNavigationProp<AuthStackParamList>).navigate('AccountType')
+            }
           />
         </View>
       </SafeAreaView>
@@ -91,13 +103,19 @@ export default function VerificationStatusScreen({ navigation }: Props) {
           />
         ) : null}
 
+        {fromSignup ? (
+          <PrimaryButton label="Continue to App" onPress={handleEnterApp} />
+        ) : null}
+
         <PrimaryButton
           label={isRefetching ? 'Refreshing...' : 'Refresh Status'}
           variant="outline"
           onPress={() => void refetch()}
         />
 
-        <PrimaryButton label="Back to Profile" variant="outline" onPress={() => navigation.popToTop()} />
+        {!fromSignup ? (
+          <PrimaryButton label="Back to Profile" variant="outline" onPress={() => navigation.popToTop()} />
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );

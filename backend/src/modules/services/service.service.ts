@@ -1,10 +1,13 @@
 import { serviceRepository } from './service.repository';
+import { SERVICE_BASE_PRICES } from '../bookings/booking.constants';
 import type { IService } from './service.model';
 
 export interface MobileServiceItem {
   id: string;
   label: string;
   description?: string;
+  fromPrice?: number;
+  currency?: string;
 }
 
 export interface MobileServiceCategory {
@@ -19,6 +22,19 @@ export class ServiceCatalogService {
   async getGroupedServices(): Promise<MobileServiceCategory[]> {
     const services = await serviceRepository.findAllActive();
     return this.groupServices(services);
+  }
+
+  async getUpcomingServices() {
+    const services = await serviceRepository.findAllActive();
+    return services
+      .filter((s) => s.category === 'future')
+      .map((s) => ({
+        id: s.slug,
+        title: s.title,
+        description: s.description,
+        icon: s.icon ?? s.categoryIcon,
+        isComingSoon: true,
+      }));
   }
 
   groupServices(services: IService[]): MobileServiceCategory[] {
@@ -39,6 +55,8 @@ export class ServiceCatalogService {
         id: service.slug,
         label: service.title,
         description: service.description,
+        fromPrice: SERVICE_BASE_PRICES[service.slug],
+        currency: 'INR',
       });
     }
 

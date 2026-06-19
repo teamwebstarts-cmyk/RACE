@@ -1,10 +1,11 @@
 import React from 'react';
-import { ActivityIndicator, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 
+import BookingCard from '../components/booking/BookingCard';
 import QuickActionGrid from '../components/dashboard/QuickActionGrid';
 import SosButton from '../components/dashboard/SosButton';
 import VehicleCard from '../components/dashboard/VehicleCard';
@@ -17,6 +18,7 @@ import HighlightCard from '../components/ui/HighlightCard';
 import LocationBar from '../components/ui/LocationBar';
 import Screen, { ScreenContent, SectionTitle } from '../components/ui/Screen';
 import { useBrandQuery, useServicesQuery } from '../services/catalog/useCatalogQueries';
+import { useBookingsQuery } from '../services/bookings/useBookingQueries';
 import { useVehiclesQuery } from '../services/vehicles/useVehicleQueries';
 import type { HomeStackParamList, RootTabParamList } from '../types/navigation';
 import { colors, layout, spacing, typography } from '../theme';
@@ -30,8 +32,10 @@ export default function HomeScreen({ navigation }: Props) {
   const { data: brand, isLoading: brandLoading } = useBrandQuery();
   const { data: categories = [], isLoading: servicesLoading } = useServicesQuery();
   const { data: vehicles = [] } = useVehiclesQuery();
+  const { data: bookings = [] } = useBookingsQuery();
 
   const primaryVehicle = vehicles[0];
+  const recentBookings = bookings.slice(0, 3);
   const totalServices = categories.reduce(
     (count, category) => count + category.services.length,
     0,
@@ -88,10 +92,34 @@ export default function HomeScreen({ navigation }: Props) {
             <SectionTitle title="quick" highlight="actions" subtitle="Emergency roadside services" />
             <QuickActionGrid onAction={handleQuickAction} />
 
-            <GlassCard style={styles.banner}>
+            <Pressable
+              style={styles.banner}
+              onPress={() =>
+                navigation.getParent()?.navigate('Profile', { screen: 'SubscriptionPlans' })
+              }>
               <Text style={styles.bannerTitle}>RACE Subscription</Text>
               <Text style={styles.bannerText}>Priority dispatch, zero wait surcharge, and annual roadside cover.</Text>
-            </GlassCard>
+              <Text style={styles.bannerCta}>View Plans →</Text>
+            </Pressable>
+
+            {recentBookings.length > 0 ? (
+              <>
+                <SectionTitle title="recent" highlight="bookings" />
+                {recentBookings.map((booking) => (
+                  <BookingCard
+                    key={booking.id}
+                    booking={booking}
+                    compact
+                    onPress={() =>
+                      navigation.getParent()?.navigate('Bookings', {
+                        screen: 'BookingDetail',
+                        params: { bookingId: booking.id },
+                      })
+                    }
+                  />
+                ))}
+              </>
+            ) : null}
 
             <Text style={styles.catalogMeta}>
               {categories.length} categories · {totalServices} services
@@ -121,12 +149,16 @@ export default function HomeScreen({ navigation }: Props) {
                 <ServiceCategoryCard
                   key={category.id}
                   category={category}
-                  onPress={() =>
+                  onPress={() => {
+                    if (category.id === 'future') {
+                      navigation.navigate('MoreServices');
+                      return;
+                    }
                     navigation.navigate('ServiceList', {
                       categoryId: category.id,
                       categoryTitle: category.title,
-                    })
-                  }
+                    });
+                  }}
                 />
               ))}
             </View>
@@ -169,7 +201,13 @@ const styles = StyleSheet.create({
   emptyVehicle: { marginBottom: spacing.lg },
   emptyTitle: { color: colors.textLight, fontWeight: typography.weights.bold, fontSize: typography.sizes.lg },
   emptyText: { color: colors.subtext, marginTop: spacing.xs },
-  banner: { marginVertical: spacing.lg },
+  banner: {
+    marginVertical: spacing.lg,
+    backgroundColor: colors.surfaceDark,
+    borderRadius: 16,
+    padding: spacing.lg,
+  },
   bannerTitle: { color: colors.secondary, fontWeight: typography.weights.bold, fontSize: typography.sizes.lg },
   bannerText: { color: colors.subtext, marginTop: spacing.xs, lineHeight: 20 },
+  bannerCta: { color: colors.primary, fontWeight: typography.weights.bold, marginTop: spacing.sm },
 });

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Linking, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -11,10 +11,19 @@ import { brand, colors, spacing, typography } from '../theme';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'SelectService'>;
 
-export default function SelectServiceScreen({ route }: Props) {
-  const { serviceLabel, serviceDescription } = route.params;
+export default function SelectServiceScreen({ navigation, route }: Props) {
+  const { categoryId, serviceId, serviceLabel, serviceDescription } = route.params;
 
   const handleBook = () => {
+    navigation.navigate('BookingFlow', {
+      categoryId,
+      serviceId,
+      serviceLabel,
+      serviceDescription,
+    });
+  };
+
+  const handleCall = () => {
     Linking.openURL(`tel:${brand.phoneRaw}`);
   };
 
@@ -30,11 +39,12 @@ export default function SelectServiceScreen({ route }: Props) {
               <Text style={styles.description}>{serviceDescription}</Text>
             ) : null}
             <Text style={styles.subtitle}>
-              Available 24/7 across Bhubaneswar and Odisha. Call now to confirm
-              your booking.
+              Available 24/7 across Bhubaneswar and Odisha. Book in-app or call now.
             </Text>
-            <PrimaryButton label="Call to Book" onPress={handleBook} />
-            <Text style={styles.phone}>{brand.phone}</Text>
+            <PrimaryButton label="Book Now" onPress={handleBook} />
+            <Pressable onPress={handleCall} style={styles.callLink}>
+              <Text style={styles.callText}>Or call {brand.phone}</Text>
+            </Pressable>
           </View>
         </ScreenContent>
       </SafeAreaView>
@@ -43,22 +53,15 @@ export default function SelectServiceScreen({ route }: Props) {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-  },
+  safeArea: { flex: 1 },
+  content: { flex: 1, justifyContent: 'center' },
   hero: {
     backgroundColor: colors.surfaceDark,
     borderRadius: 20,
     padding: spacing.xxl,
     alignItems: 'center',
   },
-  logo: {
-    marginBottom: spacing.lg,
-  },
+  logo: { marginBottom: spacing.lg },
   kicker: {
     color: colors.primary,
     fontSize: typography.sizes.sm,
@@ -87,8 +90,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
     textAlign: 'center',
   },
-  phone: {
-    marginTop: spacing.md,
+  callLink: { marginTop: spacing.md },
+  callText: {
     fontSize: typography.sizes.md,
     color: colors.primary,
     fontWeight: typography.weights.bold,

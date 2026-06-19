@@ -50,7 +50,7 @@ const GENDERS: CompleteProfileRequest['gender'][] = [
 function resetToLogin(navigation: Props['navigation']) {
   navigation.reset({
     index: 0,
-    routes: [{ name: 'MobileNumber' }],
+    routes: [{ name: 'AccountType' }],
   });
 }
 
@@ -58,6 +58,9 @@ export default function ProfileWizardScreen({ navigation }: Props) {
   const dispatch = useAppDispatch();
   const loading = useAppSelector((state) => state.auth.loading);
   const accessToken = useAppSelector((state) => state.auth.accessToken);
+  const partnerSignupRequired = useAppSelector((state) => state.onboarding.partnerSignupRequired);
+  const signupVendorType = useAppSelector((state) => state.onboarding.signupVendorType);
+  const signupAccountType = useAppSelector((state) => state.onboarding.signupAccountType);
   const draft = useAppSelector((state) => state.onboarding.profileDraft);
   const currentStep = useAppSelector((state) => state.onboarding.currentStep);
 
@@ -176,6 +179,10 @@ export default function ProfileWizardScreen({ navigation }: Props) {
         dispatch(completeOnboarding(updatedUser));
         return;
       }
+      if (partnerSignupRequired && signupVendorType) {
+        navigation.replace('VendorWizard', { vendorType: signupVendorType });
+        return;
+      }
       dispatch(startVehicleOnboarding());
       navigation.replace('AddFirstVehicle');
     } catch (err) {
@@ -197,7 +204,11 @@ export default function ProfileWizardScreen({ navigation }: Props) {
           <View style={styles.header}>
             <BrandLogo size="medium" />
             <Text style={styles.title}>Profile Setup</Text>
-            <Text style={styles.subtitle}>Premium onboarding for roadside assistance</Text>
+            <Text style={styles.subtitle}>
+              {partnerSignupRequired
+                ? `Complete your profile, then verify documents for ${signupAccountType === 'driver' ? 'driver' : 'vendor'} onboarding`
+                : 'Premium onboarding for roadside assistance'}
+            </Text>
           </View>
 
           <ProgressStepper currentStep={currentStep} totalSteps={5} labels={STEP_LABELS} />

@@ -9,18 +9,21 @@ import GlassCard from '../../components/ui/GlassCard';
 import PrimaryButton from '../../components/ui/PrimaryButton';
 import { getVendorConfig } from '../../data/vendorWizardConfig';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
+import { completeOnboarding } from '../../redux/auth/authSlice';
+import { finishPartnerSignup } from '../../redux/onboarding/onboardingSlice';
 import { resetVendorWizard } from '../../redux/vendor/vendorOnboardingSlice';
 import { getApiErrorMessage } from '../../services/api/apiClient';
 import { useRegisterVendorMutation } from '../../services/vendor/useVendorMutations';
-import type { ProfileStackParamList } from '../../types/navigation';
+import type { VendorFlowParamList } from '../../types/navigation';
 import type { UploadedDocument } from '../../types/vendor';
 import { colors, spacing, typography } from '../../theme';
 
-type Props = NativeStackScreenProps<ProfileStackParamList, 'VendorReview'>;
+type Props = NativeStackScreenProps<VendorFlowParamList, 'VendorReview'>;
 
 export default function ReviewSubmissionScreen({ navigation }: Props) {
   const dispatch = useAppDispatch();
   const draft = useAppSelector((state) => state.vendorOnboarding.draft);
+  const partnerSignupRequired = useAppSelector((state) => state.onboarding.partnerSignupRequired);
   const registerMutation = useRegisterVendorMutation();
   const [error, setError] = React.useState('');
 
@@ -51,7 +54,7 @@ export default function ReviewSubmissionScreen({ navigation }: Props) {
         acceptTerms: true,
       });
       dispatch(resetVendorWizard());
-      navigation.replace('VendorVerificationStatus');
+      navigation.replace('VendorVerificationStatus', { fromSignup: partnerSignupRequired });
     } catch (err) {
       setError(getApiErrorMessage(err, 'Unable to submit application'));
     }

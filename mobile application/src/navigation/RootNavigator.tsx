@@ -3,6 +3,7 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
+import SplashScreen from '../screens/auth/SplashScreen';
 import AuthNavigator from './AuthNavigator';
 import MainNavigator from './MainNavigator';
 import PartnerNavigator from './PartnerNavigator';
@@ -42,12 +43,17 @@ export default function RootNavigator() {
   return (
     <NavigationContainer theme={navigationTheme}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {!isAuthenticated ? (
-          <Stack.Screen name="Auth" component={AuthNavigator} />
-        ) : showPartner ? (
-          <Stack.Screen name="Partner" component={PartnerNavigator} />
+        {isAuthenticated ? (
+          showPartner ? (
+            <Stack.Screen name="Partner" component={PartnerNavigator} />
+          ) : (
+            <Stack.Screen name="Main" component={MainNavigator} />
+          )
         ) : (
-          <Stack.Screen name="Main" component={MainNavigator} />
+          <>
+            <Stack.Screen name="Splash" component={SplashScreen} />
+            <Stack.Screen name="Auth" component={AuthNavigator} />
+          </>
         )}
       </Stack.Navigator>
     </NavigationContainer>

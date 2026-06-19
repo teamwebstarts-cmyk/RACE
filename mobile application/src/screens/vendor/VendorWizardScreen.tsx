@@ -36,12 +36,15 @@ import {
   useUploadVendorDocumentMutation,
   useUploadVendorSelfieMutation,
 } from '../../services/vendor/useVendorMutations';
-import type { ProfileStackParamList } from '../../types/navigation';
+import type { AuthStackParamList, ProfileStackParamList } from '../../types/navigation';
 import type { VendorDraft, WizardStepConfig, UploadedDocument } from '../../types/vendor';
 import { colors, spacing, typography } from '../../theme';
 import type { PickedFile } from '../../components/vendor/DocumentUpload';
 
-type Props = NativeStackScreenProps<ProfileStackParamList, 'VendorWizard'>;
+type Props = NativeStackScreenProps<
+  AuthStackParamList & ProfileStackParamList,
+  'VendorWizard'
+>;
 
 function validateStep(step: WizardStepConfig, draft: VendorDraft): string | null {
   if (step.kind === 'business_info' || step.kind === 'personal_info') {
