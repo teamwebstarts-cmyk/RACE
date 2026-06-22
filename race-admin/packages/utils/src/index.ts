@@ -28,6 +28,53 @@ export function formatRelativeTime(iso: string): string {
   return `${days} day${days > 1 ? 's' : ''} ago`;
 }
 
+export function formatDate(iso: string, options?: Intl.DateTimeFormatOptions): string {
+  return new Intl.DateTimeFormat('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    ...options,
+  }).format(new Date(iso));
+}
+
+export function formatDateTime(iso: string): string {
+  return new Intl.DateTimeFormat('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  }).format(new Date(iso));
+}
+
+export function exportToCsv<T extends object>(
+  filename: string,
+  rows: T[],
+  columns: { key: keyof T; header: string }[],
+): void {
+  const header = columns.map((c) => c.header).join(',');
+  const body = rows
+    .map((row) =>
+      columns
+        .map((c) => {
+          const val = row[c.key];
+          const str = val == null ? '' : String(val);
+          return str.includes(',') || str.includes('"') ? `"${str.replace(/"/g, '""')}"` : str;
+        })
+        .join(','),
+    )
+    .join('\n');
+
+  const blob = new Blob([`${header}\n${body}`], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 export function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }

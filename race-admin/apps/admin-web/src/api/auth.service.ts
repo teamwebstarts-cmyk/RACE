@@ -7,7 +7,7 @@ export async function loginWithCredentials(
   values: LoginFormValues,
 ): Promise<LoginResponse> {
   return apiLogin({
-    identifier: values.email.trim(),
+    identifier: values.identifier.trim(),
     password: values.password,
     rememberMe: values.rememberMe,
   });

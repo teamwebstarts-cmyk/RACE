@@ -13,6 +13,7 @@ const badgeVariants = cva(
         warning: 'border-transparent bg-[#D97706]/15 text-[#D97706]',
         error: 'border-transparent bg-[#DC2626]/15 text-[#DC2626]',
         info: 'border-transparent bg-[#2563EB]/15 text-[#2563EB]',
+        purple: 'border-transparent bg-[#7C3AED]/15 text-[#7C3AED]',
         outline: 'border-[#EEEEEE] text-[#555555]',
         neutral: 'border-transparent bg-[#F4F5F7] text-[#555555]',
       },
@@ -35,10 +36,12 @@ export function StatusBadge({ status }: { status: string }) {
   const normalized = status.toUpperCase();
   let variant: VariantProps<typeof badgeVariants>['variant'] = 'neutral';
 
-  if (['COMPLETED', 'APPROVED', 'PAID', 'ACTIVE'].includes(normalized)) variant = 'success';
-  else if (['PENDING', 'ASSIGNED', 'EN_ROUTE', 'PAYMENT_PENDING'].includes(normalized)) variant = 'warning';
-  else if (['CANCELLED', 'REJECTED', 'FAILED'].includes(normalized)) variant = 'error';
-  else if (['IN_PROGRESS', 'SERVICE_STARTED'].includes(normalized)) variant = 'info';
+  if (['COMPLETED', 'APPROVED', 'PAID', 'ACTIVE', 'VERIFIED'].includes(normalized)) variant = 'success';
+  else if (['PENDING', 'PAYMENT_PENDING', 'ON_LEAVE', 'UNDER_MAINTENANCE', 'CREATED'].includes(normalized))
+    variant = 'warning';
+  else if (['ASSIGNED'].includes(normalized)) variant = 'purple';
+  else if (['EN_ROUTE', 'IN_PROGRESS', 'SERVICE_STARTED'].includes(normalized)) variant = 'info';
+  else if (['CANCELLED', 'REJECTED', 'FAILED', 'SUSPENDED'].includes(normalized)) variant = 'error';
 
   return <Badge variant={variant}>{status.replace(/_/g, ' ')}</Badge>;
 }

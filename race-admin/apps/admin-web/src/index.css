@@ -4,11 +4,26 @@
 
 :root {
   --primary: #f5a623;
+  --primary-rgb: 245 166 35;
+  --primary-dark: #d97706;
   --background: #f4f5f7;
-  --content: #ffffff;
-  --border: #eeeeee;
+  --surface: #ffffff;
+  --border: #eaeaea;
   --heading: #1a1a2e;
   --body: #555555;
+  --muted: #9ca3af;
+  --success: #16a34a;
+  --success-rgb: 22 163 74;
+  --warning: #d97706;
+  --warning-rgb: 217 119 6;
+  --error: #dc2626;
+  --error-rgb: 220 38 38;
+  --info: #2563eb;
+  --info-rgb: 37 99 235;
+  --sidebar-width: 260px;
+  --sidebar-collapsed: 80px;
+  --radius-card: 12px;
+  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.05);
 }
 
 * {
@@ -26,9 +41,68 @@ body {
   background: var(--background);
   color: var(--body);
   font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
+.dark {
+  --primary: #f5a623;
+  --primary-rgb: 245 166 35;
+  --primary-dark: #fbbf24;
+  --background: #0f1419;
+  --surface: #1a1f2e;
+  --border: #2d3748;
+  --heading: #f7fafc;
+  --body: #cbd5e1;
+  --muted: #94a3b8;
+  --success: #22c55e;
+  --success-rgb: 34 197 94;
+  --warning: #f59e0b;
+  --warning-rgb: 245 158 11;
+  --error: #ef4444;
+  --error-rgb: 239 68 68;
+  --info: #60a5fa;
+  --info-rgb: 96 165 250;
+  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.35);
+}
+
+.dark body {
+  background: var(--background);
+  color: var(--body);
+}
+
+@layer components {
+  .race-card {
+    @apply rounded-card border border-border bg-surface shadow-card;
+  }
+
+  .race-page-container {
+    @apply w-full min-w-0 px-4 py-5 lg:px-6 lg:py-6;
+  }
+
+  .race-page-container--constrained {
+    @apply mx-auto max-w-content;
+  }
+
+  .race-page-container--full {
+    @apply max-w-none;
+  }
+
+  .race-nav-active {
+    @apply relative bg-primary/10 text-primary-dark font-semibold;
+  }
+
+  .race-nav-active::before {
+    content: '';
+    @apply absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-primary;
+  }
+}
+
+/* Custom scrollbar for sidebar */
+.race-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.race-scrollbar::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 4px;
 }

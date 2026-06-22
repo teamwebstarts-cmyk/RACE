@@ -17,7 +17,11 @@ export const THEME = {
   warning: '#D97706',
   error: '#DC2626',
   info: '#2563EB',
-  sidebarWidth: 220,
+  sidebarWidth: 260,
+  sidebarCollapsedWidth: 80,
+  cardRadius: 12,
+  cardShadow: '0 4px 24px rgba(0, 0, 0, 0.05)',
+  cardBorder: '#EAEAEA',
 } as const;
 
 export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
@@ -64,6 +68,25 @@ export const NAV_ITEMS = [
   { label: 'Subscription Management', href: '/subscriptions', icon: 'CreditCard', permission: Permission.SUBSCRIPTIONS_VIEW },
   { label: 'Admin Users & Roles', href: '/admin-users', icon: 'Shield', permission: Permission.ADMIN_USERS_VIEW },
   { label: 'Settings', href: '/settings', icon: 'Settings', permission: Permission.SETTINGS_VIEW },
+] as const;
+
+export const NAV_SECTIONS = [
+  {
+    label: 'Overview',
+    hrefs: ['/dashboard'] as const,
+  },
+  {
+    label: 'Operations',
+    hrefs: ['/customers', '/vendors', '/drivers', '/bookings'] as const,
+  },
+  {
+    label: 'Business',
+    hrefs: ['/financial', '/reports', '/subscriptions'] as const,
+  },
+  {
+    label: 'Administration',
+    hrefs: ['/admin-users', '/settings'] as const,
+  },
 ] as const;
 
 export const CHART_COLORS = {

@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Eye, EyeOff, Loader2, Lock, Mail, Shield } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Lock, Shield, User } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 
@@ -7,6 +7,9 @@ import { Button } from '@race/ui';
 
 import { useLogin } from '@/hooks/use-login';
 import { loginFormSchema, type LoginFormValues } from '@/types/auth';
+
+const inputClass =
+  'flex h-12 w-full rounded-lg border border-[#D1D5DB] bg-white pl-10 pr-4 text-sm text-[#1A1A2E] placeholder:text-[#9CA3AF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F5A623]/50 disabled:opacity-60';
 
 export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
@@ -19,7 +22,7 @@ export function LoginForm() {
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginFormSchema),
     defaultValues: {
-      email: '',
+      identifier: '',
       password: '',
       rememberMe: false,
     },
@@ -35,12 +38,12 @@ export function LoginForm() {
   const apiError = loginMutation.error?.message;
 
   return (
-    <div className="flex w-full max-w-md flex-col">
+    <div className="w-full">
       <div className="mb-8 text-center">
-        <h1 className="text-2xl font-bold text-[#1A1A2E]">
+        <h1 className="text-[1.65rem] font-bold leading-tight text-[#1A1A2E]">
           Welcome Back! <span aria-hidden>👋</span>
         </h1>
-        <p className="mt-2 text-sm text-[#555555]">Sign in to continue to RACE Admin Panel</p>
+        <p className="mt-2 text-sm text-[#6B7280]">Sign in to continue to RACE Admin Panel</p>
       </div>
 
       {apiError ? (
@@ -63,48 +66,48 @@ export function LoginForm() {
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
         <div>
-          <label htmlFor="email" className="mb-1.5 block text-sm font-semibold text-[#1A1A2E]">
-            Email
+          <label htmlFor="identifier" className="mb-2 block text-sm font-bold text-[#1A1A2E]">
+            Email or Mobile Number
           </label>
           <div className="relative">
-            <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9CA3AF]" />
+            <User className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-[#9CA3AF]" />
             <input
-              id="email"
-              type="email"
-              autoComplete="email"
-              placeholder="Enter your email"
+              id="identifier"
+              type="text"
+              autoComplete="username"
+              placeholder="Enter email or mobile number"
               disabled={isLoading}
-              className="flex h-12 w-full rounded-xl border border-[#E5E7EB] bg-white pl-10 pr-4 text-sm text-[#1A1A2E] placeholder:text-[#9CA3AF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F5A623] disabled:opacity-60"
-              {...register('email')}
+              className={inputClass}
+              {...register('identifier')}
             />
           </div>
-          {errors.email ? (
-            <p className="mt-1.5 text-xs text-[#DC2626]">{errors.email.message}</p>
+          {errors.identifier ? (
+            <p className="mt-1.5 text-xs text-[#DC2626]">{errors.identifier.message}</p>
           ) : null}
         </div>
 
         <div>
-          <label htmlFor="password" className="mb-1.5 block text-sm font-semibold text-[#1A1A2E]">
+          <label htmlFor="password" className="mb-2 block text-sm font-bold text-[#1A1A2E]">
             Password
           </label>
           <div className="relative">
-            <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9CA3AF]" />
+            <Lock className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-[#9CA3AF]" />
             <input
               id="password"
               type={showPassword ? 'text' : 'password'}
               autoComplete="current-password"
               placeholder="Enter your password"
               disabled={isLoading}
-              className="flex h-12 w-full rounded-xl border border-[#E5E7EB] bg-white pl-10 pr-11 text-sm text-[#1A1A2E] placeholder:text-[#9CA3AF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F5A623] disabled:opacity-60"
+              className={`${inputClass} pr-11`}
               {...register('password')}
             />
             <button
               type="button"
               onClick={() => setShowPassword((v) => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9CA3AF] hover:text-[#555555]"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9CA3AF] hover:text-[#6B7280]"
               aria-label={showPassword ? 'Hide password' : 'Show password'}
             >
-              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              {showPassword ? <EyeOff className="h-[18px] w-[18px]" /> : <Eye className="h-[18px] w-[18px]" />}
             </button>
           </div>
           {errors.password ? (
@@ -112,8 +115,8 @@ export function LoginForm() {
           ) : null}
         </div>
 
-        <div className="flex items-center justify-between gap-4">
-          <label className="flex cursor-pointer items-center gap-2 text-sm text-[#555555]">
+        <div className="flex items-center justify-between gap-4 pt-1">
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-[#4B5563]">
             <input
               type="checkbox"
               disabled={isLoading}
@@ -134,7 +137,7 @@ export function LoginForm() {
         <Button
           type="submit"
           disabled={isLoading || isSuccess}
-          className="h-12 w-full rounded-xl text-base font-semibold"
+          className="h-12 w-full rounded-lg bg-[#F5A623] text-base font-bold text-white hover:bg-[#e09515]"
         >
           {isLoading ? (
             <>
@@ -147,7 +150,7 @@ export function LoginForm() {
         </Button>
       </form>
 
-      <div className="mt-6 flex items-center justify-center gap-2 text-xs text-[#9CA3AF]">
+      <div className="mt-6 flex items-center justify-center gap-2 text-center text-xs text-[#9CA3AF]">
         <Shield className="h-3.5 w-3.5 shrink-0" />
         <span>Authorized access only. Activity may be monitored.</span>
       </div>

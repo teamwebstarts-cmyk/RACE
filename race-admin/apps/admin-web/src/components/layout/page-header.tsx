@@ -1,4 +1,7 @@
-import { Link } from 'react-router-dom';import { ChevronRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ChevronRight } from 'lucide-react';
+
+import { cn } from '@race/utils';
 
 export interface BreadcrumbItem {
   label: string;
@@ -7,16 +10,16 @@ export interface BreadcrumbItem {
 
 export function Breadcrumb({ items }: { items: BreadcrumbItem[] }) {
   return (
-    <nav aria-label="Breadcrumb" className="mb-2 flex items-center gap-1 text-sm text-[#555555]">
+    <nav aria-label="Breadcrumb" className="mb-1 flex items-center gap-1 text-xs text-muted">
       {items.map((item, index) => (
         <span key={`${item.label}-${index}`} className="flex items-center gap-1">
-          {index > 0 ? <ChevronRight className="h-3.5 w-3.5" /> : null}
+          {index > 0 ? <ChevronRight className="h-3 w-3" /> : null}
           {item.href ? (
-            <Link to={item.href} className="hover:text-[#1A1A2E]">
+            <Link to={item.href} className="transition hover:text-heading">
               {item.label}
             </Link>
           ) : (
-            <span className="text-[#1A1A2E]">{item.label}</span>
+            <span className="font-medium text-body">{item.label}</span>
           )}
         </span>
       ))}
@@ -29,20 +32,22 @@ export function PageHeader({
   description,
   breadcrumbs,
   actions,
+  className,
 }: {
   title: string;
   description?: string;
   breadcrumbs?: BreadcrumbItem[];
   actions?: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-      <div>
+    <div className={cn('mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between', className)}>
+      <div className="min-w-0">
         {breadcrumbs ? <Breadcrumb items={breadcrumbs} /> : null}
-        <h1 className="text-2xl font-bold text-[#1A1A2E]">{title}</h1>
-        {description ? <p className="mt-1 text-sm text-[#555555]">{description}</p> : null}
+        <h1 className="text-xl font-bold tracking-tight text-heading sm:text-2xl">{title}</h1>
+        {description ? <p className="mt-1 text-sm text-body">{description}</p> : null}
       </div>
-      {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
+      {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
     </div>
   );
 }

@@ -1,9 +1,24 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 
 import { ProtectedRoute, PublicOnlyRoute } from '@/components/guards/protected-route';
+import { AdminUsersPage } from './pages/admin-users/AdminUsersPage';
+import { BookingDetailPage } from './pages/bookings/BookingDetailPage';
+import { BookingsPage } from './pages/bookings/BookingsPage';
+import { CustomerDetailPage } from './pages/customers/CustomerDetailPage';
+import { CustomersPage } from './pages/customers/CustomersPage';
 import { DashboardLayout } from './layouts/DashboardLayout';
+import { DriverDetailPage } from './pages/drivers/DriverDetailPage';
+import { DriversPage } from './pages/drivers/DriversPage';
 import { DashboardPage } from './pages/DashboardPage';
+import { FinancialPage } from './pages/financial/FinancialPage';
 import { LoginPage } from './pages/LoginPage';
+import { NotificationsPage } from './pages/notifications/NotificationsPage';
+import { ProfilePage } from './pages/profile/ProfilePage';
+import { ReportsPage } from './pages/reports/ReportsPage';
+import { SettingsPage } from './pages/settings/SettingsPage';
+import { SubscriptionsPage } from './pages/subscriptions/SubscriptionsPage';
+import { VendorDetailPage } from './pages/vendors/VendorDetailPage';
+import { VendorsPage } from './pages/vendors/VendorsPage';
 import { useAuthStore } from '@/stores/auth.store';
 
 function RootRedirect() {
@@ -23,6 +38,21 @@ export default function App() {
       <Route element={<ProtectedRoute />}>
         <Route element={<DashboardLayout />}>
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/customers" element={<CustomersPage />} />
+          <Route path="/customers/:id" element={<CustomerDetailPage />} />
+          <Route path="/vendors" element={<VendorsPage />} />
+          <Route path="/vendors/:id" element={<VendorDetailPage />} />
+          <Route path="/drivers" element={<DriversPage />} />
+          <Route path="/drivers/:id" element={<DriverDetailPage />} />
+          <Route path="/bookings" element={<BookingsPage />} />
+          <Route path="/bookings/:id" element={<BookingDetailPage />} />
+          <Route path="/financial" element={<FinancialPage />} />
+          <Route path="/reports" element={<ReportsPage />} />
+          <Route path="/subscriptions" element={<SubscriptionsPage />} />
+          <Route path="/admin-users" element={<AdminUsersPage />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/settings" element={<SettingsPage />} />
         </Route>
       </Route>
 
