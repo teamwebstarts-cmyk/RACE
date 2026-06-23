@@ -1,14 +1,14 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Circle, Clock, Phone, Radio, type LucideIcon } from 'lucide-react-native';
 
 import { colors, radius, spacing, typography } from '../../theme';
 import type { Highlight, HighlightIcon } from '../../types/models';
 
-const HIGHLIGHT_ICONS: Record<HighlightIcon, keyof typeof Ionicons.glyphMap> = {
-  clock: 'time-outline',
-  phone: 'call-outline',
-  live: 'radio-outline',
+const HIGHLIGHT_ICONS: Record<HighlightIcon, LucideIcon> = {
+  clock: Clock,
+  phone: Phone,
+  live: Radio,
 };
 
 interface HighlightCardProps {
@@ -16,12 +16,12 @@ interface HighlightCardProps {
 }
 
 export default function HighlightCard({ item }: HighlightCardProps) {
-  const iconName = HIGHLIGHT_ICONS[item.icon] ?? 'ellipse-outline';
+  const Icon = HIGHLIGHT_ICONS[item.icon] ?? Circle;
 
   return (
     <View style={styles.card}>
       <View style={styles.iconWrap}>
-        <Ionicons name={iconName} size={18} color={colors.primary} />
+        <Icon size={18} color={colors.primary} strokeWidth={2} />
         {item.icon === 'live' ? <View style={styles.liveDot} /> : null}
       </View>
       <Text style={styles.value}>{item.value}</Text>

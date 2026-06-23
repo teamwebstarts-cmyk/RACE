@@ -1,0 +1,433 @@
+import React from 'react';
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import {
+  ArrowRight,
+  Bell,
+  Check,
+  ChevronRight,
+  Crown,
+  LogOut,
+  Pencil,
+  Shield,
+  UserRound,
+} from 'lucide-react-native';
+
+import { PROFILE_MENU_ITEMS, PROFILE_QUICK_STATS } from '../constants/profileScreen';
+import { PROFILE_MENU_ROUTES } from '../constants/profileSubScreens';
+import { USER } from '../constants/demo';
+import type { ProfileStackParamList } from '../types/navigation';
+import { colors, shadows, typography } from '../theme';
+
+const REF_W = 390;
+
+function ProfileAvatar({ size, px }: { size: number; px: (n: number) => number }) {
+  return (
+    <View
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        backgroundColor: colors.goldLight,
+        borderWidth: 2,
+        borderColor: colors.primary,
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
+      }}>
+      <UserRound
+        size={px(Math.round(size * 0.42))}
+        color={colors.primary}
+        fill={colors.primary}
+        strokeWidth={1.5}
+      />
+    </View>
+  );
+}
+
+export default function ProfileScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const s = width / REF_W;
+  const px = (n: number) => Math.round(n * s);
+
+  return (
+    <View style={styles.root}>
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: px(16) + insets.bottom }}>
+          <View style={{ marginHorizontal: px(20) }}>
+            <View style={styles.headerRow}>
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={{
+                    fontSize: px(28),
+                    fontWeight: typography.weights.extrabold,
+                    color: colors.dark,
+                  }}>
+                  Profile
+                </Text>
+                <Text
+                  style={{
+                    marginTop: px(4),
+                    fontSize: px(13),
+                    color: colors.grey,
+                    lineHeight: px(18),
+                  }}>
+                  Manage your account and preferences
+                </Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: px(12) }}>
+                <Pressable hitSlop={8} style={styles.bellWrap} onPress={() => navigation.navigate('Notifications')}>
+                  <Bell size={px(22)} color={colors.dark} strokeWidth={2} />
+                  <View style={styles.bellDot} />
+                </Pressable>
+                <ProfileAvatar size={px(40)} px={px} />
+              </View>
+            </View>
+
+            <View
+              style={[
+                {
+                  marginTop: px(16),
+                  marginBottom: px(14),
+                  borderRadius: px(16),
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  backgroundColor: colors.background,
+                  padding: px(14),
+                },
+                shadows.card,
+              ]}>
+              <View style={{ flexDirection: 'row', alignItems: 'stretch', gap: px(12) }}>
+                <ProfileAvatar size={px(64)} px={px} />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: px(6),
+                      marginBottom: px(4),
+                    }}>
+                    <Text
+                      numberOfLines={1}
+                      style={{
+                        fontSize: px(16),
+                        fontWeight: typography.weights.bold,
+                        color: colors.dark,
+                      }}>
+                      {USER.name}
+                    </Text>
+                    <Pencil size={px(14)} color={colors.grey} strokeWidth={2} />
+                  </View>
+                  <Text style={{ fontSize: px(12), color: colors.grey, marginBottom: px(2) }}>
+                    {USER.phone}
+                  </Text>
+                  <Text
+                    numberOfLines={1}
+                    style={{ fontSize: px(12), color: colors.grey, marginBottom: px(8) }}>
+                    {USER.email}
+                  </Text>
+                  <View
+                    style={{
+                      alignSelf: 'flex-start',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: px(4),
+                      paddingHorizontal: px(8),
+                      paddingVertical: px(4),
+                      borderRadius: px(12),
+                      backgroundColor: '#E8F8EE',
+                    }}>
+                    <Check size={px(11)} color={colors.success} strokeWidth={3} />
+                    <Text
+                      style={{
+                        fontSize: px(10),
+                        fontWeight: typography.weights.bold,
+                        color: colors.success,
+                      }}>
+                      Verified User
+                    </Text>
+                  </View>
+                </View>
+                <View
+                  style={{
+                    width: 1,
+                    backgroundColor: colors.border,
+                    marginVertical: px(2),
+                  }}
+                />
+                <Pressable
+                  onPress={() => navigation.navigate('ChoosePlan')}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    alignSelf: 'center',
+                    flexShrink: 0,
+                    gap: px(2),
+                  }}>
+                  <View style={{ alignItems: 'center' }}>
+                    <Crown size={px(20)} color={colors.primary} fill={colors.primary} />
+                    <Text
+                      style={{
+                        marginTop: px(3),
+                        fontSize: px(9),
+                        fontWeight: typography.weights.bold,
+                        color: colors.primary,
+                        lineHeight: px(11),
+                      }}>
+                      Premium
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: px(9),
+                        fontWeight: typography.weights.bold,
+                        color: colors.primary,
+                        lineHeight: px(11),
+                      }}>
+                      Member
+                    </Text>
+                  </View>
+                  <ChevronRight size={px(12)} color={colors.primary} strokeWidth={2.5} />
+                </Pressable>
+              </View>
+            </View>
+
+            <View
+              style={{
+                flexDirection: 'row',
+                borderRadius: px(14),
+                borderWidth: 1,
+                borderColor: colors.border,
+                backgroundColor: colors.background,
+                paddingVertical: px(12),
+                marginBottom: px(14),
+              }}>
+              {PROFILE_QUICK_STATS.map((item, index) => (
+                <Pressable
+                  key={item.id}
+                  onPress={() => {
+                    if (item.id === 'wallet') navigation.navigate('PaymentMethods');
+                  }}
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    alignItems: 'center',
+                    borderRightWidth: index < PROFILE_QUICK_STATS.length - 1 ? 1 : 0,
+                    borderRightColor: colors.border,
+                    paddingHorizontal: px(4),
+                  }}>
+                  <item.Icon size={px(16)} color={colors.primary} strokeWidth={2} />
+                  <Text
+                    style={{
+                      marginTop: px(4),
+                      fontSize: px(9),
+                      color: colors.grey,
+                      textAlign: 'center',
+                    }}>
+                    {item.label}
+                  </Text>
+                  <Text
+                    numberOfLines={1}
+                    style={{
+                      marginTop: px(2),
+                      fontSize: px(10),
+                      fontWeight: typography.weights.bold,
+                      color: colors.primary,
+                      textAlign: 'center',
+                    }}>
+                    {item.value}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+
+            <View
+              style={{
+                borderRadius: px(16),
+                borderWidth: 1,
+                borderColor: colors.border,
+                backgroundColor: colors.background,
+                marginBottom: px(14),
+                overflow: 'hidden',
+              }}>
+              {PROFILE_MENU_ITEMS.map((item, index) => (
+                <Pressable
+                  key={item.id}
+                  onPress={() =>
+                    navigation.navigate(
+                      PROFILE_MENU_ROUTES[item.id as keyof typeof PROFILE_MENU_ROUTES],
+                    )
+                  }
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: px(12),
+                    paddingHorizontal: px(14),
+                    paddingVertical: px(13),
+                    borderBottomWidth: index < PROFILE_MENU_ITEMS.length - 1 ? 1 : 0,
+                    borderBottomColor: colors.border,
+                  }}>
+                  <View
+                    style={{
+                      width: px(36),
+                      height: px(36),
+                      borderRadius: px(18),
+                      backgroundColor: colors.goldLight,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                    }}>
+                    <item.Icon size={px(17)} color={colors.primary} strokeWidth={2.2} />
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text
+                      style={{
+                        fontSize: px(14),
+                        fontWeight: typography.weights.bold,
+                        color: colors.dark,
+                        marginBottom: px(2),
+                      }}>
+                      {item.title}
+                    </Text>
+                    <Text numberOfLines={1} style={{ fontSize: px(11), color: colors.grey }}>
+                      {item.subtitle}
+                    </Text>
+                  </View>
+                  <ChevronRight size={px(16)} color={colors.primary} strokeWidth={2} />
+                </Pressable>
+              ))}
+            </View>
+
+            <View
+              style={{
+                borderRadius: px(14),
+                backgroundColor: colors.goldLight,
+                padding: px(14),
+                marginBottom: px(12),
+              }}>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: px(10) }}>
+                <View
+                  style={{
+                    width: px(40),
+                    height: px(40),
+                    borderRadius: px(20),
+                    backgroundColor: colors.background,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}>
+                  <Shield size={px(20)} color={colors.primary} strokeWidth={2} />
+                </View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text
+                    style={{
+                      fontSize: px(15),
+                      fontWeight: typography.weights.bold,
+                      color: colors.dark,
+                      marginBottom: px(4),
+                    }}>
+                    RACE Premium
+                  </Text>
+                  <Text
+                    style={{
+                      fontSize: px(11),
+                      color: colors.grey,
+                      lineHeight: px(16),
+                      marginBottom: px(10),
+                    }}>
+                    Priority support, faster dispatch & exclusive benefits
+                  </Text>
+                  <Pressable
+                    onPress={() => navigation.navigate('ChoosePlan')}
+                    style={{
+                      alignSelf: 'flex-start',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: px(4),
+                      paddingHorizontal: px(12),
+                      paddingVertical: px(8),
+                      borderRadius: px(10),
+                      backgroundColor: colors.primary,
+                    }}>
+                    <Text
+                      style={{
+                        fontSize: px(12),
+                        fontWeight: typography.weights.bold,
+                        color: colors.dark,
+                      }}>
+                      Upgrade Now
+                    </Text>
+                    <ArrowRight size={px(14)} color={colors.dark} strokeWidth={2.5} />
+                  </Pressable>
+                </View>
+              </View>
+            </View>
+
+            <Pressable
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: px(10),
+                paddingVertical: px(12),
+              }}>
+              <LogOut size={px(18)} color={colors.error} strokeWidth={2.2} />
+              <Text
+                style={{
+                  flex: 1,
+                  fontSize: px(14),
+                  fontWeight: typography.weights.bold,
+                  color: colors.error,
+                }}>
+                Logout
+              </Text>
+              <ChevronRight size={px(16)} color={colors.error} strokeWidth={2} />
+            </Pressable>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: colors.background,
+    overflow: 'hidden',
+  },
+  safe: {
+    flex: 1,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  bellWrap: {
+    position: 'relative',
+  },
+  bellDot: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
+    borderWidth: 1.5,
+    borderColor: colors.background,
+  },
+});

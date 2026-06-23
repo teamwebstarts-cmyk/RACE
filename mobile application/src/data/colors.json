@@ -1,17 +1,12 @@
 {
-  "primary": "#FFC326",
-  "primaryDark": "#E6A800",
-  "secondary": "#00BAC6",
-  "accentOrange": "#F4A115",
-  "accentRed": "#E7003E",
+  "primary": "#F5A800",
   "background": "#FFFFFF",
-  "backgroundMuted": "#F0F0F0",
-  "backgroundSoft": "#F5F5F5",
-  "surfaceDark": "#232323",
-  "surfaceDarker": "#181818",
-  "text": "#787878",
-  "textDark": "#232323",
-  "textLight": "#FDFDFD",
-  "textMuted": "#B4B4B4",
-  "border": "#B4B4B4"
+  "dark": "#1A1A1A",
+  "grey": "#666666",
+  "lightGrey": "#F5F5F5",
+  "border": "#E8E8E8",
+  "success": "#22C55E",
+  "error": "#EF4444",
+  "cardBg": "#FFFFFF",
+  "goldLight": "#FFF8E7"
 }

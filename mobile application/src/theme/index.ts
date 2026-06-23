@@ -1,7 +1,8 @@
 export { colors, getCategoryTheme } from './colors';
-export { typography, headingStyle, bodyStyle } from './typography';
+export { typography, headingStyle, bodyStyle, labelStyle, textStyles } from './typography';
 export { spacing, radius, layout } from './spacing';
 export { brand } from './brand';
+export { shadows } from './shadows';
 
 import { colors } from './colors';
 import { typography } from './typography';

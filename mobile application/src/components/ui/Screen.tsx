@@ -7,7 +7,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 
-import { colors, layout, radius, spacing, typography } from '../../theme';
+import { colors, layout, radius, shadows, spacing, typography } from '../../theme';
 
 interface ScreenProps {
   children: ReactNode;
@@ -18,7 +18,7 @@ interface ScreenProps {
 export default function Screen({
   children,
   style,
-  backgroundColor = colors.backgroundSoft,
+  backgroundColor = colors.background,
 }: ScreenProps) {
   return (
     <View style={[styles.screen, { backgroundColor }, style]}>{children}</View>
@@ -119,11 +119,12 @@ const cardStyles = StyleSheet.create({
     padding: spacing.lg,
   },
   light: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.cardBg,
     borderWidth: 1,
-    borderColor: colors.borderLight,
+    borderColor: colors.border,
+    ...shadows.card,
   },
   dark: {
-    backgroundColor: colors.surfaceDark,
+    backgroundColor: colors.dark,
   },
 });

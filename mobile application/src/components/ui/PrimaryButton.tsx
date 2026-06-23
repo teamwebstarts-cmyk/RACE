@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
 
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, layout, radius, spacing, typography } from '../../theme';
 import type { ButtonVariant } from '../../types/models';
 
 interface PrimaryButtonProps {
@@ -42,8 +42,8 @@ export default function PrimaryButton({
 
 const styles = StyleSheet.create({
   button: {
-    borderRadius: radius.md,
-    paddingVertical: spacing.md,
+    borderRadius: radius.button,
+    minHeight: layout.buttonHeight,
     paddingHorizontal: spacing.xl,
     alignItems: 'center',
     justifyContent: 'center',
@@ -54,8 +54,8 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   outline: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
+    backgroundColor: colors.background,
+    borderWidth: 1.5,
     borderColor: colors.primary,
   },
   pressed: {
@@ -66,13 +66,11 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   label: {
-    fontSize: typography.sizes.md,
+    fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
   primaryLabel: {
-    color: colors.textDark,
+    color: colors.dark,
   },
   outlineLabel: {
     color: colors.primary,
