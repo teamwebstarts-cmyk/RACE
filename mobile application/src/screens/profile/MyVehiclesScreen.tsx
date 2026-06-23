@@ -8,11 +8,14 @@ import {
   Info,
   Plus,
 } from 'lucide-react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Svg, { Rect } from 'react-native-svg';
 
 import ProfileSubScreenLayout, { useProfilePx } from '../../components/profile/ProfileSubScreenLayout';
 import { VEHICLES } from '../../constants/demo';
 import { images } from '../../assets';
+import type { ProfileStackParamList } from '../../types/navigation';
 import type { Vehicle } from '../../types/models';
 import { colors, shadows, typography } from '../../theme';
 
@@ -175,6 +178,7 @@ function VehicleCard({ vehicle, px }: { vehicle: Vehicle; px: (n: number) => num
 
 export default function MyVehiclesScreen() {
   const px = useProfilePx();
+  const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
 
   return (
     <ProfileSubScreenLayout title="My Vehicles" subtitle="Manage your registered vehicles">
@@ -183,7 +187,7 @@ export default function MyVehiclesScreen() {
       ))}
 
       <Pressable
-        onPress={() => Alert.alert('Add Vehicle', 'Vehicle registration coming soon.')}
+        onPress={() => navigation.navigate('AddVehicle')}
         style={{
           borderRadius: px(14),
           borderWidth: 1.5,

@@ -45,6 +45,7 @@ import HomeScreen from '../screens/HomeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import PersonalInformationScreen from '../screens/profile/PersonalInformationScreen';
 import MyVehiclesScreen from '../screens/profile/MyVehiclesScreen';
+import AddVehicleScreen from '../screens/profile/AddVehicleScreen';
 import SavedLocationsScreen from '../screens/profile/SavedLocationsScreen';
 import PaymentMethodsScreen from '../screens/profile/PaymentMethodsScreen';
 import NotificationsScreen from '../screens/profile/NotificationsScreen';
@@ -355,7 +356,11 @@ function BookingsStackNavigator() {
 
 function CallStackNavigator() {
   return (
-    <CallStack.Navigator screenOptions={{ headerShown: false }}>
+    <CallStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: '#000000' },
+      }}>
       <CallStack.Screen name="CallMain" component={CallScreen} />
       <CallStack.Screen name="QRScan" component={QRScanScreen} />
       <CallStack.Screen name="SOSEmergency" component={SOSEmergencyScreen} />
@@ -369,6 +374,7 @@ function ProfileStackNavigator() {
       <ProfileStack.Screen name="ProfileMain" component={ProfileScreen} />
       <ProfileStack.Screen name="PersonalInformation" component={PersonalInformationScreen} />
       <ProfileStack.Screen name="MyVehicles" component={MyVehiclesScreen} />
+      <ProfileStack.Screen name="AddVehicle" component={AddVehicleScreen} />
       <ProfileStack.Screen name="SavedLocations" component={SavedLocationsScreen} />
       <ProfileStack.Screen name="PaymentMethods" component={PaymentMethodsScreen} />
       <ProfileStack.Screen name="Notifications" component={NotificationsScreen} />

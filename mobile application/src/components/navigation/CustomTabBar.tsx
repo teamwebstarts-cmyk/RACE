@@ -37,6 +37,12 @@ export default function CustomTabBar({
   navigation,
 }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
+  const activeRoute = state.routes[state.index];
+
+  // Hide tab bar entirely on SOS / Call flow
+  if (activeRoute.name === 'Call') {
+    return null;
+  }
 
   const handleEmergencyCall = () => {
     navigation.navigate('Call', { screen: 'CallMain' });

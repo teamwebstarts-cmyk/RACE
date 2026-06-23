@@ -114,6 +114,7 @@ export type ProfileStackParamList = {
   ProfileMain: undefined;
   PersonalInformation: undefined;
   MyVehicles: undefined;
+  AddVehicle: undefined;
   SavedLocations: undefined;
   PaymentMethods: undefined;
   Notifications: undefined;
