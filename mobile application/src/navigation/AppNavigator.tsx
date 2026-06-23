@@ -138,11 +138,6 @@ const towingBookingScreens = (
       options={towingBookingScreenOptions}
     />
     <Stack.Screen
-      name="BookingPayment"
-      component={BookingPaymentScreen}
-      options={towingBookingScreenOptions}
-    />
-    <Stack.Screen
       name="TowingConfirmed"
       component={TowingConfirmedScreen}
       options={towingBookingScreenOptions}
@@ -202,11 +197,6 @@ const driverBookingScreens = (
       options={towingBookingScreenOptions}
     />
     <Stack.Screen
-      name="BookingPayment"
-      component={BookingPaymentScreen}
-      options={towingBookingScreenOptions}
-    />
-    <Stack.Screen
       name="DriverAssigned"
       component={DriverAssignedScreen}
       options={towingBookingScreenOptions}
@@ -241,11 +231,6 @@ const roadsideBookingScreens = (
       options={towingBookingScreenOptions}
     />
     <Stack.Screen
-      name="BookingPayment"
-      component={BookingPaymentScreen}
-      options={towingBookingScreenOptions}
-    />
-    <Stack.Screen
       name="RoadsideHelpOnWay"
       component={RoadsideHelpOnWayScreen}
       options={towingBookingScreenOptions}
@@ -276,6 +261,11 @@ function HomeStackNavigator() {
       {towingBookingScreens(HomeStack)}
       {driverBookingScreens(HomeStack)}
       {roadsideBookingScreens(HomeStack)}
+      <HomeStack.Screen
+        name="BookingPayment"
+        component={BookingPaymentScreen}
+        options={towingBookingScreenOptions}
+      />
       <HomeStack.Screen
         name="MoreServices"
         component={MoreServicesScreen}
@@ -329,6 +319,11 @@ function ServicesStackNavigator() {
           typeof createNativeStackNavigator<HomeStackParamList & RoadsideBookingParamList>
         >,
       )}
+      <ServicesStack.Screen
+        name="BookingPayment"
+        component={BookingPaymentScreen}
+        options={towingBookingScreenOptions}
+      />
       <ServicesStack.Screen
         name="MoreServices"
         component={MoreServicesScreen}
