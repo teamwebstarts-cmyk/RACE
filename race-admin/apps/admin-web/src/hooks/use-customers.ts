@@ -30,7 +30,11 @@ export function useCustomers() {
     placeholderData: (prev) => prev,
   });
 
-  const cities = useMemo(() => getCustomerCities(), []);
+  const citiesQuery = useQuery({
+    queryKey: ['customer-cities'],
+    queryFn: getCustomerCities,
+  });
+  const cities = citiesQuery.data ?? [];
 
   const handleExport = async () => {
     const rows = await exportCustomersCsv({

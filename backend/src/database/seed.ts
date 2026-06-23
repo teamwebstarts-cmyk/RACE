@@ -9,6 +9,7 @@ import { logger } from '../shared/utils/logger';
 import brandData from './seed-data/brand.json';
 import colorsData from './seed-data/colors.json';
 import servicesData from './seed-data/services.json';
+import { seedAdminPlatform } from './admin-seed';
 
 dotenv.config();
 
@@ -72,8 +73,9 @@ async function runSeed(): Promise<void> {
 
   const serviceCount = await seedServices();
   await seedBrand();
+  await seedAdminPlatform();
 
-  logger.info('Database seed completed', { services: serviceCount, brand: 1 });
+  logger.info('Database seed completed', { services: serviceCount, brand: 1, adminPlatform: true });
   await disconnectDatabase();
 }
 

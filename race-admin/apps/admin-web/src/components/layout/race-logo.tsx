@@ -23,12 +23,16 @@ export function RaceLogo({
 }: RaceLogoProps) {
   if (layout === 'sidebar') {
     return (
-      <div className={cn('h-full w-full overflow-hidden', className)}>
+      <div
+        className={cn(
+          'flex h-[72px] w-full min-w-0 items-center',
+          className,
+        )}
+      >
         <img
-          src="/race-logo.png"
+          src="/race-logo-sidebar.png"
           alt="RACE Service"
-          className="h-full w-auto max-w-none select-none object-contain object-left"
-          style={{ transform: 'scale(3.15)', transformOrigin: 'left center' }}
+          className="h-[70px] w-full select-none object-contain object-left"
           draggable={false}
         />
       </div>
@@ -37,12 +41,16 @@ export function RaceLogo({
 
   if (layout === 'sidebar-icon') {
     return (
-      <div className={cn('h-12 w-12 overflow-hidden', className)}>
+      <div
+        className={cn(
+          'flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden',
+          className,
+        )}
+      >
         <img
-          src="/race-logo.png"
+          src="/race-logo-sidebar.png"
           alt="RACE Service"
-          className="h-12 w-auto max-w-none select-none object-contain object-left"
-          style={{ transform: 'scale(3.4)', transformOrigin: 'left center' }}
+          className="h-10 w-auto max-w-none select-none object-contain object-left"
           draggable={false}
         />
       </div>

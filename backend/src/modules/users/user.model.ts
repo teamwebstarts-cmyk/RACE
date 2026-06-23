@@ -31,6 +31,8 @@ export interface IUser extends Document {
   isVerified: boolean;
   isProfileCompleted: boolean;
   role: UserRole;
+  customerCode?: string;
+  accountStatus?: 'ACTIVE' | 'SUSPENDED' | 'INACTIVE';
   createdAt: Date;
   updatedAt: Date;
 }
@@ -72,6 +74,13 @@ const UserSchema = new Schema<IUser>(
     isVerified: { type: Boolean, default: false },
     isProfileCompleted: { type: Boolean, default: false },
     role: { type: String, enum: ['customer', 'vendor', 'admin'], default: 'customer' },
+    customerCode: { type: String, unique: true, sparse: true, index: true },
+    accountStatus: {
+      type: String,
+      enum: ['ACTIVE', 'SUSPENDED', 'INACTIVE'],
+      default: 'ACTIVE',
+      index: true,
+    },
   },
   { timestamps: true },
 );

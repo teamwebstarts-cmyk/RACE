@@ -14,7 +14,7 @@ import subscriptionRoutes from '../modules/subscriptions/subscription.routes';
 import vehicleRoutes from '../modules/vehicles/vehicle.routes';
 import qrRoutes from '../modules/vehicles/qr.routes';
 import vendorRoutes from '../modules/vendors/vendor.routes';
-import adminVendorRoutes from '../modules/vendors/admin-vendor.routes';
+import adminRoutes from '../modules/admin/admin.routes';
 import { paymentController } from '../modules/payments/payment.controller';
 import { authMiddleware } from '../middleware/auth.middleware';
 
@@ -34,6 +34,6 @@ router.use(`${env.API_PREFIX}/bookings`, bookingRoutes);
 router.use(`${env.API_PREFIX}/subscriptions`, subscriptionRoutes);
 router.use(`${env.API_PREFIX}/sos`, sosRoutes);
 router.use(`${env.API_PREFIX}/vendor`, vendorRoutes);
-router.use(`${env.API_PREFIX}/admin/vendors`, adminVendorRoutes);
+router.use(`${env.API_PREFIX}/admin`, adminRoutes);
 
 export default router;

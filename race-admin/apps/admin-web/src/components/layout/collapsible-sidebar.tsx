@@ -60,7 +60,7 @@ export function CollapsibleSidebar() {
     >
       <div
         className={cn(
-          'relative flex shrink-0 items-stretch border-b border-border bg-gradient-to-br from-white via-white to-[#FFF8EB]',
+          'relative flex shrink-0 items-center border-b border-border bg-gradient-to-br from-white via-white to-[#FFF8EB]',
           collapsed ? 'h-[72px]' : 'h-[88px]',
         )}
       >
@@ -68,14 +68,11 @@ export function CollapsibleSidebar() {
           to="/dashboard"
           className={cn(
             'flex min-w-0 flex-1 items-center overflow-hidden',
-            collapsed ? 'justify-center px-2' : 'px-4 pr-9',
+            collapsed ? 'justify-center px-2' : 'items-center px-4 py-2.5 pr-10',
           )}
           aria-label="RACE Service home"
         >
-          <RaceLogo
-            layout={collapsed ? 'sidebar-icon' : 'sidebar'}
-            className={collapsed ? undefined : 'h-[76px] w-full'}
-          />
+          <RaceLogo layout={collapsed ? 'sidebar-icon' : 'sidebar'} />
         </Link>
         <button
           type="button"

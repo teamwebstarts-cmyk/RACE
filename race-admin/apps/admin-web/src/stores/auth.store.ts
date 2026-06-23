@@ -1,5 +1,5 @@
 import { setAccessToken } from '@race/api';
-import { Permission, Role, type AdminUser } from '@race/types';
+import type { AdminUser } from '@race/types';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
@@ -49,12 +49,3 @@ export const useAuthStore = create<AuthState>()(
     },
   ),
 );
-
-/** Dev mock user returned after successful login */
-export const MOCK_ADMIN_USER: AdminUser = {
-  id: 'admin_1',
-  name: 'Admin User',
-  email: 'admin@raceservice.com',
-  role: Role.SUPER_ADMIN,
-  permissions: Object.values(Permission),
-};

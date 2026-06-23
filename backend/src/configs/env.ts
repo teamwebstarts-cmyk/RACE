@@ -21,6 +21,12 @@ const envSchema = z.object({
   GCS_PROJECT_ID: z.string().optional(),
   GCS_KEY_FILE: z.string().optional(),
   APP_BASE_URL: z.string().default('http://localhost:3000'),
+  ADMIN_WEB_URL: z.string().default('http://localhost:3001'),
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().optional(),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_FROM: z.string().default('noreply@raceservice.com'),
 });
 
 const parsed = envSchema.safeParse(process.env);

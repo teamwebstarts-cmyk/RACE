@@ -8,6 +8,12 @@ declare global {
         role: string;
         mobileNumber: string;
       };
+      admin?: {
+        id: string;
+        role: string;
+        email: string;
+        permissions: string[];
+      };
     }
   }
 }

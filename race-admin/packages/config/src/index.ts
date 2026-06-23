@@ -6,4 +6,5 @@ export const appConfig = {
   refreshTokenStorageKey: 'race_admin_refresh_token',
   defaultPageSize: 10,
   mockApiDelayMs: 600,
+  useMockApi: import.meta.env.VITE_USE_MOCK_API !== 'false',
 } as const;

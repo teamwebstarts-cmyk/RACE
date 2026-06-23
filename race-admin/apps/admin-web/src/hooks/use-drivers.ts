@@ -3,7 +3,6 @@ import { useMemo, useState } from 'react';
 
 import {
   exportDriversCsv,
-  getDriverCities,
   getDrivers,
   getDriverStatusCountsApi,
   getDriverVendors,
@@ -45,8 +44,13 @@ export function useDrivers() {
     queryFn: getDriverStatusCountsApi,
   });
 
-  const cities = useMemo(() => getDriverCities(), []);
-  const vendors = useMemo(() => getDriverVendors(), []);
+  const vendorsQuery = useQuery({
+    queryKey: ['driver-vendors'],
+    queryFn: getDriverVendors,
+  });
+
+  const cities = ['Bhubaneswar', 'Cuttack', 'Puri', 'Rourkela', 'Berhampur'];
+  const vendors = vendorsQuery.data ?? [];
 
   const resetPage = () => setPage(1);
 
