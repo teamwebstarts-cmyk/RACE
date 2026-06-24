@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 
-import { connectDatabase, disconnectDatabase } from '../configs/database';
+import { connectDatabase, disconnectDatabase } from './connection';
+import { ensureDatabaseIndexes } from './indexes';
 import { brandRepository } from '../modules/brand/brand.repository';
 import { serviceRepository } from '../modules/services/service.repository';
 import type { IService } from '../modules/services/service.model';
@@ -70,6 +71,7 @@ async function seedBrand(): Promise<void> {
 
 async function runSeed(): Promise<void> {
   await connectDatabase();
+  await ensureDatabaseIndexes();
 
   const serviceCount = await seedServices();
   await seedBrand();

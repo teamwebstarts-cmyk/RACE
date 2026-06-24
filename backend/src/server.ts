@@ -6,6 +6,8 @@ import { logger } from './shared/utils/logger';
 
 async function bootstrap(): Promise<void> {
   await connectDatabase();
+  const { ensureDatabaseIndexes } = await import('./database/indexes');
+  await ensureDatabaseIndexes();
   await connectCache();
 
   const app = createApp();

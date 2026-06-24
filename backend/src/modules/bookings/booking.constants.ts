@@ -10,6 +10,8 @@ export const BOOKING_STATUS_LABELS: Record<BookingStatus, string> = {
   SERVICE_COMPLETED: 'Service completed',
   PAYMENT_PENDING: 'Payment pending',
   PAID: 'Payment received',
+  CANCELLED: 'Booking cancelled',
+  REFUNDED: 'Booking refunded',
 };
 
 export const SERVICE_BASE_PRICES: Record<string, number> = {

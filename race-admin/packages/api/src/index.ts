@@ -1,4 +1,5 @@
 export * from './client';
+export * from './http';
 export * from './types';
 export * from './services/auth.service';
 export * from './services/dashboard.service';

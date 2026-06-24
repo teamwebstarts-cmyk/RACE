@@ -209,6 +209,7 @@ export function VendorList() {
     <EntityFormModal
       open={formOpen}
       onClose={() => { setFormOpen(false); setEditing(null); }}
+      resetKey={editing?.id ?? 'create'}
       title={editing ? 'Edit Vendor' : 'Add Vendor'}
       fields={VENDOR_FIELDS}
       initialValues={

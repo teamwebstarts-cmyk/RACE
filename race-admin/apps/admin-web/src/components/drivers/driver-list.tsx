@@ -229,6 +229,7 @@ export function DriverList() {
           setFormOpen(false);
           setEditing(null);
         }}
+        resetKey={editing?.id ?? 'create'}
         title={editing ? 'Edit Driver' : 'Add Driver'}
         fields={driverFields}
         initialValues={

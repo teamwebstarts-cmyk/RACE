@@ -202,7 +202,7 @@ function VendorInfoCard({ vendor }: { vendor: VendorDetail }) {
     { label: 'Bank Name', value: vendor.bankName },
     { label: 'Account Number', value: vendor.accountNumber },
     { label: 'IFSC Code', value: vendor.ifscCode },
-    { label: 'Service Areas', value: vendor.serviceAreas.join(', ') },
+    { label: 'Service Areas', value: (vendor.serviceAreas ?? [vendor.city]).filter(Boolean).join(', ') || '—' },
     { label: 'Working Hours', value: vendor.workingHours },
     { label: 'Fleet Size', value: String(vendor.fleetSize) },
     { label: 'Drivers Assigned', value: String(vendor.driverCount) },
@@ -335,7 +335,7 @@ export function VendorDetailContent({ vendorId }: { vendorId: string }) {
           isRejecting={reject.isPending}
         />
 
-        <QuickStats stats={vendor.quickStats} />
+        <QuickStats stats={vendor.quickStats ?? []} />
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
           <div className="space-y-6 xl:col-span-2">

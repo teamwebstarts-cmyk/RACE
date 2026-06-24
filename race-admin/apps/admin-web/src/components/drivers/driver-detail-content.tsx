@@ -96,7 +96,13 @@ function LicenseDetailsCard({ driver }: { driver: DriverDetail }) {
 }
 
 function AssignedVehicleCard({ driver }: { driver: DriverDetail }) {
-  const v = driver.assignedVehicle;
+  const v = driver.assignedVehicle ?? {
+    registrationNo: driver.vehicleRegistration ?? '—',
+    type: driver.driverType,
+    model: '—',
+    year: new Date().getFullYear(),
+    status: 'ACTIVE',
+  };
   return (
     <Card>
       <CardHeader>
@@ -254,13 +260,13 @@ export function DriverDetailContent({ driverId }: { driverId: string }) {
             <CardTitle>Booking History</CardTitle>
           </CardHeader>
           <CardContent className="p-0 pb-2">
-            <DataTable columns={bookingColumns} data={driver.bookings} emptyMessage="No bookings" />
+            <DataTable columns={bookingColumns} data={driver.bookings ?? []} emptyMessage="No bookings" />
           </CardContent>
         </Card>
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-          <ReviewsSection reviews={driver.reviews} />
-          <DocumentsSection documents={driver.documents} onView={setViewingDoc} />
+          <ReviewsSection reviews={driver.reviews ?? []} />
+          <DocumentsSection documents={driver.documents ?? []} onView={setViewingDoc} />
         </div>
 
         <Card>
@@ -268,7 +274,7 @@ export function DriverDetailContent({ driverId }: { driverId: string }) {
             <CardTitle>Activity Log</CardTitle>
           </CardHeader>
           <CardContent>
-            <ActivityTimeline items={driver.activities} />
+            <ActivityTimeline items={driver.activities ?? []} />
           </CardContent>
         </Card>
       </div>

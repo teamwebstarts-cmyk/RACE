@@ -176,7 +176,15 @@ function DataGridInner<TData>({
                 )}
               >
                 {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id} className="px-4 py-3 text-heading">
+                  <td
+                    key={cell.id}
+                    className="px-4 py-3 text-heading"
+                    onClick={
+                      cell.column.id === 'actions'
+                        ? (event) => event.stopPropagation()
+                        : undefined
+                    }
+                  >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </td>
                 ))}

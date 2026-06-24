@@ -176,6 +176,7 @@ export function AdminUsersContent() {
           setFormOpen(false);
           setEditing(null);
         }}
+        resetKey={editing?.id ?? 'create'}
         title={editing ? 'Edit Admin User' : 'Add Admin User'}
         fields={ADMIN_FIELDS}
         initialValues={

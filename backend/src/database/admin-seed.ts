@@ -254,9 +254,11 @@ export async function seedAdminPlatform(): Promise<void> {
     const vehicle = await VehicleModel.findOne({ customerId: customer._id });
     const status = STATUSES[i % STATUSES.length];
     const amount = 500 + (i % 20) * 150;
+    const assignedDriver = drivers[i % drivers.length];
 
     await BookingModel.create({
       customerId: customer._id,
+      vendorId: assignedDriver.vendorId,
       bookingNumber: `BK${1000 + i}${String.fromCharCode(65 + (i % 26))}`,
       categoryId: 'towing',
       serviceId: 'towing-standard',
@@ -266,10 +268,10 @@ export async function seedAdminPlatform(): Promise<void> {
       vehicleNumber: vehicle!.vehicleNumber,
       pickup: { label: CITIES[i % CITIES.length], address: `${CITIES[i % CITIES.length]}, Odisha` },
       driver: {
-        id: drivers[i % drivers.length]._id.toString(),
-        name: drivers[i % drivers.length].name,
-        rating: drivers[i % drivers.length].rating,
-        phone: drivers[i % drivers.length].phone,
+        id: assignedDriver._id.toString(),
+        name: assignedDriver.name,
+        rating: assignedDriver.rating,
+        phone: assignedDriver.phone,
       },
       invoice: { baseFare: amount, total: amount, currency: 'INR', platformFee: Math.round(amount * 0.125) },
       statusHistory: [{ status, timestamp: new Date(Date.now() - i * 86400000) }],

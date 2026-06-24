@@ -4,34 +4,15 @@ import type {
   SubscriptionOverview,
   SubscriptionPlan,
 } from '@race/types';
-import { delay } from '@race/utils';
-import { appConfig } from '@race/config';
 
-import { filterPlans, SUBSCRIPTION_METRICS } from '../mocks/subscriptions.mock';
+import { apiGet } from '../http';
 
 export async function getSubscriptionOverview(): Promise<SubscriptionOverview> {
-  await delay(appConfig.mockApiDelayMs);
-  return { metrics: SUBSCRIPTION_METRICS };
+  return apiGet<SubscriptionOverview>('/subscriptions/overview');
 }
 
 export async function getSubscriptionPlans(
   filters: SubscriptionListFilters = {},
 ): Promise<PaginatedResponse<SubscriptionPlan>> {
-  await delay(appConfig.mockApiDelayMs);
-
-  const tab = filters.tab ?? 'CUSTOMER';
-  const page = filters.page ?? 1;
-  const pageSize = filters.pageSize ?? 10;
-  const filtered = filterPlans(tab);
-  const total = filtered.length;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const start = (page - 1) * pageSize;
-
-  return {
-    items: filtered.slice(start, start + pageSize),
-    total,
-    page,
-    pageSize,
-    totalPages,
-  };
+  return apiGet<PaginatedResponse<SubscriptionPlan>>('/subscriptions/plans', filters as Record<string, unknown>);
 }

@@ -3,8 +3,12 @@ import { Types } from 'mongoose';
 import { BookingModel } from '../../bookings/booking.model';
 import { UserModel } from '../../users/user.model';
 import { VehicleModel } from '../../vehicles/vehicle.model';
+import { VendorModel } from '../../vendors/vendor.model';
+import { TransactionModel } from '../models/transaction.model';
+import { UserSubscriptionModel } from '../../subscriptions/subscription.model';
 import { escapeRegex, paginate } from '../shared/pagination';
 import { logActivity } from '../shared/activity-logger';
+import { getEntityActivities } from '../shared/entity-activities';
 import { NotFoundError } from '../../../shared/utils/errors';
 
 function mapCustomer(user: {
@@ -67,14 +71,23 @@ export const adminCustomersService = {
     const user = await UserModel.findOne({ _id: id, role: 'customer' });
     if (!user) throw new NotFoundError('Customer not found');
 
-    const [vehicleCount, bookings, payments] = await Promise.all([
+    const [vehicleCount, bookings, payments, transactions, subscriptions, activities] = await Promise.all([
       VehicleModel.countDocuments({ customerId: user._id }),
       BookingModel.find({ customerId: user._id }).sort({ createdAt: -1 }).limit(20).lean(),
       BookingModel.aggregate([
         { $match: { customerId: user._id } },
         { $group: { _id: null, total: { $sum: '$invoice.total' } } },
       ]),
+      TransactionModel.find({ customerId: user._id }).sort({ createdAt: -1 }).limit(20).lean(),
+      UserSubscriptionModel.find({ userId: user._id }).sort({ createdAt: -1 }).lean(),
+      getEntityActivities('customer', id),
     ]);
+
+    const vendorIds = [...new Set(bookings.map((b) => b.vendorId?.toString()).filter(Boolean))];
+    const vendors = await VendorModel.find({ _id: { $in: vendorIds } }).lean();
+    const vendorMap = new Map(
+      vendors.map((v) => [v._id.toString(), v.businessName ?? v.ownerName ?? 'Vendor']),
+    );
 
     const base = mapCustomer(user, vehicleCount, bookings.length);
 
@@ -88,20 +101,33 @@ export const adminCustomersService = {
         ? `${user.emergencyContact.name} (${user.emergencyContact.mobileNumber})`
         : undefined,
       totalSpent: payments[0]?.total ?? 0,
-      bookingHistory: bookings.map((b) => ({
+      bookings: bookings.map((b) => ({
         id: b._id.toString(),
         bookingNumber: b.bookingNumber,
         service: b.serviceLabel,
         status: b.status,
         amount: b.invoice?.total ?? 0,
         date: b.createdAt.toISOString(),
-        vendorName: undefined,
+        vendorName: b.vendorId ? vendorMap.get(b.vendorId.toString()) : undefined,
         driverName: b.driver?.name,
       })),
-      payments: [],
-      subscriptions: [],
-      vehicles: [],
-      notes: '',
+      payments: transactions.map((t) => ({
+        id: t._id.toString(),
+        amount: t.amount,
+        method: t.paymentMethod ?? 'UPI',
+        status: t.status,
+        date: t.createdAt.toISOString(),
+        reference: t.reference ?? t.transactionCode,
+      })),
+      subscriptions: subscriptions.map((s) => ({
+        id: s._id.toString(),
+        planName: s.planName,
+        status: s.status,
+        startDate: s.startedAt.toISOString(),
+        endDate: s.expiresAt.toISOString(),
+        amount: s.price,
+      })),
+      activities,
     };
   },
 

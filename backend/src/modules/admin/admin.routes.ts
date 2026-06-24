@@ -18,6 +18,7 @@ import { adminSettingsService } from './settings/admin-settings.service';
 import { adminNotificationsService } from './notifications/admin-notifications.service';
 import { adminUsersService, adminActivityService } from './admins/admin-users.service';
 import { adminSubscriptionsService } from './subscriptions/admin-subscriptions.service';
+import { adminVehiclesService } from './vehicles/admin-vehicles.service';
 import { routeParam } from './shared/route-param';
 
 const router = Router();
@@ -44,6 +45,18 @@ router.get(
   requireAdminPermission(AdminPermission.CUSTOMERS_VIEW),
   asyncHandler(async (_req, res) => {
     sendSuccess(res, await adminCustomersService.getCities());
+  }),
+);
+router.patch(
+  '/customers/:id/status',
+  adminAuthMiddleware,
+  requireAdminPermission(AdminPermission.CUSTOMERS_MANAGE),
+  asyncHandler(async (req, res) => {
+    sendSuccess(res, await adminCustomersService.setStatus(
+      routeParam(req.params.id),
+      req.body.status,
+      actor(req),
+    ));
   }),
 );
 router.get(
@@ -104,6 +117,24 @@ router.post('/vendors/:id/approve', adminAuthMiddleware, requireAdminPermission(
 router.post('/vendors/:id/reject', adminAuthMiddleware, requireAdminPermission(AdminPermission.VENDORS_APPROVE), asyncHandler(async (req, res) => {
   sendSuccess(res, await adminVendorsService.reject(routeParam(req.params.id), req.body.note, actor(req)));
 }));
+router.post('/vendors', adminAuthMiddleware, requireAdminPermission(AdminPermission.VENDORS_MANAGE), asyncHandler(async (req, res) => {
+  sendSuccess(res, await adminVendorsService.create(req.body, actor(req)), 201);
+}));
+router.patch('/vendors/:id', adminAuthMiddleware, requireAdminPermission(AdminPermission.VENDORS_MANAGE), asyncHandler(async (req, res) => {
+  sendSuccess(res, await adminVendorsService.update(routeParam(req.params.id), req.body, actor(req)));
+}));
+router.post('/vendors/:id/suspend', adminAuthMiddleware, requireAdminPermission(AdminPermission.VENDORS_MANAGE), asyncHandler(async (req, res) => {
+  sendSuccess(res, await adminVendorsService.suspend(routeParam(req.params.id), req.body.note, actor(req)));
+}));
+router.post('/vendors/:id/assign-drivers', adminAuthMiddleware, requireAdminPermission(AdminPermission.VENDORS_MANAGE), asyncHandler(async (req, res) => {
+  sendSuccess(res, await adminVendorsService.assignDrivers(routeParam(req.params.id), req.body.driverIds ?? [], actor(req)));
+}));
+router.get('/vendors/:id/vehicles', adminAuthMiddleware, requireAdminPermission(AdminPermission.VENDORS_VIEW), asyncHandler(async (req, res) => {
+  sendSuccess(res, await adminVehiclesService.listByVendor(routeParam(req.params.id)));
+}));
+router.post('/vendors/:id/vehicles', adminAuthMiddleware, requireAdminPermission(AdminPermission.VENDORS_MANAGE), asyncHandler(async (req, res) => {
+  sendSuccess(res, await adminVehiclesService.create(routeParam(req.params.id), req.body, actor(req)), 201);
+}));
 
 // Drivers
 router.get('/drivers/counts', adminAuthMiddleware, requireAdminPermission(AdminPermission.DRIVERS_VIEW), asyncHandler(async (_req, res) => {
@@ -125,6 +156,12 @@ router.delete('/drivers/:id', adminAuthMiddleware, requireAdminPermission(AdminP
   await adminDriversService.remove(routeParam(req.params.id), actor(req));
   sendSuccess(res, { message: 'Deleted' });
 }));
+router.post('/drivers/:id/approve', adminAuthMiddleware, requireAdminPermission(AdminPermission.DRIVERS_APPROVE), asyncHandler(async (req, res) => {
+  sendSuccess(res, await adminDriversService.update(routeParam(req.params.id), { status: 'APPROVED' }, actor(req)));
+}));
+router.post('/drivers/:id/reject', adminAuthMiddleware, requireAdminPermission(AdminPermission.DRIVERS_APPROVE), asyncHandler(async (req, res) => {
+  sendSuccess(res, await adminDriversService.update(routeParam(req.params.id), { status: 'REJECTED' }, actor(req)));
+}));
 
 // Bookings
 router.get('/bookings', adminAuthMiddleware, requireAdminPermission(AdminPermission.BOOKINGS_VIEW), asyncHandler(async (req, res) => {
@@ -144,6 +181,27 @@ router.patch('/bookings/:id', adminAuthMiddleware, requireAdminPermission(AdminP
 }));
 router.delete('/bookings/:id', adminAuthMiddleware, requireAdminPermission(AdminPermission.BOOKINGS_MANAGE), asyncHandler(async (req, res) => {
   await adminBookingsService.remove(routeParam(req.params.id), actor(req));
+  sendSuccess(res, { message: 'Deleted' });
+}));
+router.post('/bookings/:id/assign-vendor', adminAuthMiddleware, requireAdminPermission(AdminPermission.BOOKINGS_MANAGE), asyncHandler(async (req, res) => {
+  sendSuccess(res, await adminBookingsService.assignVendor(routeParam(req.params.id), req.body.vendorId, actor(req)));
+}));
+router.post('/bookings/:id/assign-driver', adminAuthMiddleware, requireAdminPermission(AdminPermission.BOOKINGS_MANAGE), asyncHandler(async (req, res) => {
+  sendSuccess(res, await adminBookingsService.assignDriver(routeParam(req.params.id), req.body.driverId, actor(req)));
+}));
+router.post('/bookings/:id/status', adminAuthMiddleware, requireAdminPermission(AdminPermission.BOOKINGS_MANAGE), asyncHandler(async (req, res) => {
+  sendSuccess(res, await adminBookingsService.updateStatus(
+    routeParam(req.params.id),
+    req.body.status,
+    actor(req),
+    { reason: req.body.reason, amount: req.body.amount },
+  ));
+}));
+router.patch('/vehicles/:id', adminAuthMiddleware, requireAdminPermission(AdminPermission.VENDORS_MANAGE), asyncHandler(async (req, res) => {
+  sendSuccess(res, await adminVehiclesService.update(routeParam(req.params.id), req.body, actor(req)));
+}));
+router.delete('/vehicles/:id', adminAuthMiddleware, requireAdminPermission(AdminPermission.VENDORS_MANAGE), asyncHandler(async (req, res) => {
+  await adminVehiclesService.remove(routeParam(req.params.id), actor(req));
   sendSuccess(res, { message: 'Deleted' });
 }));
 
@@ -210,6 +268,18 @@ router.get('/subscriptions/overview', adminAuthMiddleware, requireAdminPermissio
 }));
 router.get('/subscriptions/plans', adminAuthMiddleware, requireAdminPermission(AdminPermission.SUBSCRIPTIONS_VIEW), asyncHandler(async (req, res) => {
   sendSuccess(res, await adminSubscriptionsService.listPlans(req.query as never));
+}));
+router.post('/subscriptions/plans', adminAuthMiddleware, requireAdminPermission(AdminPermission.SUBSCRIPTIONS_MANAGE), asyncHandler(async (req, res) => {
+  sendSuccess(res, await adminSubscriptionsService.createPlan(req.body, actor(req)), 201);
+}));
+router.patch('/subscriptions/plans/:id', adminAuthMiddleware, requireAdminPermission(AdminPermission.SUBSCRIPTIONS_MANAGE), asyncHandler(async (req, res) => {
+  sendSuccess(res, await adminSubscriptionsService.updatePlan(routeParam(req.params.id), req.body, actor(req)));
+}));
+router.post('/subscriptions/assign', adminAuthMiddleware, requireAdminPermission(AdminPermission.SUBSCRIPTIONS_MANAGE), asyncHandler(async (req, res) => {
+  sendSuccess(res, await adminSubscriptionsService.assignSubscription(req.body, actor(req)), 201);
+}));
+router.post('/subscriptions/:id/cancel', adminAuthMiddleware, requireAdminPermission(AdminPermission.SUBSCRIPTIONS_MANAGE), asyncHandler(async (req, res) => {
+  sendSuccess(res, await adminSubscriptionsService.cancelSubscription(routeParam(req.params.id), actor(req)));
 }));
 
 export default router;

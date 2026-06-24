@@ -45,7 +45,11 @@ export function useVendors() {
     queryFn: getVendorStatusCountsApi,
   });
 
-  const cities = useMemo(() => getVendorCities(), []);
+  const citiesQuery = useQuery({
+    queryKey: ['vendor-cities'],
+    queryFn: getVendorCities,
+  });
+  const cities = citiesQuery.data ?? [];
 
   const handleExport = async () => {
     const rows = await exportVendorsCsv({

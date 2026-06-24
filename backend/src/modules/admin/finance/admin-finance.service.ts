@@ -27,7 +27,7 @@ export const adminFinanceService = {
   },
 
   async getSummary() {
-    const [revenue, commission, refunds, payouts] = await Promise.all([
+    const [revenue, commission, refunds, payouts, pending] = await Promise.all([
       TransactionModel.aggregate([
         { $match: { type: 'PAYMENT', status: 'COMPLETED' } },
         { $group: { _id: null, total: { $sum: '$amount' } } },
@@ -44,6 +44,10 @@ export const adminFinanceService = {
         { $match: { type: 'VENDOR_PAYOUT', status: 'COMPLETED' } },
         { $group: { _id: null, total: { $sum: '$amount' } } },
       ]),
+      TransactionModel.aggregate([
+        { $match: { type: 'VENDOR_PAYOUT', status: 'PENDING' } },
+        { $group: { _id: null, total: { $sum: '$amount' } } },
+      ]),
     ]);
 
     return {
@@ -51,7 +55,7 @@ export const adminFinanceService = {
       totalCommission: commission[0]?.total ?? 0,
       totalRefunds: refunds[0]?.total ?? 0,
       totalPayouts: payouts[0]?.total ?? 0,
-      pendingPayouts: 0,
+      pendingPayouts: pending[0]?.total ?? 0,
     };
   },
 };

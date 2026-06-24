@@ -199,6 +199,7 @@ export function CustomerList() {
           setFormOpen(false);
           setEditing(null);
         }}
+        resetKey={editing?.id ?? 'create'}
         title={editing ? 'Edit Customer' : 'Add Customer'}
         description={editing ? 'Update customer details' : 'Create a new customer record'}
         fields={CUSTOMER_FIELDS}

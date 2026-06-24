@@ -25,7 +25,7 @@ export function useReports() {
 
   const handleExport = async () => {
     const data = await exportReportData(filters);
-    exportToCsv(`report-${activeTab.toLowerCase()}.csv`, data.revenueTrend, [
+    exportToCsv(`report-${activeTab.toLowerCase()}.csv`, data, [
       { key: 'label', header: 'Date' },
       { key: 'revenue', header: 'Revenue' },
     ]);

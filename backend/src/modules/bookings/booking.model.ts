@@ -9,7 +9,9 @@ export type BookingStatus =
   | 'SERVICE_STARTED'
   | 'SERVICE_COMPLETED'
   | 'PAYMENT_PENDING'
-  | 'PAID';
+  | 'PAID'
+  | 'CANCELLED'
+  | 'REFUNDED';
 
 export interface IBookingLocation {
   label: string;
@@ -53,6 +55,7 @@ export interface IStatusHistoryEntry {
 
 export interface IBooking extends Document {
   customerId: Types.ObjectId;
+  vendorId?: Types.ObjectId;
   bookingNumber: string;
   categoryId: string;
   serviceId: string;
@@ -74,6 +77,8 @@ export interface IBooking extends Document {
   rating?: IBookingRating;
   driverLatitude?: number;
   driverLongitude?: number;
+  cancelReason?: string;
+  refundedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -136,6 +141,7 @@ const StatusHistorySchema = new Schema<IStatusHistoryEntry>(
 const BookingSchema = new Schema<IBooking>(
   {
     customerId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    vendorId: { type: Schema.Types.ObjectId, ref: 'Vendor', index: true },
     bookingNumber: { type: String, required: true, unique: true },
     categoryId: { type: String, required: true },
     serviceId: { type: String, required: true },
@@ -153,6 +159,8 @@ const BookingSchema = new Schema<IBooking>(
         'SERVICE_COMPLETED',
         'PAYMENT_PENDING',
         'PAID',
+        'CANCELLED',
+        'REFUNDED',
       ],
       default: 'CREATED',
       index: true,
@@ -172,10 +180,14 @@ const BookingSchema = new Schema<IBooking>(
     rating: { type: RatingSchema },
     driverLatitude: { type: Number },
     driverLongitude: { type: Number },
+    cancelReason: { type: String },
+    refundedAt: { type: Date },
   },
   { timestamps: true },
 );
 
 BookingSchema.index({ customerId: 1, createdAt: -1 });
+BookingSchema.index({ vendorId: 1, createdAt: -1 });
+BookingSchema.index({ status: 1, createdAt: -1 });
 
 export const BookingModel = model<IBooking>('Booking', BookingSchema);

@@ -1,9 +1,13 @@
 import { Types } from 'mongoose';
 
 import { VendorModel } from '../../vendors/vendor.model';
+import { BookingModel } from '../../bookings/booking.model';
 import { DriverModel, type IDriver } from '../models/driver.model';
+import { VendorVehicleModel } from '../models/vendor-vehicle.model';
 import { escapeRegex, paginate } from '../shared/pagination';
 import { logActivity } from '../shared/activity-logger';
+import { getEntityActivities } from '../shared/entity-activities';
+import { mapDocStatus } from '../shared/response-mappers';
 import { NotFoundError } from '../../../shared/utils/errors';
 
 async function mapDriver(driver: {
@@ -78,16 +82,48 @@ export const adminDriversService = {
       vendorName = vendor?.businessName ?? vendor?.ownerName;
     }
     const base = await mapDriver(driver, vendorName);
+
+    const [bookings, activities, fleetVehicle] = await Promise.all([
+      BookingModel.find({ 'driver.id': id }).sort({ createdAt: -1 }).limit(20).lean(),
+      getEntityActivities('driver', id),
+      driver.vehicleRegistration
+        ? VendorVehicleModel.findOne({ registrationNo: driver.vehicleRegistration }).lean()
+        : Promise.resolve(null),
+    ]);
+
     return {
       ...base,
-      email: driver.email,
-      state: driver.state,
-      totalTrips: driver.totalTrips,
-      documents: driver.documents,
-      statusHistory: driver.statusHistory,
-      activities: [],
-      bookings: [],
-      earnings: { total: 0, thisMonth: 0, pending: 0 },
+      email: driver.email ?? '',
+      address: `${driver.city}${driver.state ? `, ${driver.state}` : ''}`,
+      joinedAt: driver.createdAt.toISOString(),
+      licenseExpiry: '',
+      licenseClass: 'LMV',
+      aadhaarMasked: 'XXXX-XXXX-XXXX',
+      assignedVehicle: {
+        registrationNo: driver.vehicleRegistration ?? fleetVehicle?.registrationNo ?? '—',
+        type: fleetVehicle?.type ?? driver.driverType,
+        model: fleetVehicle?.vehicleModel ?? '—',
+        year: fleetVehicle?.year ?? new Date().getFullYear(),
+        status: (fleetVehicle?.status ?? 'ACTIVE') as 'ACTIVE' | 'UNDER_MAINTENANCE',
+      },
+      bookings: bookings.map((b) => ({
+        id: b._id.toString(),
+        bookingNumber: b.bookingNumber,
+        service: b.serviceLabel,
+        status: b.status,
+        amount: b.invoice?.total ?? 0,
+        date: b.createdAt.toISOString(),
+        driverName: b.driver?.name,
+      })),
+      reviews: [],
+      documents: driver.documents.map((doc, index) => ({
+        id: `${driver._id.toString()}-doc-${index}`,
+        name: doc.type,
+        status: mapDocStatus(doc.status),
+        url: doc.url,
+        uploadedAt: doc.uploadedAt.toISOString(),
+      })),
+      activities,
     };
   },
 

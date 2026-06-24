@@ -1,50 +1,54 @@
-import type { AdminNotification, NotificationListFilters, PaginatedResponse } from '@race/types';
-import { delay } from '@race/utils';
-import { appConfig } from '@race/config';
+import type { AdminNotification, PaginatedResponse } from '@race/types';
 
-import { filterNotifications, MOCK_NOTIFICATIONS } from '../mocks/notifications.mock';
+import { apiGet, apiPatch, apiPost } from '../http';
 
-export async function getNotifications(
-  filters: NotificationListFilters = {},
-): Promise<PaginatedResponse<AdminNotification>> {
-  await delay(appConfig.mockApiDelayMs);
+const CATEGORY_TO_TYPE: Record<string, AdminNotification['type']> = {
+  vendor: 'VENDOR',
+  driver: 'VENDOR',
+  booking: 'BOOKING',
+  payment: 'PAYMENT',
+  customer: 'SYSTEM',
+  system: 'SYSTEM',
+  subscription: 'SYSTEM',
+};
 
-  const filter = filters.filter ?? 'ALL';
-  const page = filters.page ?? 1;
-  const pageSize = filters.pageSize ?? 10;
-  const filtered = filterNotifications(MOCK_NOTIFICATIONS, filter, filters.search);
-  const total = filtered.length;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const start = (page - 1) * pageSize;
+export async function getNotifications(filters: { page?: number; pageSize?: number } = {}) {
+  const result = await apiGet<PaginatedResponse<{
+    id: string;
+    title: string;
+    message?: string;
+    type: string;
+    category: string;
+    isRead: boolean;
+    createdAt: string;
+  }>>('/notifications', filters as Record<string, unknown>);
 
   return {
-    items: filtered.slice(start, start + pageSize),
-    total,
-    page,
-    pageSize,
-    totalPages,
+    ...result,
+    items: result.items.map((n) => ({
+      id: n.id,
+      title: n.title,
+      message: n.message ?? '',
+      type: CATEGORY_TO_TYPE[n.category] ?? 'SYSTEM',
+      isRead: n.isRead,
+      createdAt: n.createdAt,
+    })),
   };
 }
 
-export async function markNotificationRead(id: string): Promise<void> {
-  await delay(200);
-  const n = MOCK_NOTIFICATIONS.find((item) => item.id === id);
-  if (n) n.isRead = true;
+export async function markNotificationRead(id: string) {
+  await apiPatch(`/notifications/${id}/read`);
 }
 
-export async function markAllNotificationsRead(): Promise<void> {
-  await delay(300);
-  MOCK_NOTIFICATIONS.forEach((n) => {
-    n.isRead = true;
-  });
+export async function markAllNotificationsRead() {
+  await apiPost('/notifications/read-all');
 }
 
-export async function deleteNotification(id: string): Promise<void> {
-  await delay(200);
-  const idx = MOCK_NOTIFICATIONS.findIndex((item) => item.id === id);
-  if (idx >= 0) MOCK_NOTIFICATIONS.splice(idx, 1);
+export async function getUnreadNotificationCount(): Promise<number> {
+  const result = await apiGet<{ count: number }>('/notifications/unread-count');
+  return result.count;
 }
 
-export function getUnreadNotificationCount(): number {
-  return MOCK_NOTIFICATIONS.filter((n) => !n.isRead).length;
+export async function deleteNotification(_id: string) {
+  throw new Error('Delete notification is not supported via API');
 }

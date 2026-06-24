@@ -23,6 +23,7 @@ export function EntityFormModal({
   description,
   fields,
   initialValues = {},
+  resetKey,
   onSubmit,
   loading,
 }: {
@@ -32,6 +33,7 @@ export function EntityFormModal({
   description?: string;
   fields: FormFieldConfig[];
   initialValues?: Record<string, string>;
+  resetKey?: string;
   onSubmit: (values: Record<string, string>) => void | Promise<void>;
   loading?: boolean;
 }) {
@@ -39,7 +41,7 @@ export function EntityFormModal({
 
   useEffect(() => {
     if (open) setValues(initialValues);
-  }, [open, initialValues]);
+  }, [open, resetKey, initialValues]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

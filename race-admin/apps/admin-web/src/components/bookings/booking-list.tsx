@@ -221,6 +221,7 @@ export function BookingList() {
           setFormOpen(false);
           setEditing(null);
         }}
+        resetKey={editing?.id ?? 'create'}
         title={editing ? 'Edit Booking' : 'Add Booking'}
         fields={BOOKING_FIELDS}
         initialValues={

@@ -17,8 +17,16 @@ export function formatNumber(value: number): string {
   return new Intl.NumberFormat('en-IN').format(value);
 }
 
+function parseIsoDate(iso: string): Date | null {
+  if (!iso || iso === '—') return null;
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 export function formatRelativeTime(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
+  const date = parseIsoDate(iso);
+  if (!date) return '—';
+  const diff = Date.now() - date.getTime();
   const minutes = Math.floor(diff / 60000);
   if (minutes < 1) return 'Just now';
   if (minutes < 60) return `${minutes} min ago`;
@@ -29,15 +37,19 @@ export function formatRelativeTime(iso: string): string {
 }
 
 export function formatDate(iso: string, options?: Intl.DateTimeFormatOptions): string {
+  const date = parseIsoDate(iso);
+  if (!date) return '—';
   return new Intl.DateTimeFormat('en-IN', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
     ...options,
-  }).format(new Date(iso));
+  }).format(date);
 }
 
 export function formatDateTime(iso: string): string {
+  const date = parseIsoDate(iso);
+  if (!date) return '—';
   return new Intl.DateTimeFormat('en-IN', {
     day: '2-digit',
     month: 'short',
@@ -45,7 +57,7 @@ export function formatDateTime(iso: string): string {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
-  }).format(new Date(iso));
+  }).format(date);
 }
 
 export function exportToCsv<T extends object>(
