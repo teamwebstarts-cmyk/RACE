@@ -3,9 +3,10 @@ import type {
   VendorDetail,
   VendorListFilters,
   VendorListItem,
+  VendorVehicle,
 } from '@race/types';
 
-import { apiGet, apiPatch, apiPost } from '../http';
+import { apiDelete, apiGet, apiPatch, apiPost } from '../http';
 
 export async function getVendors(
   filters: VendorListFilters = {},
@@ -23,6 +24,14 @@ export async function approveVendor(id: string): Promise<VendorListItem> {
 
 export async function rejectVendor(id: string, note?: string): Promise<VendorListItem> {
   return apiPost<VendorListItem>(`/vendors/${id}/reject`, { note });
+}
+
+export async function reviewVendorDocument(
+  vendorId: string,
+  docKey: string,
+  status: 'VERIFIED' | 'REJECTED',
+) {
+  return apiPatch<VendorDetail>(`/vendors/${vendorId}/documents/${encodeURIComponent(docKey)}`, { status });
 }
 
 export async function getVendorStatusCountsApi() {
@@ -53,6 +62,35 @@ export async function suspendVendor(id: string, note?: string) {
   return apiPost<VendorListItem>(`/vendors/${id}/suspend`, { note });
 }
 
-export async function deleteVendor(_id: string) {
-  throw new Error('Vendor delete is not supported via admin API');
+export async function deleteVendor(id: string) {
+  await apiDelete(`/vendors/${id}`);
+}
+
+export async function createVendorVehicle(
+  vendorId: string,
+  input: {
+    registrationNo: string;
+    type: string;
+    model: string;
+    year?: number;
+    status?: string;
+  },
+) {
+  return apiPost<VendorVehicle>(`/vendors/${vendorId}/vehicles`, input);
+}
+
+export async function updateVendorVehicle(
+  vehicleId: string,
+  input: {
+    type?: string;
+    model?: string;
+    year?: number;
+    status?: string;
+  },
+) {
+  return apiPatch<VendorVehicle>(`/vehicles/${vehicleId}`, input);
+}
+
+export async function deleteVendorVehicle(vehicleId: string) {
+  await apiDelete(`/vehicles/${vehicleId}`);
 }

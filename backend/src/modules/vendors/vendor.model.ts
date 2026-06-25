@@ -74,6 +74,11 @@ export interface IVendor extends Document {
   bankDetails?: IVendorBankDetails;
   driverProfile?: IVendorDriverProfile;
   reviewNotes?: string;
+  documentReviews?: Array<{
+    key: string;
+    status: 'VERIFIED' | 'REJECTED' | 'PENDING';
+    reviewedAt?: Date;
+  }>;
   statusHistory: Array<{
     status: VendorStatus | VerificationStage;
     note?: string;
@@ -156,6 +161,13 @@ const VendorSchema = new Schema<IVendor>(
       },
     },
     reviewNotes: { type: String },
+    documentReviews: [
+      {
+        key: { type: String, required: true },
+        status: { type: String, enum: ['VERIFIED', 'REJECTED', 'PENDING'], required: true },
+        reviewedAt: { type: Date, default: Date.now },
+      },
+    ],
     statusHistory: [
       {
         status: { type: String, required: true },

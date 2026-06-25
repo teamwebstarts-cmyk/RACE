@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useState } from 'react';
 
-import { getAuditLogs, getSettings, resetSettings, saveSettings } from '@race/api';
+import { getSettings, resetSettings, saveSettings } from '@race/api';
 import type { AppSettings, SettingsCategory } from '@race/types';
 import { hasPermission } from '@race/utils';
 import { Permission, Role } from '@race/types';
@@ -17,7 +17,7 @@ export function useSettingsAccess() {
   const canAccess = useCallback(
     (category: SettingsCategory): boolean => {
       if (role === Role.SUPER_ADMIN) return true;
-      if (['security', 'emailSms', 'audit'].includes(category)) {
+      if (['security', 'emailSms'].includes(category)) {
         return hasPermission(permissions, Permission.SETTINGS_MANAGE);
       }
       if (category === 'payment') {
@@ -39,11 +39,6 @@ export function useSettings() {
   const query = useQuery({
     queryKey: ['settings'],
     queryFn: getSettings,
-  });
-
-  const auditQuery = useQuery({
-    queryKey: ['audit-logs'],
-    queryFn: getAuditLogs,
   });
 
   useEffect(() => {
@@ -107,7 +102,5 @@ export function useSettings() {
     save,
     cancel,
     discardChanges,
-    auditLogs: auditQuery.data ?? [],
-    auditLoading: auditQuery.isLoading,
   };
 }

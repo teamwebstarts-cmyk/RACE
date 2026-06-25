@@ -246,6 +246,7 @@ export interface VendorVehicle {
 
 export interface VendorDocument {
   id: string;
+  key?: string;
   name: string;
   status: VerificationStatus;
   url?: string;
@@ -289,7 +290,6 @@ export interface VendorDetail extends VendorListItem {
   ifscCode: string;
   serviceAreas: string[];
   workingHours: string;
-  fleetSize: number;
   totalBookings: number;
   totalRevenue: number;
   vehicles: VendorVehicle[];
@@ -298,6 +298,9 @@ export interface VendorDetail extends VendorListItem {
   assignedDrivers: VendorAssignedDriver[];
   activities: ActivityItem[];
   quickStats: VendorQuickStat[];
+  verificationStage?: string;
+  verificationStageLabel?: string;
+  reviewNotes?: string;
 }
 
 export interface VendorStatusCounts {
@@ -324,11 +327,14 @@ export interface DriverListItem {
   rating: number;
   reviewCount: number;
   status: DriverStatus;
+  verificationStatus: VerificationStatus;
+  documentsStatus: VerificationStatus;
 }
 
 export interface DriverListFilters {
   search?: string;
   status?: DriverStatus | 'ALL';
+  verification?: VerificationStatus | 'ALL';
   vendorId?: string;
   city?: string;
   page?: number;
@@ -345,6 +351,7 @@ export interface DriverReview {
 
 export interface DriverDocument {
   id: string;
+  key?: string;
   name: string;
   status: VerificationStatus;
   url?: string;
@@ -669,8 +676,7 @@ export type SettingsCategory =
   | 'service'
   | 'terms'
   | 'emailSms'
-  | 'appearance'
-  | 'audit';
+  | 'appearance';
 
 export interface GeneralSettings {
   appName: string;

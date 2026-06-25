@@ -12,7 +12,7 @@ export function CustomersPage() {
     <PermissionGuard permission={Permission.CUSTOMERS_VIEW} permissions={user?.permissions}>
       <PageHeader
         title="Customers"
-        breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Customers' }]}
+        breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }]}
       />
       <CustomerList />
     </PermissionGuard>

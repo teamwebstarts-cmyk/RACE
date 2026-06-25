@@ -169,7 +169,7 @@ export function ProfileContent() {
             </div>
             <div className="sm:col-span-2">
               <p className="text-sm text-[#9CA3AF]">
-                Role: {profile.role.replace(/_/g, ' ')} · Joined {formatDate(profile.joinedAt)}
+                Role: Super Admin · Joined {formatDate(profile.joinedAt)}
               </p>
             </div>
             <div className="sm:col-span-2">

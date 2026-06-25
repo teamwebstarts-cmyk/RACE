@@ -5,12 +5,11 @@ import {
   IndianRupee,
   Loader2,
   MapPin,
-  MoreVertical,
   Phone,
   Star,
   Truck,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import type {
@@ -35,11 +34,16 @@ import {
 
 import { ActivityTimeline } from '@/components/shared/activity-timeline';
 import { DataTable } from '@/components/shared/data-table';
-import { DocumentViewer } from '@/components/shared/document-viewer';
+import { EntityFormModal } from '@/components/shared/entity-form-modal';
+import { ConfirmDialog } from '@/components/shared/modal';
+import { RowActionsMenu } from '@/components/shared/row-actions-menu';
+import { VerificationDocumentsCard } from '@/components/shared/verification-documents-card';
 import { VendorAvatar } from '@/components/shared/user-avatar';
+import { downloadDocument, openDocument } from '@/lib/document-actions';
+import { getApiErrorMessage } from '@race/api';
 import { PermissionGuard } from '@/components/guards/permission-guard';
 import { PageHeader } from '@/components/layout/page-header';
-import { useVendorActions, useVendorDetail } from '@/hooks/use-vendor-detail';
+import { useVendorActions, useVendorDetail, useVendorDocumentReview, useVendorVehicleMutations } from '@/hooks/use-vendor-detail';
 import { useAuthStore } from '@/stores/auth.store';
 
 const STAT_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -80,7 +84,8 @@ function VendorProfileCard({
             </div>
           </div>
 
-          {vendor.status === 'PENDING' ? (
+          {vendor.status === 'PENDING' ||
+          (vendor.verificationStatus === 'PENDING' && vendor.status !== 'REJECTED') ? (
             <div className="flex shrink-0 gap-2">
               <Button
                 variant="outline"
@@ -149,24 +154,38 @@ function QuickStats({ stats }: { stats: VendorDetail['quickStats'] }) {
   );
 }
 
-const vehicleColumns: ColumnDef<VendorVehicle, unknown>[] = [
-  { accessorKey: 'registrationNo', header: 'Vehicle No.' },
-  { accessorKey: 'type', header: 'Type' },
-  { accessorKey: 'model', header: 'Model' },
-  { accessorKey: 'year', header: 'Year' },
+const VEHICLE_FIELDS = [
+  { name: 'registrationNo', label: 'Registration No.', required: true, placeholder: 'e.g. OD05 AB 1234' },
+  { name: 'type', label: 'Vehicle Type', required: true, placeholder: 'e.g. Tow Truck, Flatbed' },
+  { name: 'model', label: 'Model', required: true, placeholder: 'e.g. Tata 407' },
+  { name: 'year', label: 'Year', type: 'number' as const, placeholder: 'e.g. 2022' },
   {
-    accessorKey: 'status',
-    header: 'Status',
-    cell: ({ row }) => <StatusBadge status={row.original.status} />,
+    name: 'status',
+    label: 'Status',
+    type: 'select' as const,
+    placeholder: 'Select vehicle status',
+    options: [
+      { label: 'Active', value: 'ACTIVE' },
+      { label: 'Under Maintenance', value: 'UNDER_MAINTENANCE' },
+      { label: 'Inactive', value: 'INACTIVE' },
+    ],
   },
+];
+
+const VEHICLE_EDIT_FIELDS = [
+  { name: 'type', label: 'Vehicle Type', required: true, placeholder: 'e.g. Tow Truck, Flatbed' },
+  { name: 'model', label: 'Model', required: true, placeholder: 'e.g. Tata 407' },
+  { name: 'year', label: 'Year', type: 'number' as const, placeholder: 'e.g. 2022' },
   {
-    id: 'actions',
-    header: 'Actions',
-    cell: () => (
-      <button type="button" className="rounded-md p-1 hover:bg-[#F4F5F7]" aria-label="Actions">
-        <MoreVertical className="h-4 w-4 text-[#9CA3AF]" />
-      </button>
-    ),
+    name: 'status',
+    label: 'Status',
+    type: 'select' as const,
+    placeholder: 'Select vehicle status',
+    options: [
+      { label: 'Active', value: 'ACTIVE' },
+      { label: 'Under Maintenance', value: 'UNDER_MAINTENANCE' },
+      { label: 'Inactive', value: 'INACTIVE' },
+    ],
   },
 ];
 
@@ -204,7 +223,6 @@ function VendorInfoCard({ vendor }: { vendor: VendorDetail }) {
     { label: 'IFSC Code', value: vendor.ifscCode },
     { label: 'Service Areas', value: (vendor.serviceAreas ?? [vendor.city]).filter(Boolean).join(', ') || '—' },
     { label: 'Working Hours', value: vendor.workingHours },
-    { label: 'Fleet Size', value: String(vendor.fleetSize) },
     { label: 'Drivers Assigned', value: String(vendor.driverCount) },
   ];
 
@@ -222,44 +240,6 @@ function VendorInfoCard({ vendor }: { vendor: VendorDetail }) {
             </div>
           ))}
         </dl>
-      </CardContent>
-    </Card>
-  );
-}
-
-function DocumentsCard({
-  documents,
-  onView,
-}: {
-  documents: VendorDocument[];
-  onView: (doc: VendorDocument) => void;
-}) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Documents</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <ul className="space-y-3">
-          {documents.map((doc) => (
-            <li
-              key={doc.id}
-              className="flex items-center justify-between gap-3 rounded-lg border border-[#F4F5F7] px-3 py-2.5"
-            >
-              <span className="text-sm font-medium text-[#1A1A2E]">{doc.name}</span>
-              <div className="flex items-center gap-3">
-                <StatusBadge status={doc.status} />
-                <button
-                  type="button"
-                  onClick={() => onView(doc)}
-                  className="text-sm font-medium text-[#F5A623] hover:underline"
-                >
-                  View
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
       </CardContent>
     </Card>
   );
@@ -300,7 +280,82 @@ export function VendorDetailContent({ vendorId }: { vendorId: string }) {
   const user = useAuthStore((s) => s.user);
   const { data: vendor, isLoading, isError, refetch } = useVendorDetail(vendorId);
   const { approve, reject } = useVendorActions(vendorId);
-  const [viewingDoc, setViewingDoc] = useState<VendorDocument | null>(null);
+  const reviewDocument = useVendorDocumentReview(vendorId);
+  const { createVehicle, updateVehicle, removeVehicle } = useVendorVehicleMutations(vendorId);
+  const [reviewingDocId, setReviewingDocId] = useState<string | null>(null);
+  const [documentActionError, setDocumentActionError] = useState<string | null>(null);
+
+  const getVendorDocKey = (doc: VendorDocument) => {
+    if (doc.key) return doc.key;
+    const prefix = `${vendorId}-`;
+    return doc.id.startsWith(prefix) ? doc.id.slice(prefix.length) : doc.id;
+  };
+
+  const [vehicleFormOpen, setVehicleFormOpen] = useState(false);
+  const [editingVehicle, setEditingVehicle] = useState<VendorVehicle | null>(null);
+  const [deleteVehicleTarget, setDeleteVehicleTarget] = useState<VendorVehicle | null>(null);
+
+  const handleOpenDocument = async (doc: VendorDocument) => {
+    if (!doc.url) return;
+    setDocumentActionError(null);
+    const preview = window.open('', '_blank');
+    try {
+      await openDocument(doc.url, doc.name, preview);
+    } catch (error) {
+      preview?.close();
+      setDocumentActionError(getApiErrorMessage(error, 'Failed to open document'));
+    }
+  };
+
+  const handleDownloadDocument = async (doc: VendorDocument) => {
+    if (!doc.url) return;
+    setDocumentActionError(null);
+    try {
+      await downloadDocument(doc.url, doc.name);
+    } catch (error) {
+      setDocumentActionError(getApiErrorMessage(error, 'Failed to download document'));
+    }
+  };
+
+  const handleReviewDocument = async (doc: VendorDocument, status: 'VERIFIED' | 'REJECTED') => {
+    setReviewingDocId(doc.id);
+    setDocumentActionError(null);
+    try {
+      await reviewDocument.mutateAsync({ docKey: getVendorDocKey(doc), status });
+    } catch (error) {
+      setDocumentActionError(getApiErrorMessage(error, 'Failed to update document status'));
+    } finally {
+      setReviewingDocId(null);
+    }
+  };
+
+  const vehicleColumns = useMemo<ColumnDef<VendorVehicle, unknown>[]>(
+    () => [
+      { accessorKey: 'registrationNo', header: 'Vehicle No.' },
+      { accessorKey: 'type', header: 'Type' },
+      { accessorKey: 'model', header: 'Model' },
+      { accessorKey: 'year', header: 'Year' },
+      {
+        accessorKey: 'status',
+        header: 'Status',
+        cell: ({ row }) => <StatusBadge status={row.original.status} />,
+      },
+      {
+        id: 'actions',
+        header: 'Actions',
+        cell: ({ row }) => (
+          <RowActionsMenu
+            onEdit={() => {
+              setEditingVehicle(row.original);
+              setVehicleFormOpen(true);
+            }}
+            onDelete={() => setDeleteVehicleTarget(row.original)}
+          />
+        ),
+      },
+    ],
+    [],
+  );
 
   if (isLoading) return <LoadingState message="Loading vendor..." />;
   if (isError || !vendor) {
@@ -335,6 +390,20 @@ export function VendorDetailContent({ vendorId }: { vendorId: string }) {
           isRejecting={reject.isPending}
         />
 
+        <VerificationDocumentsCard
+          verificationStatus={vendor.verificationStatus}
+          documentsStatus={vendor.documentsStatus}
+          verificationStageLabel={vendor.verificationStageLabel}
+          reviewNotes={vendor.reviewNotes}
+          documents={vendor.documents}
+          onOpenDocument={handleOpenDocument}
+          onDownloadDocument={handleDownloadDocument}
+          onVerifyDocument={(doc) => handleReviewDocument(doc, 'VERIFIED')}
+          onRejectDocument={(doc) => handleReviewDocument(doc, 'REJECTED')}
+          reviewingDocumentId={reviewingDocId}
+          actionError={documentActionError}
+        />
+
         <QuickStats stats={vendor.quickStats ?? []} />
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
@@ -342,7 +411,16 @@ export function VendorDetailContent({ vendorId }: { vendorId: string }) {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Vehicles Owned</CardTitle>
-                <Button size="sm">+ Add Vehicle</Button>
+                <Button
+                  size="sm"
+                  type="button"
+                  onClick={() => {
+                    setEditingVehicle(null);
+                    setVehicleFormOpen(true);
+                  }}
+                >
+                  + Add Vehicle
+                </Button>
               </CardHeader>
               <CardContent className="p-0 pb-2">
                 <DataTable
@@ -372,7 +450,6 @@ export function VendorDetailContent({ vendorId }: { vendorId: string }) {
 
           <div className="space-y-6">
             <VendorInfoCard vendor={vendor} />
-            <DocumentsCard documents={vendor.documents} onView={setViewingDoc} />
             <AssignedDriversCard drivers={vendor.assignedDrivers} />
           </div>
         </div>
@@ -387,10 +464,68 @@ export function VendorDetailContent({ vendorId }: { vendorId: string }) {
         </Card>
       </div>
 
-      <DocumentViewer
-        open={Boolean(viewingDoc)}
-        onClose={() => setViewingDoc(null)}
-        document={viewingDoc}
+      <EntityFormModal
+        open={vehicleFormOpen}
+        onClose={() => {
+          setVehicleFormOpen(false);
+          setEditingVehicle(null);
+        }}
+        resetKey={editingVehicle?.id ?? 'create'}
+        title={editingVehicle ? 'Edit Vehicle' : 'Add Vehicle'}
+        description={
+          editingVehicle
+            ? `Update ${editingVehicle.registrationNo}`
+            : `Add a vehicle to ${vendor.businessName}`
+        }
+        fields={editingVehicle ? VEHICLE_EDIT_FIELDS : VEHICLE_FIELDS}
+        initialValues={
+          editingVehicle
+            ? {
+                type: editingVehicle.type,
+                model: editingVehicle.model,
+                year: String(editingVehicle.year ?? ''),
+                status: editingVehicle.status,
+              }
+            : { status: 'ACTIVE' }
+        }
+        onSubmit={async (values) => {
+          if (editingVehicle) {
+            await updateVehicle.mutateAsync({
+              vehicleId: editingVehicle.id,
+              input: {
+                type: values.type.trim(),
+                model: values.model.trim(),
+                year: values.year ? Number(values.year) : undefined,
+                status: values.status || 'ACTIVE',
+              },
+            });
+          } else {
+            await createVehicle.mutateAsync({
+              registrationNo: values.registrationNo.trim(),
+              type: values.type.trim(),
+              model: values.model.trim(),
+              year: values.year ? Number(values.year) : undefined,
+              status: values.status || 'ACTIVE',
+            });
+          }
+          setVehicleFormOpen(false);
+          setEditingVehicle(null);
+        }}
+        loading={createVehicle.isPending || updateVehicle.isPending}
+      />
+
+      <ConfirmDialog
+        open={!!deleteVehicleTarget}
+        onClose={() => setDeleteVehicleTarget(null)}
+        title="Delete Vehicle"
+        message={`Remove ${deleteVehicleTarget?.registrationNo} from this vendor?`}
+        onConfirm={async () => {
+          if (deleteVehicleTarget) {
+            await removeVehicle.mutateAsync(deleteVehicleTarget.id);
+            setDeleteVehicleTarget(null);
+          }
+        }}
+        loading={removeVehicle.isPending}
       />
     </PermissionGuard>
   );

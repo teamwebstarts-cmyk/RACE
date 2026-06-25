@@ -44,6 +44,8 @@ export function DriverList() {
     vendors,
     activeTab,
     setActiveTab,
+    verification,
+    setVerification,
   } = useDrivers();
 
   const { create, update, remove } = useDriverMutations();
@@ -53,13 +55,14 @@ export function DriverList() {
 
   const driverFields = useMemo(
     () => [
-      { name: 'name', label: 'Driver Name', required: true },
-      { name: 'phone', label: 'Phone', type: 'tel' as const, required: true },
-      { name: 'licenseNo', label: 'License No.', required: true },
+      { name: 'name', label: 'Driver Name', required: true, placeholder: 'Enter driver full name' },
+      { name: 'phone', label: 'Phone', type: 'tel' as const, required: true, placeholder: 'Enter 10-digit mobile number' },
+      { name: 'licenseNo', label: 'License No.', required: true, placeholder: 'Enter license number' },
       {
         name: 'driverType',
         label: 'Driver Type',
         type: 'select' as const,
+        placeholder: 'Select driver type',
         options: [
           { label: 'Tow Driver', value: 'Tow Driver' },
           { label: 'Full-Time', value: 'Full-Time' },
@@ -72,13 +75,15 @@ export function DriverList() {
         label: 'Vendor',
         type: 'select' as const,
         required: true,
+        placeholder: 'Select vendor',
         options: vendors.map((v) => ({ label: v.name, value: v.id })),
       },
-      { name: 'city', label: 'City', required: true },
+      { name: 'city', label: 'City', required: true, placeholder: 'Enter city name' },
       {
         name: 'status',
         label: 'Status',
         type: 'select' as const,
+        placeholder: 'Select status',
         options: [
           { label: 'Pending', value: 'PENDING' },
           { label: 'Approved', value: 'APPROVED' },
@@ -122,6 +127,16 @@ export function DriverList() {
         accessorKey: 'status',
         header: 'Status',
         cell: ({ row }) => <StatusBadge status={row.original.status} />,
+      },
+      {
+        accessorKey: 'verificationStatus',
+        header: 'Verification',
+        cell: ({ row }) => <StatusBadge status={row.original.verificationStatus} />,
+      },
+      {
+        accessorKey: 'documentsStatus',
+        header: 'Documents',
+        cell: ({ row }) => <StatusBadge status={row.original.documentsStatus} />,
       },
       {
         id: 'actions',
@@ -177,6 +192,18 @@ export function DriverList() {
             onSearchChange={setSearch}
             searchPlaceholder="Search by name, mobile or license no..."
             filters={[
+              {
+                id: 'verification',
+                label: 'Verification',
+                value: verification,
+                onChange: setVerification,
+                options: [
+                  { label: 'All', value: 'ALL' },
+                  { label: 'Verified', value: 'VERIFIED' },
+                  { label: 'Pending', value: 'PENDING' },
+                  { label: 'Rejected', value: 'REJECTED' },
+                ],
+              },
               {
                 id: 'vendor',
                 label: 'Vendor',

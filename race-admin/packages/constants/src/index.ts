@@ -66,7 +66,6 @@ export const NAV_ITEMS = [
   { label: 'Financial Management', href: '/financial', icon: 'IndianRupee', permission: Permission.FINANCE_VIEW },
   { label: 'Reports & Analytics', href: '/reports', icon: 'BarChart3', permission: Permission.REPORTS_VIEW },
   { label: 'Subscription Management', href: '/subscriptions', icon: 'CreditCard', permission: Permission.SUBSCRIPTIONS_VIEW },
-  { label: 'Admin Users & Roles', href: '/admin-users', icon: 'Shield', permission: Permission.ADMIN_USERS_VIEW },
   { label: 'Settings', href: '/settings', icon: 'Settings', permission: Permission.SETTINGS_VIEW },
 ] as const;
 
@@ -85,7 +84,7 @@ export const NAV_SECTIONS = [
   },
   {
     label: 'Administration',
-    hrefs: ['/admin-users', '/settings'] as const,
+    hrefs: ['/settings'] as const,
   },
 ] as const;
 

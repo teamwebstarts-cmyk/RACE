@@ -7,8 +7,8 @@ import { VendorVehicleModel } from '../models/vendor-vehicle.model';
 import { escapeRegex, paginate } from '../shared/pagination';
 import { logActivity } from '../shared/activity-logger';
 import { getEntityActivities } from '../shared/entity-activities';
-import { mapDocStatus } from '../shared/response-mappers';
-import { NotFoundError } from '../../../shared/utils/errors';
+import { buildDriverDocuments, deriveDocumentsStatus, mapVerificationStage } from '../shared/response-mappers';
+import { NotFoundError, BadRequestError } from '../../../shared/utils/errors';
 
 async function mapDriver(driver: {
   _id: Types.ObjectId;
@@ -24,6 +24,7 @@ async function mapDriver(driver: {
   reviewCount: number;
   status: string;
 }, vendorName?: string) {
+  const documents = buildDriverDocuments(driver);
   return {
     id: driver._id.toString(),
     name: driver.name,
@@ -37,6 +38,11 @@ async function mapDriver(driver: {
     rating: driver.rating,
     reviewCount: driver.reviewCount,
     status: driver.status,
+    verificationStatus: mapVerificationStage(
+      driver.status === 'APPROVED' ? 'approved' : driver.status === 'REJECTED' ? 'rejected' : 'document_review',
+      driver.status.toLowerCase(),
+    ),
+    documentsStatus: deriveDocumentsStatus(documents),
   };
 }
 
@@ -44,6 +50,7 @@ export const adminDriversService = {
   async list(filters: {
     search?: string;
     status?: string;
+    verification?: string;
     city?: string;
     vendorId?: string;
     page?: number;
@@ -53,6 +60,11 @@ export const adminDriversService = {
     if (filters.status && filters.status !== 'ALL') query.status = filters.status;
     if (filters.city && filters.city !== 'ALL') query.city = filters.city;
     if (filters.vendorId && filters.vendorId !== 'ALL') query.vendorId = filters.vendorId;
+    if (filters.verification && filters.verification !== 'ALL') {
+      if (filters.verification === 'VERIFIED') query.status = 'APPROVED';
+      else if (filters.verification === 'REJECTED') query.status = 'REJECTED';
+      else query.status = 'PENDING';
+    }
     if (filters.search?.trim()) {
       const regex = new RegExp(escapeRegex(filters.search.trim()), 'i');
       query.$or = [{ name: regex }, { phone: regex }, { licenseNo: regex }, { driverCode: regex }];
@@ -116,13 +128,7 @@ export const adminDriversService = {
         driverName: b.driver?.name,
       })),
       reviews: [],
-      documents: driver.documents.map((doc, index) => ({
-        id: `${driver._id.toString()}-doc-${index}`,
-        name: doc.type,
-        status: mapDocStatus(doc.status),
-        url: doc.url,
-        uploadedAt: doc.uploadedAt.toISOString(),
-      })),
+      documents: buildDriverDocuments(driver),
       activities,
     };
   },
@@ -196,6 +202,69 @@ export const adminDriversService = {
       entityId: id,
       title: `Driver ${driver.name} deleted`,
     });
+  },
+
+  async reviewDocument(
+    id: string,
+    documentId: string,
+    status: 'VERIFIED' | 'REJECTED',
+    actor: { id: string; name: string },
+  ) {
+    if (status !== 'VERIFIED' && status !== 'REJECTED') {
+      throw new BadRequestError('Invalid document status');
+    }
+    const driver = await DriverModel.findById(id);
+    if (!driver) throw new NotFoundError('Driver not found');
+
+    const driverId = driver._id.toString();
+    const DOC_BY_KEY: Record<string, string> = {
+      dl: 'Driving License',
+      aadhaar: 'Aadhaar Card',
+      police: 'Police Verification',
+      medical: 'Medical Fitness Certificate',
+    };
+
+    let docIndex = -1;
+    const indexMatch = documentId.match(/-doc-(\d+)$/);
+    if (indexMatch) {
+      docIndex = Number(indexMatch[1]);
+    } else if (documentId.startsWith(`${driverId}-`)) {
+      const docKey = documentId.slice(driverId.length + 1);
+      const docType = DOC_BY_KEY[docKey];
+      if (!docType) throw new NotFoundError('Document not found');
+
+      if (!driver.documents?.length) {
+        driver.documents = [];
+      }
+      docIndex = driver.documents.findIndex((doc) => doc.type === docType);
+      if (docIndex < 0) {
+        driver.documents.push({
+          type: docType,
+          url: `/admin/documents/driver/${driverId}/${docKey}`,
+          status,
+          uploadedAt: new Date(),
+        });
+        docIndex = driver.documents.length - 1;
+      }
+    } else {
+      throw new NotFoundError('Document not found');
+    }
+
+    if (!driver.documents[docIndex]) throw new NotFoundError('Document not found');
+
+    driver.documents[docIndex].status = status;
+    await driver.save();
+
+    await logActivity({
+      actorId: actor.id,
+      actorName: actor.name,
+      action: status === 'VERIFIED' ? 'DRIVER_DOCUMENT_VERIFIED' : 'DRIVER_DOCUMENT_REJECTED',
+      entityType: 'driver',
+      entityId: id,
+      title: `${driver.documents[docIndex].type} ${status === 'VERIFIED' ? 'verified' : 'rejected'} for ${driver.name}`,
+    });
+
+    return this.getById(id);
   },
 
   async getCounts() {

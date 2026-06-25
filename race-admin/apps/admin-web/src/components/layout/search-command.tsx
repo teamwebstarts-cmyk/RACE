@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { Building2, Car, ClipboardList, Search, Users, X } from 'lucide-react';
 
 import { NAV_ITEMS } from '@race/constants';
-import { cn } from '@race/utils';
 
 const QUICK_LINKS = [
   { label: 'Customers', href: '/customers', icon: Users, keywords: 'users people' },
@@ -55,7 +54,7 @@ export function SearchCommand({
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4 pt-[15vh] backdrop-blur-sm">
-      <div className="w-full max-w-lg overflow-hidden rounded-card border border-border bg-white shadow-card-hover">
+      <div className="race-dropdown w-full max-w-lg shadow-card-hover">
         <div className="flex items-center gap-3 border-b border-border px-4">
           <Search className="h-4 w-4 shrink-0 text-muted" />
           <input
@@ -68,13 +67,13 @@ export function SearchCommand({
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className="rounded p-1 text-muted hover:bg-[#F4F5F7]"
+            className="rounded-lg p-1 text-muted hover:bg-surface-hover"
             aria-label="Close search"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
-        <ul className="max-h-72 overflow-y-auto p-2">
+        <ul className="max-h-72 overflow-y-auto p-2 race-scrollbar">
           {results.length ? (
             results.map((item) => {
               const Icon = item.icon;
@@ -86,9 +85,7 @@ export function SearchCommand({
                       navigate(item.href);
                       onOpenChange(false);
                     }}
-                    className={cn(
-                      'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition hover:bg-[#F4F5F7]',
-                    )}
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition hover:bg-surface-hover"
                   >
                     <Icon className="h-4 w-4 text-muted" />
                     <span className="font-medium text-heading">{item.label}</span>

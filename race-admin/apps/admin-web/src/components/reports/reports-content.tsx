@@ -82,6 +82,16 @@ function ReportMetricCard({ metric }: { metric: ReportMetric }) {
 }
 
 function RevenueTrendChart({ data }: { data: ReportData['revenueTrend'] }) {
+  if (!data.length) {
+    return (
+      <ChartCard title="Revenue Trend" subtitle="Daily revenue with gradient area visualization">
+        <div className="flex h-full items-center justify-center text-sm text-[#9CA3AF]">
+          No trend data for the selected date range
+        </div>
+      </ChartCard>
+    );
+  }
+
   return (
     <ChartCard title="Revenue Trend" subtitle="Daily revenue with gradient area visualization">
       <ResponsiveContainer width="100%" height="100%">
@@ -111,6 +121,16 @@ function RevenueTrendChart({ data }: { data: ReportData['revenueTrend'] }) {
 }
 
 function TopServicesDonut({ data }: { data: ReportData['topServices'] }) {
+  if (!data.length) {
+    return (
+      <ChartCard title="Top Services">
+        <div className="flex h-full items-center justify-center text-sm text-[#9CA3AF]">
+          No service data for the selected date range
+        </div>
+      </ChartCard>
+    );
+  }
+
   return (
     <ChartCard title="Top Services">
       <div className="flex h-full flex-col items-center justify-center gap-4 lg:flex-row">
@@ -142,6 +162,16 @@ function TopServicesDonut({ data }: { data: ReportData['topServices'] }) {
 
 function MonthlyComparisonChart({ data }: { data: ReportData['monthlyComparison'] }) {
   const chartData = data.filter((d) => d.current > 0 || d.previous > 0).slice(0, 6);
+
+  if (!chartData.length) {
+    return (
+      <ChartCard title="Monthly Comparison">
+        <div className="flex h-full items-center justify-center text-sm text-[#9CA3AF]">
+          No comparison data for the selected date range
+        </div>
+      </ChartCard>
+    );
+  }
 
   return (
     <ChartCard title="Monthly Comparison">

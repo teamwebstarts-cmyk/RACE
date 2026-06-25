@@ -15,6 +15,7 @@ export function useDrivers() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<string>('ALL');
   const [vendorId, setVendorId] = useState<string>('ALL');
+  const [verification, setVerification] = useState<string>('ALL');
   const [city, setCity] = useState<string>('ALL');
   const [page, setPage] = useState(1);
   const [activeTab, setActiveTab] = useState<string>('ALL');
@@ -25,12 +26,13 @@ export function useDrivers() {
     () => ({
       search,
       status: tabStatus as DriverListFilters['status'],
+      verification: verification as DriverListFilters['verification'],
       vendorId,
       city,
       page,
       pageSize: PAGE_SIZE,
     }),
-    [search, tabStatus, vendorId, city, page],
+    [search, tabStatus, verification, vendorId, city, page],
   );
 
   const query = useQuery({
@@ -72,6 +74,11 @@ export function useDrivers() {
       setVendorId(v);
       resetPage();
     },
+    verification,
+    setVerification: (v: string) => {
+      setVerification(v);
+      resetPage();
+    },
     city,
     setCity: (v: string) => {
       setCity(v);
@@ -87,6 +94,13 @@ export function useDrivers() {
       setActiveTab(tab);
       resetPage();
     },
-    handleExport: () => exportDriversCsv({ search, status: tabStatus as DriverListFilters['status'], vendorId, city }),
+    handleExport: () =>
+      exportDriversCsv({
+        search,
+        status: tabStatus as DriverListFilters['status'],
+        verification: verification as DriverListFilters['verification'],
+        vendorId,
+        city,
+      }),
   };
 }

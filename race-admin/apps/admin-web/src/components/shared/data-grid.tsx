@@ -179,6 +179,11 @@ function DataGridInner<TData>({
                   <td
                     key={cell.id}
                     className="px-4 py-3 text-heading"
+                    onPointerDown={
+                      cell.column.id === 'actions'
+                        ? (event) => event.stopPropagation()
+                        : undefined
+                    }
                     onClick={
                       cell.column.id === 'actions'
                         ? (event) => event.stopPropagation()

@@ -25,13 +25,14 @@ const TABS = [
 ] as const;
 
 const BOOKING_FIELDS = [
-  { name: 'customerName', label: 'Customer Name', required: true },
-  { name: 'vendorName', label: 'Vendor Name', required: true },
-  { name: 'service', label: 'Service', required: true },
+  { name: 'customerName', label: 'Customer Name', required: true, placeholder: 'Enter customer name' },
+  { name: 'vendorName', label: 'Vendor Name', required: true, placeholder: 'Enter vendor name' },
+  { name: 'service', label: 'Service', required: true, placeholder: 'e.g. Towing, battery jump-start' },
   {
     name: 'serviceType',
     label: 'Service Type',
     type: 'select' as const,
+    placeholder: 'Select service type',
     options: [
       { label: 'Towing', value: 'towing' },
       { label: 'Roadside', value: 'roadside' },
@@ -40,12 +41,13 @@ const BOOKING_FIELDS = [
       { label: 'Fuel', value: 'fuel' },
     ],
   },
-  { name: 'amount', label: 'Amount (₹)', type: 'number' as const, required: true },
-  { name: 'city', label: 'City', required: true },
+  { name: 'amount', label: 'Amount (₹)', type: 'number' as const, required: true, placeholder: 'Enter amount in rupees' },
+  { name: 'city', label: 'City', required: true, placeholder: 'Enter service city' },
   {
     name: 'status',
     label: 'Status',
     type: 'select' as const,
+    placeholder: 'Select booking status',
     options: [
       { label: 'Created', value: 'CREATED' },
       { label: 'Assigned', value: 'ASSIGNED' },

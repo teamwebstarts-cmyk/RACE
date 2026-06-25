@@ -237,7 +237,6 @@ export function buildVendorDetail(base: VendorListItem): VendorDetail {
   ];
 
   const quickStats: VendorQuickStat[] = [
-    { id: 'qs1', label: 'Total Vehicles', value: String(base.vehicleCount), icon: 'Truck' },
     { id: 'qs2', label: 'Total Bookings', value: String(312 + base.id.length), icon: 'ClipboardList' },
     {
       id: 'qs3',
@@ -260,7 +259,6 @@ export function buildVendorDetail(base: VendorListItem): VendorDetail {
     ifscCode: 'SBIN0001234',
     serviceAreas: [base.city, 'Cuttack', 'Puri'],
     workingHours: '24/7',
-    fleetSize: base.vehicleCount,
     totalBookings: 312 + base.id.length,
     totalRevenue: 468000 + base.id.length * 1000,
     vehicles,

@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 
 import type { CustomerListItem } from '@race/types';
 import { formatDate } from '@race/utils';
-import { Card, CardContent, CardHeader, CardTitle, ErrorState, LoadingState, StatusBadge } from '@race/ui';
+import { Card, CardContent, ErrorState, LoadingState, StatusBadge } from '@race/ui';
 
 import { ConfirmDialog } from '@/components/shared/modal';
 import { DataTable } from '@/components/shared/data-table';
@@ -17,14 +17,15 @@ import { useCustomerMutations } from '@/hooks/use-customer-mutations';
 import { useCustomers } from '@/hooks/use-customers';
 
 const CUSTOMER_FIELDS = [
-  { name: 'name', label: 'Full Name', required: true, placeholder: 'Enter customer name' },
-  { name: 'email', label: 'Email', type: 'email' as const, required: true },
-  { name: 'phone', label: 'Phone', type: 'tel' as const, required: true },
-  { name: 'city', label: 'City', required: true },
+  { name: 'name', label: 'Full Name', required: true, placeholder: 'Enter customer full name' },
+  { name: 'email', label: 'Email', type: 'email' as const, required: true, placeholder: 'Enter email address' },
+  { name: 'phone', label: 'Phone', type: 'tel' as const, required: true, placeholder: 'Enter 10-digit mobile number' },
+  { name: 'city', label: 'City', required: true, placeholder: 'Enter city name' },
   {
     name: 'status',
     label: 'Status',
     type: 'select' as const,
+    placeholder: 'Select status',
     options: [
       { label: 'Active', value: 'ACTIVE' },
       { label: 'Suspended', value: 'SUSPENDED' },
@@ -135,9 +136,6 @@ export function CustomerList() {
   return (
     <>
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0">
-          <CardTitle>Customer List</CardTitle>
-        </CardHeader>
         <CardContent className="p-0">
           <ListToolbar
             search={search}

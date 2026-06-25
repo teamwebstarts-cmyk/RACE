@@ -13,8 +13,10 @@ export type FormFieldConfig = {
   options?: { label: string; value: string }[];
 };
 
+const FORM_ID = 'entity-form-modal';
+
 const inputClass =
-  'flex h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-heading focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40';
+  'flex h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-heading placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40';
 
 export function EntityFormModal({
   open,
@@ -38,14 +40,39 @@ export function EntityFormModal({
   loading?: boolean;
 }) {
   const [values, setValues] = useState<Record<string, string>>(initialValues);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (open) setValues(initialValues);
+    if (open) {
+      setValues(initialValues);
+      setError(null);
+    }
   }, [open, resetKey, initialValues]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    void onSubmit(values);
+  const validate = () => {
+    for (const field of fields) {
+      if (field.required && !values[field.name]?.trim()) {
+        return `${field.label} is required`;
+      }
+    }
+    return null;
+  };
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setError(null);
+
+    const validationError = validate();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    try {
+      await onSubmit(values);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save');
+    }
   };
 
   return (
@@ -59,13 +86,18 @@ export function EntityFormModal({
           <Button variant="outline" onClick={onClose} disabled={loading}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={loading}>
+          <Button type="submit" form={FORM_ID} disabled={loading}>
             {loading ? 'Saving...' : 'Save'}
           </Button>
         </>
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form id={FORM_ID} onSubmit={handleSubmit} className="space-y-4">
+        {error ? (
+          <p className="rounded-lg border border-error/20 bg-error/10 px-3 py-2 text-sm text-error">
+            {error}
+          </p>
+        ) : null}
         {fields.map((field) => (
           <div key={field.name}>
             <label className="mb-1.5 block text-sm font-semibold text-heading">
@@ -79,6 +111,9 @@ export function EntityFormModal({
                 required={field.required}
                 onChange={(e) => setValues((v) => ({ ...v, [field.name]: e.target.value }))}
               >
+                <option value="" disabled>
+                  {field.placeholder ?? `Select ${field.label.toLowerCase()}`}
+                </option>
                 {field.options?.map((opt) => (
                   <option key={opt.value} value={opt.value}>
                     {opt.label}
@@ -89,7 +124,7 @@ export function EntityFormModal({
               <input
                 type={field.type ?? 'text'}
                 className={inputClass}
-                placeholder={field.placeholder}
+                placeholder={field.placeholder ?? `Enter ${field.label.toLowerCase()}`}
                 required={field.required}
                 value={values[field.name] ?? ''}
                 onChange={(e) => setValues((v) => ({ ...v, [field.name]: e.target.value }))}

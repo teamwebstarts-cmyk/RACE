@@ -177,31 +177,14 @@ export function FinancialContent() {
                 ],
               },
             ]}
+            dateFrom={dateFrom}
+            dateTo={dateTo}
+            onDateFromChange={setDateFrom}
+            onDateToChange={setDateTo}
             onExport={() => void handleExport()}
             exportLabel="Export"
             showAdd={false}
           />
-
-          <div className="flex flex-wrap items-center gap-3 border-b border-[#EEEEEE] px-4 py-3">
-            <label className="flex items-center gap-2 text-sm text-[#555555]">
-              From
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                className="h-9 rounded-lg border border-[#EEEEEE] px-2 text-sm"
-              />
-            </label>
-            <label className="flex items-center gap-2 text-sm text-[#555555]">
-              To
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                className="h-9 rounded-lg border border-[#EEEEEE] px-2 text-sm"
-              />
-            </label>
-          </div>
 
           {isLoading && !data ? (
             <LoadingState message="Loading transactions..." />

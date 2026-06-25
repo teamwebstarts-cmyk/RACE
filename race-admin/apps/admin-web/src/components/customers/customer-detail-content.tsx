@@ -157,11 +157,10 @@ export function CustomerDetailContent({ customerId }: { customerId: string }) {
   return (
     <PermissionGuard permission={Permission.CUSTOMERS_VIEW} permissions={user?.permissions}>
       <PageHeader
-        title={customer.name}
+        title="Customer Details"
         breadcrumbs={[
           { label: 'Dashboard', href: '/dashboard' },
           { label: 'Customers', href: '/customers' },
-          { label: customer.name },
         ]}
       />
 

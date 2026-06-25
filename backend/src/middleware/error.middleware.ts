@@ -20,8 +20,27 @@ export function errorHandler(
     return sendError(res, message, 400);
   }
 
+  if (isMongoDuplicateKeyError(error)) {
+    const field = Object.keys(error.keyPattern ?? {})[0] ?? 'field';
+    return sendError(res, `A record with this ${field} already exists`, 409);
+  }
+
+  if (error.name === 'ValidationError') {
+    const message = Object.values((error as { errors?: Record<string, { message?: string }> }).errors ?? {})
+      .map((entry) => entry.message)
+      .filter(Boolean)
+      .join(', ');
+    return sendError(res, message || 'Validation failed', 400);
+  }
+
   logger.error('Unhandled error', { error: error.message, stack: error.stack });
   return sendError(res, 'Internal server error', 500);
+}
+
+function isMongoDuplicateKeyError(
+  error: Error,
+): error is Error & { code: number; keyPattern?: Record<string, number> } {
+  return 'code' in error && (error as { code: number }).code === 11000;
 }
 
 export function notFoundHandler(_req: Request, res: Response): Response {

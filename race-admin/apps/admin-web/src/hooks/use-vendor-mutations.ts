@@ -4,7 +4,11 @@ import { createVendor, deleteVendor, updateVendor } from '@race/api';
 
 export function useVendorMutations() {
   const qc = useQueryClient();
-  const invalidate = () => void qc.invalidateQueries({ queryKey: ['vendors'] });
+  const invalidate = () => {
+    void qc.invalidateQueries({ queryKey: ['vendors'] });
+    void qc.invalidateQueries({ queryKey: ['vendor-status-counts'] });
+    void qc.invalidateQueries({ queryKey: ['vendor-cities'] });
+  };
   return {
     create: useMutation({ mutationFn: createVendor, onSuccess: invalidate }),
     update: useMutation({

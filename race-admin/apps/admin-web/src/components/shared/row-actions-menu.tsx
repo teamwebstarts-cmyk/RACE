@@ -41,15 +41,15 @@ export function RowActionsMenu({
   const runAction = useCallback((action?: () => void) => {
     if (!action) return;
     setOpen(false);
-    window.setTimeout(action, 0);
+    action();
   }, []);
 
   const isEventInsideMenu = useCallback((event: Event) => {
-    const path = event.composedPath();
-    return (
-      (buttonRef.current && path.includes(buttonRef.current)) ||
-      (menuRef.current && path.includes(menuRef.current))
-    );
+    const target = event.target;
+    if (!(target instanceof Node)) return false;
+    if (buttonRef.current?.contains(target)) return true;
+    if (menuRef.current?.contains(target)) return true;
+    return false;
   }, []);
 
   useLayoutEffect(() => {
@@ -78,17 +78,17 @@ export function RowActionsMenu({
       setOpen(false);
     }
 
-    const pointerTimer = window.setTimeout(() => {
-      document.addEventListener('pointerdown', handlePointerDown, true);
-    }, 0);
+    const frameId = window.requestAnimationFrame(() => {
+      document.addEventListener('pointerdown', handlePointerDown);
+    });
 
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('resize', updatePosition);
     window.addEventListener('scroll', handleScroll, true);
 
     return () => {
-      window.clearTimeout(pointerTimer);
-      document.removeEventListener('pointerdown', handlePointerDown, true);
+      window.cancelAnimationFrame(frameId);
+      document.removeEventListener('pointerdown', handlePointerDown);
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('resize', updatePosition);
       window.removeEventListener('scroll', handleScroll, true);
@@ -104,20 +104,13 @@ export function RowActionsMenu({
             className="fixed z-[9999] min-w-[140px] overflow-hidden rounded-lg border border-border bg-surface py-1 shadow-card"
             style={{ top: coords.top, left: coords.left }}
             onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => event.stopPropagation()}
           >
             {onView ? (
-              <ActionItem
-                icon={Eye}
-                label="View"
-                onSelect={() => runAction(onView)}
-              />
+              <ActionItem icon={Eye} label="View" onSelect={() => runAction(onView)} />
             ) : null}
             {onEdit ? (
-              <ActionItem
-                icon={Pencil}
-                label="Edit"
-                onSelect={() => runAction(onEdit)}
-              />
+              <ActionItem icon={Pencil} label="Edit" onSelect={() => runAction(onEdit)} />
             ) : null}
             {onDelete ? (
               <ActionItem
@@ -172,7 +165,8 @@ function ActionItem({
         'flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-body hover:bg-background',
         className,
       )}
-      onPointerDown={(event) => {
+      onPointerDown={(event) => event.stopPropagation()}
+      onClick={(event) => {
         event.preventDefault();
         event.stopPropagation();
         onSelect();

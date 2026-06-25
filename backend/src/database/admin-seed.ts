@@ -143,36 +143,6 @@ export async function seedAdminPlatform(): Promise<void> {
     lastLoginAt: new Date(),
   });
 
-  const extraAdmins = await AdminModel.insertMany([
-    {
-      name: 'Operations Lead',
-      email: 'ops@raceservice.com',
-      passwordHash,
-      role: AdminRole.OPERATIONS_ADMIN,
-      permissions: getPermissionsForRole(AdminRole.OPERATIONS_ADMIN),
-      isActive: true,
-      lastLoginAt: new Date(Date.now() - 86400000),
-    },
-    {
-      name: 'Finance Manager',
-      email: 'finance@raceservice.com',
-      passwordHash,
-      role: AdminRole.FINANCE_ADMIN,
-      permissions: getPermissionsForRole(AdminRole.FINANCE_ADMIN),
-      isActive: true,
-      lastLoginAt: new Date(Date.now() - 172800000),
-    },
-    {
-      name: 'Support Agent',
-      email: 'support@raceservice.com',
-      passwordHash,
-      role: AdminRole.SUPPORT_ADMIN,
-      permissions: getPermissionsForRole(AdminRole.SUPPORT_ADMIN),
-      isActive: true,
-      lastLoginAt: new Date(Date.now() - 3600000),
-    },
-  ]);
-
   const customers = [];
   for (let i = 0; i < 20; i++) {
     const customer = await UserModel.create({
@@ -220,6 +190,17 @@ export async function seedAdminPlatform(): Promise<void> {
       mobileNumber: vendorUser.mobileNumber,
       email: vendorUser.email,
       address: `${CITIES[i % CITIES.length]}, Odisha`,
+      bankDetails: {
+        accountHolderName: vendorUser.fullName,
+        accountNumber: `XXXX${String(1000 + i).slice(-4)}`,
+        ifsc: 'HDFC0001234',
+        bankName: 'HDFC Bank',
+      },
+      towVehicle: {
+        registrationNumber: `OD-VND-${1000 + i}`,
+        vehicleType: 'Tow Truck',
+        capacity: '3 Ton',
+      },
       submittedAt: new Date(),
       approvedAt: i === 2 ? undefined : new Date(),
       statusHistory: [{ status: 'approved', changedAt: new Date() }],
@@ -244,6 +225,32 @@ export async function seedAdminPlatform(): Promise<void> {
       reviewCount: 10 + i * 3,
       status: i === 3 ? 'PENDING' : 'APPROVED',
       totalTrips: i * 12,
+      documents: [
+        {
+          type: 'Driving License',
+          url: `/documents/driver/${i + 1}/dl.pdf`,
+          status: i === 3 ? 'PENDING' : 'VERIFIED',
+          uploadedAt: new Date(),
+        },
+        {
+          type: 'Aadhaar Card',
+          url: `/documents/driver/${i + 1}/aadhaar.pdf`,
+          status: i === 3 ? 'PENDING' : 'VERIFIED',
+          uploadedAt: new Date(),
+        },
+        {
+          type: 'Police Verification',
+          url: `/documents/driver/${i + 1}/police.pdf`,
+          status: i === 3 ? 'PENDING' : 'VERIFIED',
+          uploadedAt: new Date(),
+        },
+        {
+          type: 'Medical Fitness Certificate',
+          url: `/documents/driver/${i + 1}/medical.pdf`,
+          status: i === 3 ? 'PENDING' : 'VERIFIED',
+          uploadedAt: new Date(),
+        },
+      ],
       statusHistory: [{ status: i === 3 ? 'PENDING' : 'APPROVED', changedAt: new Date() }],
     });
     drivers.push(driver);
@@ -405,8 +412,8 @@ export async function seedAdminPlatform(): Promise<void> {
 
   await ActivityLogModel.insertMany(
     activityEntries.map((entry, index) => ({
-      actorId: index % 2 === 0 ? superAdmin._id : extraAdmins[index % extraAdmins.length]._id,
-      actorName: index % 2 === 0 ? superAdmin.name : extraAdmins[index % extraAdmins.length].name,
+      actorId: superAdmin._id,
+      actorName: superAdmin.name,
       ...entry,
       createdAt: new Date(Date.now() - index * 3600000),
     })),
@@ -423,7 +430,7 @@ export async function seedAdminPlatform(): Promise<void> {
 
   logger.info('Admin platform seed completed', {
     superAdmin: superAdmin.email,
-    admins: 1 + extraAdmins.length,
+    admins: 1,
     customers: customers.length,
     vendors: vendors.length,
     drivers: drivers.length,

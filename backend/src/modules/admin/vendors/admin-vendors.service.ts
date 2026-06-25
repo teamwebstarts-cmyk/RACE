@@ -13,9 +13,26 @@ import { getEntityActivities } from '../shared/entity-activities';
 import {
   driverInitials,
   formatInr,
+  buildVendorDocuments,
+  deriveDocumentsStatus,
   mapVendorTypeLabel,
+  mapVerificationStage,
+  mapVerificationStageLabel,
 } from '../shared/response-mappers';
-import { NotFoundError } from '../../../shared/utils/errors';
+import { BadRequestError, ConflictError, NotFoundError } from '../../../shared/utils/errors';
+
+function mapAdminVendorStatus(status?: string): string {
+  switch (String(status ?? 'PENDING').toUpperCase()) {
+    case 'APPROVED':
+      return 'approved';
+    case 'REJECTED':
+      return 'rejected';
+    case 'SUSPENDED':
+      return 'changes_requested';
+    default:
+      return 'pending';
+  }
+}
 
 function mapAssignedDriverStatus(status: string): 'ACTIVE' | 'ON_LEAVE' {
   if (status === 'SUSPENDED') return 'ON_LEAVE';
@@ -42,6 +59,7 @@ function mapVendor(vendor: {
 }) {
   const city = vendor.address?.split(',')[0] ?? 'Odisha';
   const status = mapVendorStatus(vendor.status);
+  const documents = buildVendorDocuments(vendor);
   return {
     id: vendor._id.toString(),
     businessName: vendor.businessName ?? vendor.ownerName ?? 'Vendor',
@@ -55,8 +73,8 @@ function mapVendor(vendor: {
     rating: 0,
     reviewCount: 0,
     status,
-    verificationStatus: vendor.verificationStage === 'approved' ? 'VERIFIED' : 'PENDING',
-    documentsStatus: status === 'APPROVED' ? 'VERIFIED' : 'PENDING',
+    verificationStatus: mapVerificationStage(vendor.verificationStage, vendor.status),
+    documentsStatus: deriveDocumentsStatus(documents),
   };
 }
 
@@ -75,6 +93,17 @@ export const adminVendorsService = {
     if (filters.search) {
       const regex = new RegExp(escapeRegex(String(filters.search)), 'i');
       query.$or = [{ businessName: regex }, { ownerName: regex }, { mobileNumber: regex }, { email: regex }];
+    }
+    if (filters.verification && filters.verification !== 'ALL') {
+      if (filters.verification === 'VERIFIED') {
+        query.verificationStage = 'approved';
+        query.status = 'approved';
+      } else if (filters.verification === 'REJECTED') {
+        query.$or = [{ verificationStage: 'rejected' }, { status: 'rejected' }];
+      } else {
+        query.status = { $in: ['pending', 'under_review'] };
+        query.verificationStage = { $nin: ['approved', 'rejected'] };
+      }
     }
 
     const result = await paginate(VendorModel, query, filters as never, (doc) => mapVendor(doc as never));
@@ -142,6 +171,7 @@ export const adminVendorsService = {
 
     const totalRevenue = revenueAgg[0]?.total ?? 0;
     const city = vendor.address?.split(',')[0]?.trim() ?? base.city;
+    const documents = buildVendorDocuments(vendor);
 
     return {
       ...base,
@@ -157,10 +187,13 @@ export const adminVendorsService = {
       ifscCode: vendor.bankDetails?.ifsc ?? '—',
       serviceAreas: city ? [city] : [],
       workingHours: '24/7',
-      fleetSize: vehicles.length,
       totalBookings: bookingCount,
       totalRevenue,
-      documents: [],
+      verificationStage: vendor.verificationStage,
+      verificationStageLabel: mapVerificationStageLabel(vendor.verificationStage),
+      reviewNotes: vendor.reviewNotes ?? '',
+      documentsStatus: deriveDocumentsStatus(documents),
+      documents,
       assignedDrivers: drivers.map((d) => ({
         id: d._id.toString(),
         name: d.name,
@@ -189,12 +222,6 @@ export const adminVendorsService = {
       activities,
       quickStats: [
         {
-          id: 'fleet',
-          label: 'Fleet Size',
-          value: String(vehicles.length),
-          icon: 'Truck',
-        },
-        {
           id: 'bookings',
           label: 'Total Bookings',
           value: String(bookingCount),
@@ -218,36 +245,56 @@ export const adminVendorsService = {
 
   async create(
     input: {
-      businessName: string;
-      ownerName: string;
-      phone: string;
+      businessName?: string;
+      ownerName?: string;
+      phone?: string;
       email?: string;
       city?: string;
       vendorType?: string;
+      status?: string;
     },
     actor: { id: string; name: string },
   ) {
+    const businessName = input.businessName?.trim();
+    const ownerName = input.ownerName?.trim();
+    const phone = input.phone?.trim();
+    const email = input.email?.trim();
+    const city = input.city?.trim();
+
+    if (!businessName) throw new BadRequestError('Business name is required');
+    if (!ownerName) throw new BadRequestError('Owner name is required');
+    if (!phone) throw new BadRequestError('Phone is required');
+
+    const existingUser = await UserModel.findOne({ mobileNumber: phone });
+    if (existingUser) {
+      throw new ConflictError('A user with this phone number already exists');
+    }
+
+    const vendorStatus = mapAdminVendorStatus(input.status);
+    const isApproved = vendorStatus === 'approved';
+
     const vendorUser = await UserModel.create({
-      mobileNumber: input.phone,
-      fullName: input.ownerName,
-      email: input.email,
+      mobileNumber: phone,
+      fullName: ownerName,
+      email: email || undefined,
       role: 'vendor',
       isVerified: true,
-      isProfileCompleted: true,
+      isProfileCompleted: false,
     });
 
     const vendor = await VendorModel.create({
       userId: vendorUser._id,
       vendorType: (input.vendorType as never) ?? 'towing_company',
-      status: 'pending',
-      verificationStage: 'document_review',
-      businessName: input.businessName,
-      ownerName: input.ownerName,
-      mobileNumber: input.phone,
-      email: input.email,
-      address: input.city ? `${input.city}, Odisha` : undefined,
+      status: vendorStatus,
+      verificationStage: isApproved ? 'approved' : 'document_review',
+      businessName,
+      ownerName,
+      mobileNumber: phone,
+      email: email || undefined,
+      address: city ? `${city}, Odisha` : undefined,
       submittedAt: new Date(),
-      statusHistory: [{ status: 'pending', changedAt: new Date() }],
+      approvedAt: isApproved ? new Date() : undefined,
+      statusHistory: [{ status: vendorStatus, changedAt: new Date(), note: 'Created by admin' }],
     });
 
     await logActivity({
@@ -278,6 +325,7 @@ export const adminVendorsService = {
       phone: string;
       email: string;
       city: string;
+      status: string;
       bankDetails: Record<string, string>;
     }>,
     actor: { id: string; name: string },
@@ -287,9 +335,31 @@ export const adminVendorsService = {
 
     if (input.businessName) vendor.businessName = input.businessName;
     if (input.ownerName) vendor.ownerName = input.ownerName;
-    if (input.phone) vendor.mobileNumber = input.phone;
-    if (input.email) vendor.email = input.email;
+    if (input.phone) {
+      const phone = input.phone.trim();
+      const duplicate = await UserModel.findOne({
+        mobileNumber: phone,
+        _id: { $ne: vendor.userId },
+      });
+      if (duplicate) throw new ConflictError('A user with this phone number already exists');
+      vendor.mobileNumber = phone;
+      await UserModel.findByIdAndUpdate(vendor.userId, { mobileNumber: phone });
+    }
+    if (input.email !== undefined) vendor.email = input.email;
     if (input.city) vendor.address = `${input.city}, Odisha`;
+    if (input.status) {
+      const vendorStatus = mapAdminVendorStatus(input.status);
+      vendor.status = vendorStatus as never;
+      if (vendorStatus === 'approved') {
+        vendor.verificationStage = 'approved';
+        vendor.approvedAt = new Date();
+      }
+      vendor.statusHistory.push({
+        status: vendorStatus as never,
+        changedAt: new Date(),
+        note: 'Updated by admin',
+      });
+    }
     if (input.bankDetails) vendor.bankDetails = input.bankDetails as never;
     await vendor.save();
 
@@ -378,6 +448,39 @@ export const adminVendorsService = {
     return mapVendor(vendor);
   },
 
+  async reviewDocument(
+    id: string,
+    docKey: string,
+    status: 'VERIFIED' | 'REJECTED',
+    actor: { id: string; name: string },
+  ) {
+    if (status !== 'VERIFIED' && status !== 'REJECTED') {
+      throw new BadRequestError('Invalid document status');
+    }
+    const vendor = await VendorModel.findById(id);
+    if (!vendor) throw new NotFoundError('Vendor not found');
+
+    const reviews = [...(vendor.documentReviews ?? [])];
+    const idx = reviews.findIndex((review) => review.key === docKey);
+    const entry = { key: docKey, status, reviewedAt: new Date() };
+    if (idx >= 0) reviews[idx] = entry;
+    else reviews.push(entry);
+    vendor.documentReviews = reviews;
+    vendor.verificationStage = 'document_review';
+    await vendor.save();
+
+    await logActivity({
+      actorId: actor.id,
+      actorName: actor.name,
+      action: status === 'VERIFIED' ? 'VENDOR_DOCUMENT_VERIFIED' : 'VENDOR_DOCUMENT_REJECTED',
+      entityType: 'vendor',
+      entityId: id,
+      title: `${docKey} ${status === 'VERIFIED' ? 'verified' : 'rejected'} for ${vendor.businessName ?? vendor.ownerName}`,
+    });
+
+    return this.getById(id);
+  },
+
   async getCounts() {
     const [all, pending, approved, rejected, suspended] = await Promise.all([
       VendorModel.countDocuments(),
@@ -408,5 +511,33 @@ export const adminVendorsService = {
     });
 
     return { assigned: driverIds.length };
+  },
+
+  async remove(id: string, actor: { id: string; name: string }) {
+    const vendor = await VendorModel.findById(id);
+    if (!vendor) throw new NotFoundError('Vendor not found');
+
+    const vendorName = vendor.businessName ?? vendor.ownerName ?? 'Vendor';
+
+    await Promise.all([
+      DriverModel.updateMany({ vendorId: vendor._id }, { $unset: { vendorId: 1 } }),
+      VendorVehicleModel.deleteMany({ vendorId: vendor._id }),
+      BookingModel.updateMany({ vendorId: vendor._id }, { $unset: { vendorId: 1 } }),
+      TransactionModel.updateMany({ vendorId: vendor._id }, { $unset: { vendorId: 1 } }),
+    ]);
+
+    await VendorModel.findByIdAndDelete(id);
+    if (vendor.userId) {
+      await UserModel.findByIdAndDelete(vendor.userId);
+    }
+
+    await logActivity({
+      actorId: actor.id,
+      actorName: actor.name,
+      action: 'VENDOR_DELETED',
+      entityType: 'vendor',
+      entityId: id,
+      title: `Vendor ${vendorName} deleted`,
+    });
   },
 };

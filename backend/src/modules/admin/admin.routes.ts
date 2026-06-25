@@ -19,6 +19,7 @@ import { adminNotificationsService } from './notifications/admin-notifications.s
 import { adminUsersService, adminActivityService } from './admins/admin-users.service';
 import { adminSubscriptionsService } from './subscriptions/admin-subscriptions.service';
 import { adminVehiclesService } from './vehicles/admin-vehicles.service';
+import { adminDocumentsService } from './documents/admin-documents.service';
 import { routeParam } from './shared/route-param';
 
 const router = Router();
@@ -29,6 +30,22 @@ router.use('/dashboard', adminDashboardRoutes);
 function actor(req: Request) {
   return { id: req.admin!.id, name: req.admin!.email };
 }
+
+function sendPdf(res: import('express').Response, filename: string, buffer: Buffer) {
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+  res.send(buffer);
+}
+
+// Documents
+router.get('/documents/vendor/:vendorId/:docKey', adminAuthMiddleware, requireAdminPermission(AdminPermission.VENDORS_VIEW), asyncHandler(async (req, res) => {
+  const file = adminDocumentsService.getVendorDocument(routeParam(req.params.vendorId), routeParam(req.params.docKey));
+  sendPdf(res, file.filename, file.buffer);
+}));
+router.get('/documents/driver/:driverId/:docKey', adminAuthMiddleware, requireAdminPermission(AdminPermission.DRIVERS_VIEW), asyncHandler(async (req, res) => {
+  const file = adminDocumentsService.getDriverDocument(routeParam(req.params.driverId), routeParam(req.params.docKey));
+  sendPdf(res, file.filename, file.buffer);
+}));
 
 // Customers
 router.get(
@@ -117,11 +134,23 @@ router.post('/vendors/:id/approve', adminAuthMiddleware, requireAdminPermission(
 router.post('/vendors/:id/reject', adminAuthMiddleware, requireAdminPermission(AdminPermission.VENDORS_APPROVE), asyncHandler(async (req, res) => {
   sendSuccess(res, await adminVendorsService.reject(routeParam(req.params.id), req.body.note, actor(req)));
 }));
+router.patch('/vendors/:id/documents/:docKey', adminAuthMiddleware, requireAdminPermission(AdminPermission.VENDORS_APPROVE), asyncHandler(async (req, res) => {
+  sendSuccess(res, await adminVendorsService.reviewDocument(
+    routeParam(req.params.id),
+    routeParam(req.params.docKey),
+    req.body.status,
+    actor(req),
+  ));
+}));
 router.post('/vendors', adminAuthMiddleware, requireAdminPermission(AdminPermission.VENDORS_MANAGE), asyncHandler(async (req, res) => {
   sendSuccess(res, await adminVendorsService.create(req.body, actor(req)), 201);
 }));
 router.patch('/vendors/:id', adminAuthMiddleware, requireAdminPermission(AdminPermission.VENDORS_MANAGE), asyncHandler(async (req, res) => {
   sendSuccess(res, await adminVendorsService.update(routeParam(req.params.id), req.body, actor(req)));
+}));
+router.delete('/vendors/:id', adminAuthMiddleware, requireAdminPermission(AdminPermission.VENDORS_MANAGE), asyncHandler(async (req, res) => {
+  await adminVendorsService.remove(routeParam(req.params.id), actor(req));
+  sendSuccess(res, { message: 'Deleted' });
 }));
 router.post('/vendors/:id/suspend', adminAuthMiddleware, requireAdminPermission(AdminPermission.VENDORS_MANAGE), asyncHandler(async (req, res) => {
   sendSuccess(res, await adminVendorsService.suspend(routeParam(req.params.id), req.body.note, actor(req)));
@@ -161,6 +190,14 @@ router.post('/drivers/:id/approve', adminAuthMiddleware, requireAdminPermission(
 }));
 router.post('/drivers/:id/reject', adminAuthMiddleware, requireAdminPermission(AdminPermission.DRIVERS_APPROVE), asyncHandler(async (req, res) => {
   sendSuccess(res, await adminDriversService.update(routeParam(req.params.id), { status: 'REJECTED' }, actor(req)));
+}));
+router.patch('/drivers/:id/documents/:documentId', adminAuthMiddleware, requireAdminPermission(AdminPermission.DRIVERS_APPROVE), asyncHandler(async (req, res) => {
+  sendSuccess(res, await adminDriversService.reviewDocument(
+    routeParam(req.params.id),
+    routeParam(req.params.documentId),
+    req.body.status,
+    actor(req),
+  ));
 }));
 
 // Bookings

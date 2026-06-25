@@ -17,15 +17,16 @@ import { useVendorMutations } from '@/hooks/use-vendor-mutations';
 import { useVendors } from '@/hooks/use-vendors';
 
 const VENDOR_FIELDS = [
-  { name: 'businessName', label: 'Business Name', required: true },
-  { name: 'ownerName', label: 'Owner Name', required: true },
-  { name: 'email', label: 'Email', type: 'email' as const, required: true },
-  { name: 'phone', label: 'Phone', type: 'tel' as const, required: true },
-  { name: 'city', label: 'City', required: true },
+  { name: 'businessName', label: 'Business Name', required: true, placeholder: 'Enter business name' },
+  { name: 'ownerName', label: 'Owner Name', required: true, placeholder: 'Enter owner name' },
+  { name: 'email', label: 'Email', type: 'email' as const, required: true, placeholder: 'Enter email address' },
+  { name: 'phone', label: 'Phone', type: 'tel' as const, required: true, placeholder: 'Enter 10-digit mobile number' },
+  { name: 'city', label: 'City', required: true, placeholder: 'Enter city name' },
   {
     name: 'status',
     label: 'Status',
     type: 'select' as const,
+    placeholder: 'Select status',
     options: [
       { label: 'Pending', value: 'PENDING' },
       { label: 'Approved', value: 'APPROVED' },
@@ -95,6 +96,16 @@ export function VendorList() {
         cell: ({ row }) => <StatusBadge status={row.original.status} />,
       },
       {
+        accessorKey: 'verificationStatus',
+        header: 'Verification',
+        cell: ({ row }) => <StatusBadge status={row.original.verificationStatus} />,
+      },
+      {
+        accessorKey: 'documentsStatus',
+        header: 'Documents',
+        cell: ({ row }) => <StatusBadge status={row.original.documentsStatus} />,
+      },
+      {
         id: 'actions',
         header: 'Actions',
         cell: ({ row }) => (
@@ -160,7 +171,7 @@ export function VendorList() {
               value: verification,
               onChange: setVerification,
               options: [
-                { label: 'All Verification', value: 'ALL' },
+                { label: 'All', value: 'ALL' },
                 { label: 'Verified', value: 'VERIFIED' },
                 { label: 'Pending', value: 'PENDING' },
                 { label: 'Rejected', value: 'REJECTED' },
@@ -233,8 +244,13 @@ export function VendorList() {
           city: values.city,
           status: values.status as VendorListItem['status'],
         };
-        if (editing) await update.mutateAsync({ id: editing.id, data: payload });
-        else await create.mutateAsync(payload);
+        if (editing) {
+          await update.mutateAsync({ id: editing.id, data: payload });
+        } else {
+          await create.mutateAsync(payload);
+          setActiveTab(values.status === 'APPROVED' ? 'APPROVED' : 'PENDING');
+          setPage(1);
+        }
         setFormOpen(false);
         setEditing(null);
       }}
@@ -247,9 +263,12 @@ export function VendorList() {
       title="Delete Vendor"
       message={`Delete ${deleteTarget?.businessName}?`}
       onConfirm={async () => {
-        if (deleteTarget) {
+        if (!deleteTarget) return;
+        try {
           await remove.mutateAsync(deleteTarget.id);
           setDeleteTarget(null);
+        } catch (error) {
+          alert(error instanceof Error ? error.message : 'Failed to delete vendor');
         }
       }}
       loading={remove.isPending}

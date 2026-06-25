@@ -1,7 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 
 import { ProtectedRoute, PublicOnlyRoute } from '@/components/guards/protected-route';
-import { AdminUsersPage } from './pages/admin-users/AdminUsersPage';
 import { BookingDetailPage } from './pages/bookings/BookingDetailPage';
 import { BookingsPage } from './pages/bookings/BookingsPage';
 import { CustomerDetailPage } from './pages/customers/CustomerDetailPage';
@@ -49,7 +48,7 @@ export default function App() {
           <Route path="/financial" element={<FinancialPage />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/subscriptions" element={<SubscriptionsPage />} />
-          <Route path="/admin-users" element={<AdminUsersPage />} />
+          <Route path="/admin-users" element={<Navigate to="/profile" replace />} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/settings" element={<SettingsPage />} />

@@ -22,7 +22,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <TopNavigation />
         <main
           className={cn(
-            'race-page-container flex-1',
+            'race-page-container race-page-bg flex-1',
             collapsed ? 'race-page-container--full' : 'race-page-container--constrained',
           )}
         >

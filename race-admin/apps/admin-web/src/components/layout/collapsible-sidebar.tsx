@@ -53,16 +53,13 @@ export function CollapsibleSidebar() {
   })).filter((section) => section.items.length > 0);
 
   return (
-    <aside
-      className={cn(
-        'sticky top-0 z-40 flex h-screen w-full flex-col border-r border-border bg-surface',
-      )}
-    >
+    <aside className="sticky top-0 z-40 flex h-screen w-full flex-col border-r border-border bg-surface">
       <div
         className={cn(
-          'relative flex shrink-0 items-center border-b border-border bg-gradient-to-br from-white via-white to-[#FFF8EB]',
+          'relative flex shrink-0 items-center border-b border-border',
           collapsed ? 'h-[72px]' : 'h-[88px]',
         )}
+        style={{ background: 'var(--sidebar-header-bg)' }}
       >
         <Link
           to="/dashboard"
@@ -77,10 +74,10 @@ export function CollapsibleSidebar() {
         <button
           type="button"
           onClick={toggleSidebar}
-          className="absolute -right-3 top-1/2 z-10 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-white text-muted shadow-sm transition hover:bg-[#F4F5F7] hover:text-heading"
+          className="absolute -right-3 top-1/2 z-10 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-surface text-muted shadow-card transition hover:bg-surface-hover hover:text-heading"
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
-          <ChevronLeft className={cn('h-4 w-4', collapsed && 'rotate-180')} />
+          <ChevronLeft className={cn('h-4 w-4 transition-transform', collapsed && 'rotate-180')} />
         </button>
       </div>
 
@@ -88,11 +85,11 @@ export function CollapsibleSidebar() {
         {sections.map((section) => (
           <div key={section.label} className="mb-5 last:mb-0">
             {!collapsed ? (
-              <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-muted">
+              <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-widest text-muted">
                 {section.label}
               </p>
             ) : (
-              <div className="mb-2 h-px bg-border" />
+              <div className="mb-2 h-px bg-border-subtle" />
             )}
             <ul className="space-y-0.5">
               {section.items.map((item) => {
@@ -106,11 +103,11 @@ export function CollapsibleSidebar() {
                       to={item.href}
                       title={collapsed ? item.label : undefined}
                       className={cn(
-                        'group flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium transition-all',
+                        'group flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium transition-all',
                         collapsed && 'justify-center px-2',
                         active
                           ? 'race-nav-active'
-                          : 'text-body hover:bg-[#F4F5F7] hover:text-heading',
+                          : 'text-body hover:bg-surface-hover hover:text-heading',
                       )}
                     >
                       <Icon
@@ -131,14 +128,14 @@ export function CollapsibleSidebar() {
 
       <div className={cn('shrink-0 border-t border-border p-3', collapsed && 'px-2')}>
         {!collapsed ? (
-          <div className="rounded-lg bg-[#F4F5F7]/80 p-3">
+          <div className="rounded-xl border border-border-subtle bg-surface-muted p-3">
             <div className="flex items-start gap-2.5">
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/15">
                 <Headphones className="h-4 w-4 text-primary-dark" />
               </div>
               <div className="min-w-0">
                 <p className="text-xs font-semibold text-heading">Need help?</p>
-                <p className="mt-0.5 text-[11px] leading-relaxed text-body">
+                <p className="mt-0.5 text-[11px] leading-relaxed text-muted">
                   Contact{' '}
                   <a href="mailto:support@raceservice.com" className="text-primary-dark hover:underline">
                     support@raceservice.com

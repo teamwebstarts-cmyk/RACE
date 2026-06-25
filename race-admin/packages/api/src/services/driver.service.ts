@@ -38,6 +38,14 @@ export async function rejectDriver(id: string) {
   return apiPost<DriverListItem>(`/drivers/${id}/reject`);
 }
 
+export async function reviewDriverDocument(
+  driverId: string,
+  documentId: string,
+  status: 'VERIFIED' | 'REJECTED',
+) {
+  return apiPatch<DriverDetail>(`/drivers/${driverId}/documents/${encodeURIComponent(documentId)}`, { status });
+}
+
 export async function getDriverStatusCountsApi() {
   return apiGet<{ all: number; pending: number; approved: number; rejected: number; suspended: number }>(
     '/drivers/counts',

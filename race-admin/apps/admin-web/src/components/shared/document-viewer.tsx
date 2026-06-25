@@ -11,10 +11,24 @@ export interface DocumentViewerProps {
     url?: string;
     uploadedAt: string;
   } | null;
+  canReview?: boolean;
+  onVerify?: () => void;
+  onReject?: () => void;
+  reviewing?: boolean;
 }
 
-export function DocumentViewer({ open, onClose, document }: DocumentViewerProps) {
+export function DocumentViewer({
+  open,
+  onClose,
+  document,
+  canReview = false,
+  onVerify,
+  onReject,
+  reviewing = false,
+}: DocumentViewerProps) {
   if (!open || !document) return null;
+
+  const showReviewActions = canReview && document.status === 'PENDING' && onVerify && onReject;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -60,11 +74,27 @@ export function DocumentViewer({ open, onClose, document }: DocumentViewerProps)
           </div>
         </div>
 
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={onClose}>
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button variant="outline" onClick={onClose} disabled={reviewing}>
             Close
           </Button>
-          <Button disabled={!document.url}>Download</Button>
+          {showReviewActions ? (
+            <>
+              <Button
+                variant="outline"
+                className="border-error/30 text-error hover:bg-error/10"
+                onClick={onReject}
+                disabled={reviewing}
+              >
+                Reject
+              </Button>
+              <Button onClick={onVerify} disabled={reviewing}>
+                {reviewing ? 'Saving...' : 'Verify'}
+              </Button>
+            </>
+          ) : (
+            <Button disabled={!document.url}>Download</Button>
+          )}
         </div>
       </div>
     </div>

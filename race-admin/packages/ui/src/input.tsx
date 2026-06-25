@@ -7,7 +7,7 @@ export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttribute
     <input
       type={type}
       className={cn(
-        'flex h-10 w-full rounded-md border border-[#EEEEEE] bg-white px-3 py-2 text-sm text-[#1A1A2E] placeholder:text-[#9CA3AF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F5A623]',
+        'flex h-10 w-full rounded-lg border border-border bg-input px-3 py-2 text-sm text-heading placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30',
         className,
       )}
       ref={ref}
@@ -21,7 +21,7 @@ export const Select = React.forwardRef<HTMLSelectElement, React.SelectHTMLAttrib
   ({ className, children, ...props }, ref) => (
     <select
       className={cn(
-        'flex h-10 w-full rounded-md border border-[#EEEEEE] bg-white px-3 py-2 text-sm text-[#1A1A2E] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F5A623]',
+        'flex h-10 w-full rounded-lg border border-border bg-input px-3 py-2 text-sm text-heading focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30',
         className,
       )}
       ref={ref}

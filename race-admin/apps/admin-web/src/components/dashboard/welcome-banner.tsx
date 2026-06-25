@@ -54,7 +54,7 @@ export function AlertsPanel() {
   ];
 
   return (
-    <div className="rounded-card border border-border bg-white p-4 shadow-card">
+    <div className="rounded-card border border-border bg-surface p-4 shadow-card">
       <div className="mb-3 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-heading">Alerts & Tasks</h3>
         <span className="rounded-full bg-error/10 px-2 py-0.5 text-[11px] font-semibold text-error">
@@ -66,7 +66,7 @@ export function AlertsPanel() {
           <li key={alert.id}>
             <Link
               to={alert.href}
-              className="flex items-start gap-2.5 rounded-lg p-2.5 transition hover:bg-[#FAFAFA]"
+              className="flex items-start gap-2.5 rounded-xl p-2.5 transition hover:bg-surface-hover"
             >
               <AlertTriangle
                 className={`mt-0.5 h-4 w-4 shrink-0 ${alert.urgent ? 'text-warning' : 'text-muted'}`}
