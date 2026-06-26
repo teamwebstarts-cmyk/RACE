@@ -27,14 +27,14 @@ export function RaceLogo({
     return (
       <div
         className={cn(
-          'flex h-[72px] w-full min-w-0 items-center',
+          'flex h-[72px] w-full min-w-0 items-center justify-center',
           className,
         )}
       >
         <img
           src="/race-logo-sidebar.png"
           alt="RACE Service"
-          className="h-[70px] w-full select-none object-contain object-left"
+          className="h-[70px] w-full max-w-[200px] select-none object-contain object-center"
           draggable={false}
         />
       </div>

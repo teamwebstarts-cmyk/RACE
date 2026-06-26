@@ -64,7 +64,7 @@ export function CollapsibleSidebar() {
           to="/dashboard"
           className={cn(
             'flex min-w-0 flex-1 items-center overflow-hidden',
-            collapsed ? 'justify-center px-2' : 'items-center px-4 py-2.5 pr-10',
+            collapsed ? 'justify-center px-2' : 'justify-center px-4 py-2.5',
           )}
           aria-label="RACE Service home"
         >
