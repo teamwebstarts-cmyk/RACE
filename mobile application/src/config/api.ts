@@ -1,4 +1,7 @@
+import Constants from 'expo-constants';
 import { Platform } from 'react-native';
+
+const extraApiUrl = Constants.expoConfig?.extra?.apiUrl as string | undefined;
 
 const DEV_API_HOST = Platform.select({
   android: '10.0.2.2',
@@ -7,12 +10,18 @@ const DEV_API_HOST = Platform.select({
 });
 
 export const API_CONFIG = {
-  baseUrl: `http://${DEV_API_HOST}:3000`,
-  timeoutMs: 8000,
+  baseUrl: extraApiUrl ?? `http://${DEV_API_HOST}:3000`,
+  timeoutMs: 12000,
 } as const;
 
 export const API_ENDPOINTS = {
   health: '/health',
   brand: '/api/v1/brand',
   services: '/api/v1/services',
+  sendOtp: '/api/v1/auth/send-otp',
+  verifyOtp: '/api/v1/auth/verify-otp',
+  refreshToken: '/api/v1/auth/refresh-token',
+  profile: '/api/v1/profile',
+  profileComplete: '/api/v1/profile/complete',
+  vehicles: '/api/v1/vehicles',
 } as const;

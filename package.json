@@ -2,11 +2,13 @@
   "name": "race",
   "version": "1.0.0",
   "private": true,
-  "description": "RACE Service — mobile + web (team repo structure)",
+  "description": "RACE Service — mobile + web + backend",
   "scripts": {
     "dev:mobile": "cd \"mobile application\" && npm start",
+    "dev:web": "cd \"web application\" && npm run dev",
+    "dev:backend": "cd backend && npm run dev",
+    "seed:backend": "cd backend && npm run seed",
     "ios": "cd \"mobile application\" && npm run ios",
-    "android": "cd \"mobile application\" && npm run android",
-    "dev:web": "cd \"web application\" && npm run dev"
+    "android": "cd \"mobile application\" && npm run android"
   }
 }
