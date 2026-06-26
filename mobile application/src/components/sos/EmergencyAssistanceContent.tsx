@@ -24,14 +24,11 @@ import { useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 
 import SosPulseButton from './SosPulseButton';
-import { AUTH_USER, DEMO_VEHICLE } from '../../constants/auth';
+import { useSosDetails } from '../../context/SosDetailsContext';
 import {
   SOS_COLORS,
-  SOS_EMERGENCY_CONTACT,
   SOS_GRID_ACTIONS,
-  SOS_LOCATION,
 } from '../../constants/sosTheme';
-import { brand } from '../../theme/brand';
 import type { RootTabParamList } from '../../types/navigation';
 import { typography } from '../../theme';
 
@@ -49,10 +46,12 @@ export default function EmergencyAssistanceContent({
   showClose = false,
 }: Props) {
   const tabNav = useNavigation<BottomTabNavigationProp<RootTabParamList>>();
+  const { details } = useSosDetails();
   const { width } = useWindowDimensions();
   const px = (n: number) => Math.round(n * (width / REF_W));
 
-  const vehicleLabel = `${DEMO_VEHICLE.brand} ${DEMO_VEHICLE.model}`;
+  const vehicleLabel = `${details.vehicleBrand} ${details.vehicleModel}`.trim();
+  const ownerPhoneRaw = details.ownerPhone.replace(/\s/g, '');
 
   const handleGridAction = (id: string) => {
     switch (id) {
@@ -64,13 +63,13 @@ export default function EmergencyAssistanceContent({
         break;
       case 'location':
         void Share.share({
-          message: `Vehicle ${DEMO_VEHICLE.number} — ${SOS_LOCATION}`,
+          message: `Vehicle ${details.vehicleNumber} — ${details.location}`,
         });
         break;
       case 'contacts':
         Alert.alert(
           'Emergency Contacts',
-          `${SOS_EMERGENCY_CONTACT.name} (${SOS_EMERGENCY_CONTACT.relation})\n${SOS_EMERGENCY_CONTACT.phone}`,
+          `${details.contactName} (${details.contactRelation})\n${details.contactPhone}`,
         );
         break;
       default:
@@ -81,7 +80,7 @@ export default function EmergencyAssistanceContent({
   const sendAlert = () => {
     Alert.alert(
       'Alert Sent',
-      `Emergency alert sent to ${SOS_EMERGENCY_CONTACT.name} (${SOS_EMERGENCY_CONTACT.phone}).`,
+      `Emergency alert sent to ${details.contactName} (${details.contactPhone}).`,
     );
   };
 
@@ -90,15 +89,17 @@ export default function EmergencyAssistanceContent({
   };
 
   return (
-    <ScrollView
-      contentContainerStyle={{ paddingHorizontal: px(20), paddingBottom: px(32) }}
-      showsVerticalScrollIndicator={false}>
+    <View style={{ flex: 1, backgroundColor: SOS_COLORS.bg }}>
       <View
         style={{
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
-          marginBottom: px(4),
+          paddingHorizontal: px(20),
+          paddingTop: px(4),
+          paddingBottom: px(8),
+          borderBottomWidth: 1,
+          borderBottomColor: SOS_COLORS.cardBorder,
         }}>
         {showBack && onBack ? (
           <Pressable onPress={onBack} hitSlop={12} style={{ paddingVertical: px(4) }}>
@@ -115,7 +116,10 @@ export default function EmergencyAssistanceContent({
           <View style={{ width: px(24) }} />
         )}
       </View>
-
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingHorizontal: px(20), paddingBottom: px(32) }}
+        showsVerticalScrollIndicator={false}>
       <SosPulseButton px={px} />
 
       <Text
@@ -142,7 +146,7 @@ export default function EmergencyAssistanceContent({
           marginBottom: px(22),
           letterSpacing: 0.5,
         }}>
-        {DEMO_VEHICLE.number}
+        {details.vehicleNumber}
       </Text>
 
       <View
@@ -173,14 +177,14 @@ export default function EmergencyAssistanceContent({
             Vehicle Owner
           </Text>
           <Text style={{ fontSize: px(15), fontWeight: typography.weights.bold, color: SOS_COLORS.white }}>
-            {AUTH_USER.name}
+            {details.ownerName}
           </Text>
           <Text style={{ fontSize: px(13), color: SOS_COLORS.gold, marginTop: px(2) }}>
-            {AUTH_USER.phone}
+            {details.ownerPhone}
           </Text>
         </View>
         <Pressable
-          onPress={() => void Linking.openURL(`tel:${brand.phoneRaw}`)}
+          onPress={() => void Linking.openURL(`tel:${ownerPhoneRaw}`)}
           style={{
             flexDirection: 'row',
             alignItems: 'center',
@@ -307,10 +311,10 @@ export default function EmergencyAssistanceContent({
         </View>
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={{ fontSize: px(14), fontWeight: typography.weights.bold, color: SOS_COLORS.white }}>
-            {SOS_EMERGENCY_CONTACT.name} ({SOS_EMERGENCY_CONTACT.relation})
+            {details.contactName} ({details.contactRelation})
           </Text>
           <Text style={{ fontSize: px(13), color: SOS_COLORS.gold, marginTop: px(3) }}>
-            {SOS_EMERGENCY_CONTACT.phone}
+            {details.contactPhone}
           </Text>
         </View>
         <Pressable
@@ -344,7 +348,7 @@ export default function EmergencyAssistanceContent({
         Current Location
       </Text>
       <Pressable
-        onPress={() => Alert.alert('Location', SOS_LOCATION)}
+        onPress={() => Alert.alert('Location', details.location)}
         style={{
           flexDirection: 'row',
           alignItems: 'center',
@@ -362,7 +366,7 @@ export default function EmergencyAssistanceContent({
             Current Location Detected
           </Text>
           <Text style={{ fontSize: px(14), fontWeight: typography.weights.semibold, color: SOS_COLORS.white }}>
-            {SOS_LOCATION}
+            {details.location}
           </Text>
         </View>
         <ChevronRight size={px(20)} color={SOS_COLORS.gold} strokeWidth={2.5} />
@@ -378,6 +382,7 @@ export default function EmergencyAssistanceContent({
         }}>
         Powered by RACE Service
       </Text>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }

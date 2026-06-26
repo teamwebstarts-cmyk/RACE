@@ -3,7 +3,6 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { colors, radius, spacing, typography } from '../../theme';
 import type { Brand } from '../../types/models';
-import BrandLogo from './BrandLogo';
 
 interface AppHeaderProps {
   brand: Brand;
@@ -12,7 +11,6 @@ interface AppHeaderProps {
 export default function AppHeader({ brand }: AppHeaderProps) {
   return (
     <View style={styles.header}>
-      <BrandLogo size="small" />
       <View style={styles.textWrap}>
         <Text style={styles.product}>{brand.productName}</Text>
         <Text style={styles.name}>{brand.name}</Text>
@@ -35,7 +33,6 @@ const styles = StyleSheet.create({
   },
   textWrap: {
     flex: 1,
-    marginLeft: spacing.md,
   },
   product: {
     color: colors.primary,

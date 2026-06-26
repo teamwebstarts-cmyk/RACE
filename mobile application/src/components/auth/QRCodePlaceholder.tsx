@@ -2,7 +2,6 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import Svg, { Rect } from 'react-native-svg';
 
-import AuthLogo from './AuthLogo';
 import { colors, radius } from '../../theme';
 
 const PATTERN = [
@@ -17,13 +16,11 @@ const PATTERN = [
 
 interface QRCodePlaceholderProps {
   size?: number;
-  showCenterLogo?: boolean;
   scale?: number;
 }
 
 export default function QRCodePlaceholder({
   size = 200,
-  showCenterLogo = true,
   scale = 1,
 }: QRCodePlaceholderProps) {
   const px = (n: number) => Math.round(n * scale);
@@ -58,11 +55,6 @@ export default function QRCodePlaceholder({
             ),
           )}
         </Svg>
-        {showCenterLogo ? (
-          <View style={styles.centerLogo}>
-            <AuthLogo width={px(52)} />
-          </View>
-        ) : null}
       </View>
     </View>
   );
@@ -81,13 +73,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
-  },
-  centerLogo: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.background,
-    margin: 28,
-    borderRadius: radius.sm,
   },
 });

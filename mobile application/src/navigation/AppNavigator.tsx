@@ -1,9 +1,11 @@
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import CustomTabBar from '../components/navigation/CustomTabBar';
+import StackBackButton from '../components/navigation/StackBackButton';
 import { DriverBookingProvider } from '../context/DriverBookingContext';
 import { RoadsideBookingProvider } from '../context/RoadsideBookingContext';
 import { TowingBookingProvider } from '../context/TowingBookingContext';
@@ -46,6 +48,7 @@ import ProfileScreen from '../screens/ProfileScreen';
 import PersonalInformationScreen from '../screens/profile/PersonalInformationScreen';
 import MyVehiclesScreen from '../screens/profile/MyVehiclesScreen';
 import AddVehicleScreen from '../screens/profile/AddVehicleScreen';
+import SosDetailsScreen from '../screens/profile/SosDetailsScreen';
 import SavedLocationsScreen from '../screens/profile/SavedLocationsScreen';
 import PaymentMethodsScreen from '../screens/profile/PaymentMethodsScreen';
 import NotificationsScreen from '../screens/profile/NotificationsScreen';
@@ -91,14 +94,24 @@ const BookingsStack = createNativeStackNavigator<BookingsStackParamList>();
 const CallStack = createNativeStackNavigator<CallStackParamList>();
 
 const stackScreenOptions = {
-  headerStyle: { backgroundColor: colors.background },
-  headerTintColor: colors.primary,
+  headerStyle: {
+    backgroundColor: colors.background,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  headerTintColor: colors.dark,
   headerTitleStyle: {
+    fontSize: 17,
     fontWeight: typography.weights.bold,
     color: colors.dark,
   },
+  headerTitleAlign: 'center' as const,
   headerShadowVisible: false,
+  headerBackVisible: false,
+  headerBackTitle: '',
   headerBackTitleVisible: false,
+  headerBackButtonDisplayMode: 'minimal' as const,
+  headerLeft: (props: Parameters<typeof StackBackButton>[0]) => <StackBackButton {...props} />,
   contentStyle: { backgroundColor: colors.background },
 };
 
@@ -245,7 +258,7 @@ function HomeStackNavigator() {
       <HomeStack.Screen
         name="HomeMain"
         component={HomeScreen}
-        options={{ headerShown: false }}
+        options={{ headerShown: false, title: 'Home' }}
       />
       <HomeStack.Screen
         name="ServiceList"
@@ -291,7 +304,7 @@ function ServicesStackNavigator() {
       <ServicesStack.Screen
         name="ServicesMain"
         component={ServicesScreen}
-        options={{ headerShown: false }}
+        options={{ headerShown: false, title: 'Services' }}
       />
       <ServicesStack.Screen
         name="ServiceList"
@@ -375,6 +388,7 @@ function ProfileStackNavigator() {
       <ProfileStack.Screen name="PersonalInformation" component={PersonalInformationScreen} />
       <ProfileStack.Screen name="MyVehicles" component={MyVehiclesScreen} />
       <ProfileStack.Screen name="AddVehicle" component={AddVehicleScreen} />
+      <ProfileStack.Screen name="SosDetails" component={SosDetailsScreen} />
       <ProfileStack.Screen name="SavedLocations" component={SavedLocationsScreen} />
       <ProfileStack.Screen name="PaymentMethods" component={PaymentMethodsScreen} />
       <ProfileStack.Screen name="Notifications" component={NotificationsScreen} />

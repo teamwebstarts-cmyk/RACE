@@ -1,6 +1,5 @@
 import React from 'react';
-import { Linking, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Linking, Pressable, Text, useWindowDimensions, View } from 'react-native';
 import {
   Calendar,
   Car,
@@ -13,7 +12,7 @@ import {
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import DriverAvatar from '../../components/bookings/DriverAvatar';
-import { AuthBackHeader } from '../../components/auth/StepHeader';
+import ProfileSubScreenLayout from '../../components/profile/ProfileSubScreenLayout';
 import GoldButton from '../../components/auth/GoldButton';
 import { getBookingDetail, getBookingDetailFromHistory } from '../../constants/bookingDetail';
 import { COMPLETED_BOOKINGS } from '../../constants/bookingsScreen';
@@ -72,37 +71,28 @@ export default function BookingDetailScreen({ navigation, route }: Props) {
   const isCompleted = detail.status === 'Completed';
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <ScrollView
-        contentContainerStyle={{ paddingHorizontal: px(20), paddingBottom: px(24) }}
-        showsVerticalScrollIndicator={false}>
-        <AuthBackHeader onBack={() => navigation.goBack()} />
-
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: px(16) }}>
-          <View>
-            <Text style={{ fontSize: px(24), fontWeight: typography.weights.extrabold, color: colors.dark }}>
-              Booking Detail
-            </Text>
-            <Text style={{ fontSize: px(13), color: colors.grey, marginTop: px(4) }}>{detail.id}</Text>
-          </View>
-          <View
+    <ProfileSubScreenLayout
+      title="Booking Detail"
+      subtitle={detail.id}
+      onBack={() => navigation.goBack()}
+      headerRight={
+        <View
+          style={{
+            paddingHorizontal: px(10),
+            paddingVertical: px(5),
+            borderRadius: px(12),
+            backgroundColor: isCompleted ? '#E8F8EE' : colors.goldLight,
+          }}>
+          <Text
             style={{
-              paddingHorizontal: px(10),
-              paddingVertical: px(5),
-              borderRadius: px(12),
-              backgroundColor: isCompleted ? '#E8F8EE' : colors.goldLight,
+              fontSize: px(11),
+              fontWeight: typography.weights.bold,
+              color: isCompleted ? colors.success : colors.primary,
             }}>
-            <Text
-              style={{
-                fontSize: px(11),
-                fontWeight: typography.weights.bold,
-                color: isCompleted ? colors.success : colors.primary,
-              }}>
-              {detail.status}
-            </Text>
-          </View>
+            {detail.status}
+          </Text>
         </View>
-
+      }>
         <View style={[styles.card, { borderRadius: px(14), padding: px(14), marginBottom: px(14) }, shadows.card]}>
           <Text style={{ fontSize: px(16), fontWeight: typography.weights.bold, color: colors.dark, marginBottom: px(4) }}>
             {detail.service}
@@ -241,16 +231,14 @@ export default function BookingDetailScreen({ navigation, route }: Props) {
             Need help? Contact Support
           </Text>
         </Pressable>
-      </ScrollView>
-    </SafeAreaView>
+    </ProfileSubScreenLayout>
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
+const styles = {
   card: {
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.background,
   },
-});
+};

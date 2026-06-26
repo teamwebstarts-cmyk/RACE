@@ -3,7 +3,6 @@ import { Linking, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import PrimaryButton from '../components/ui/PrimaryButton';
-import BrandLogo from '../components/ui/BrandLogo';
 import Screen, { ScreenContent } from '../components/ui/Screen';
 import { brand, colors, spacing, typography } from '../theme';
 
@@ -27,7 +26,6 @@ export default function PlaceholderScreen({
       <SafeAreaView style={styles.safeArea}>
         <ScreenContent style={styles.content}>
           <View style={styles.card}>
-            <BrandLogo size="medium" style={styles.logo} />
             <Text style={styles.badge}>{brand.name}</Text>
             <Text style={styles.title}>{title}</Text>
             <Text style={styles.subtitle}>{subtitle}</Text>
@@ -56,9 +54,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.borderLight,
     alignItems: 'center',
-  },
-  logo: {
-    marginBottom: spacing.md,
   },
   badge: {
     color: colors.primary,

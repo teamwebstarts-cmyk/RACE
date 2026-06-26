@@ -2,20 +2,18 @@ import React from 'react';
 import {
   Image,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   useWindowDimensions,
   View,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Bell } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import ServiceCategoryGridCard from '../components/services/ServiceCategoryGridCard';
+import AppScreenLayout from '../components/ui/AppScreenLayout';
+import TabRootHeader from '../components/ui/TabRootHeader';
 import { HOME_HERO_IMAGE } from '../constants/home';
 import { SERVICE_GRID_CARDS, SERVICES_TRUST_ITEMS } from '../constants/servicesScreen';
-import { USER } from '../constants/demo';
 import type { ServicesStackParamList } from '../types/navigation';
 import { openServiceCategory } from '../utils/serviceNavigation';
 import { colors, shadows, typography } from '../theme';
@@ -26,7 +24,6 @@ type Props = NativeStackScreenProps<ServicesStackParamList, 'ServicesMain'>;
 
 export default function ServicesScreen({ navigation }: Props) {
   const { width } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
   const s = width / REF_W;
   const px = (n: number) => Math.round(n * s);
 
@@ -35,58 +32,14 @@ export default function ServicesScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={styles.root}>
-      <SafeAreaView style={styles.safe} edges={['top']}>
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{
-            paddingHorizontal: px(20),
-            paddingBottom: px(16) + insets.bottom,
-          }}>
-          {/* Header */}
-          <View style={styles.headerRow}>
-            <View style={{ flex: 1 }}>
-              <Text
-                style={{
-                  fontSize: px(28),
-                  fontWeight: typography.weights.extrabold,
-                  color: colors.dark,
-                }}>
-                Services
-              </Text>
-              <Text
-                style={{
-                  marginTop: px(4),
-                  fontSize: px(13),
-                  color: colors.grey,
-                  lineHeight: px(18),
-                }}>
-                Choose a service category to get started
-              </Text>
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: px(12) }}>
-              <Pressable hitSlop={8} style={styles.bellWrap}>
-                <Bell size={px(22)} color={colors.dark} strokeWidth={2} />
-                <View style={styles.bellDot} />
-              </Pressable>
-              <View
-                style={[
-                  styles.avatar,
-                  { width: px(40), height: px(40), borderRadius: px(20) },
-                ]}>
-                <Text
-                  style={{
-                    fontSize: px(15),
-                    fontWeight: typography.weights.bold,
-                    color: colors.dark,
-                  }}>
-                  {USER.name.charAt(0)}
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Hero banner — dimensions match HomeScreen hero card */}
+    <AppScreenLayout
+      contentStyle={{ paddingTop: px(10) }}
+      header={
+        <TabRootHeader
+          title="Services"
+          subtitle="Choose a service category to get started"
+        />
+      }>
           <View
             style={[
               styles.heroCard,
@@ -232,46 +185,11 @@ export default function ServicesScreen({ navigation }: Props) {
               </View>
             ))}
           </View>
-        </ScrollView>
-      </SafeAreaView>
-    </View>
+    </AppScreenLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  safe: {
-    flex: 1,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-  },
-  bellWrap: {
-    position: 'relative',
-  },
-  bellDot: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.primary,
-    borderWidth: 1.5,
-    borderColor: colors.background,
-  },
-  avatar: {
-    backgroundColor: colors.goldLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: colors.primary,
-  },
   heroCard: {
     backgroundColor: colors.background,
     borderWidth: 0,

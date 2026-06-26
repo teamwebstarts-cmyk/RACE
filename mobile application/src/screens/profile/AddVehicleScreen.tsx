@@ -1,16 +1,13 @@
 import React, { useState } from 'react';
 import {
   Alert,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   useWindowDimensions,
   View,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Bike,
   Bus,
@@ -29,7 +26,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import FormField from '../../components/auth/FormField';
 import GoldButton from '../../components/auth/GoldButton';
-import { AuthBackHeader } from '../../components/auth/StepHeader';
+import ProfileSubScreenLayout from '../../components/profile/ProfileSubScreenLayout';
 import { FUEL_TYPES, VEHICLE_COLORS, VEHICLE_TYPES } from '../../constants/auth';
 import type { ProfileStackParamList } from '../../types/navigation';
 import { colors, shadows, typography } from '../../theme';
@@ -100,30 +97,30 @@ export default function AddVehicleScreen({ navigation }: Props) {
   );
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView
-          style={styles.flex}
-          contentContainerStyle={{
+    <ProfileSubScreenLayout
+      title="Add Vehicle"
+      keyboardAvoiding
+      onBack={() => navigation.goBack()}
+      footer={
+        <View
+          style={{
             paddingHorizontal: px(20),
-            paddingBottom: px(16),
-          }}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}>
-          <AuthBackHeader onBack={() => navigation.goBack()} />
-          <Text
-            style={{
-              fontSize: px(22),
-              fontWeight: typography.weights.extrabold,
-              color: colors.dark,
-              textAlign: 'center',
-              marginBottom: px(20),
-            }}>
-            Add Vehicle
-          </Text>
-
+            paddingTop: px(12),
+            paddingBottom: Math.max(insets.bottom, px(16)),
+            backgroundColor: colors.background,
+            borderTopWidth: StyleSheet.hairlineWidth,
+            borderTopColor: colors.border,
+          }}>
+          <GoldButton
+            label="Save Vehicle"
+            onPress={handleSave}
+            style={[styles.fullBtn, shadows.card]}
+            height={px(54)}
+            labelSize={px(17)}
+            borderRadius={px(14)}
+          />
+        </View>
+      }>
           {sectionLabel('Vehicle Type')}
           <View
             style={{
@@ -325,33 +322,11 @@ export default function AddVehicleScreen({ navigation }: Props) {
               Add Vehicle Photo (Optional)
             </Text>
           </Pressable>
-        </ScrollView>
 
-        <View
-          style={{
-            paddingHorizontal: px(20),
-            paddingTop: px(12),
-            paddingBottom: Math.max(insets.bottom, px(16)),
-            backgroundColor: colors.background,
-            borderTopWidth: StyleSheet.hairlineWidth,
-            borderTopColor: colors.border,
-          }}>
-          <GoldButton
-            label="Save Vehicle"
-            onPress={handleSave}
-            style={[styles.fullBtn, shadows.card]}
-            height={px(54)}
-            labelSize={px(17)}
-            borderRadius={px(14)}
-          />
-        </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+    </ProfileSubScreenLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
-  flex: { flex: 1 },
   fullBtn: { width: '100%' },
 });

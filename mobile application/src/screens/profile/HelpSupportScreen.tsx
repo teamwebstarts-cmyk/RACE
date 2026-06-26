@@ -1,12 +1,11 @@
 import React, { type ReactNode } from 'react';
-import { Alert, Image, Linking, Pressable, Text, View } from 'react-native';
+import { Alert, Linking, Pressable, Text, View } from 'react-native';
 import { ChevronRight, Mail, Phone, Siren } from 'lucide-react-native';
 
 import LiveChatIcon from '../../components/icons/LiveChatIcon';
 import WhatsAppIcon from '../../components/icons/WhatsAppIcon';
 import ProfileSubScreenLayout, { useProfilePx } from '../../components/profile/ProfileSubScreenLayout';
 import { HELP_FAQ_ITEMS } from '../../constants/profileSubScreens';
-import { images } from '../../assets';
 import { brand } from '../../theme/brand';
 import { colors, shadows, typography } from '../../theme';
 
@@ -207,19 +206,11 @@ export default function HelpSupportScreen() {
 
       <View
         style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: px(12),
           borderRadius: px(14),
           backgroundColor: colors.goldLight,
           padding: px(14),
         }}>
-        <Image
-          source={images.logo}
-          style={{ width: px(160), height: px(160) }}
-          resizeMode="contain"
-        />
-        <View style={{ flex: 1, minWidth: 0 }}>
+        <View>
           <Text style={{ fontSize: px(15), fontWeight: typography.weights.bold, marginBottom: px(4) }}>
             <Text style={{ color: colors.error }}>RACE </Text>
             <Text style={{ color: colors.dark }}>Service Support</Text>

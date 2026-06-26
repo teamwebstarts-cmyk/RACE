@@ -10,10 +10,8 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ArrowRight,
-  Bell,
   ChevronDown,
   MapPin,
   MessageCircle,
@@ -30,6 +28,8 @@ import {
   QUICK_SERVICES,
   TRUST_ITEMS,
 } from '../constants/home';
+import AppScreenLayout from '../components/ui/AppScreenLayout';
+import TabRootHeader from '../components/ui/TabRootHeader';
 import { USER } from '../constants/demo';
 import { brand } from '../theme/brand';
 import type { HomeStackParamList, RootTabParamList } from '../types/navigation';
@@ -42,7 +42,6 @@ type Props = NativeStackScreenProps<HomeStackParamList, 'HomeMain'>;
 
 export default function HomeScreen({ navigation }: Props) {
   const { width } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
   const s = width / REF_W;
   const px = (n: number) => Math.round(n * s);
 
@@ -61,17 +60,12 @@ export default function HomeScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={styles.root}>
-      <SafeAreaView style={styles.safe} edges={['top']}>
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{
-            paddingHorizontal: px(20),
-            paddingBottom: px(16) + insets.bottom,
-          }}>
-          {/* Header */}
-          <View style={styles.headerRow}>
-            <View style={{ flex: 1 }}>
+    <AppScreenLayout
+      contentStyle={{ paddingTop: px(16) }}
+      header={
+        <TabRootHeader
+          leading={
+            <>
               <Text
                 style={{
                   fontSize: px(20),
@@ -98,30 +92,10 @@ export default function HomeScreen({ navigation }: Props) {
                 </Text>
                 <ChevronDown size={px(14)} color={colors.primary} />
               </Pressable>
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: px(12) }}>
-              <Pressable hitSlop={8} style={styles.bellWrap}>
-                <Bell size={px(22)} color={colors.dark} strokeWidth={2} />
-                <View style={styles.bellDot} />
-              </Pressable>
-              <View
-                style={[
-                  styles.avatar,
-                  { width: px(40), height: px(40), borderRadius: px(20) },
-                ]}>
-                <Text
-                  style={{
-                    fontSize: px(15),
-                    fontWeight: typography.weights.bold,
-                    color: colors.dark,
-                  }}>
-                  {USER.name.charAt(0)}
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Hero card */}
+            </>
+          }
+        />
+      }>
           <View
             style={[
               styles.heroCard,
@@ -455,46 +429,11 @@ export default function HomeScreen({ navigation }: Props) {
               </View>
             ))}
           </View>
-        </ScrollView>
-      </SafeAreaView>
-    </View>
+    </AppScreenLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  safe: {
-    flex: 1,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-  },
-  bellWrap: {
-    position: 'relative',
-  },
-  bellDot: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.primary,
-    borderWidth: 1.5,
-    borderColor: colors.background,
-  },
-  avatar: {
-    backgroundColor: colors.goldLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: colors.primary,
-  },
   heroCard: {
     backgroundColor: colors.background,
     borderWidth: 0,

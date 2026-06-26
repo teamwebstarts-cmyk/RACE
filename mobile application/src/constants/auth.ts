@@ -4,6 +4,9 @@ export const AUTH_USER = {
   email: 'rahul.kumar@gmail.com',
 };
 
+/** Demo: registered returning user (10-digit mobile without country code) */
+export const REGISTERED_PHONE_DIGITS = '8249472910';
+
 export const DEMO_OTP = '247392';
 
 export const DEMO_PIN = '1234';

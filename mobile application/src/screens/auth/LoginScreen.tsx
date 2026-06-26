@@ -7,19 +7,22 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   useWindowDimensions,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Eye, EyeOff, Lock, Phone } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-import AuthLogo from '../../components/auth/AuthLogo';
-import FormField from '../../components/auth/FormField';
 import GoldButton from '../../components/auth/GoldButton';
 import GoogleIcon from '../../components/auth/GoogleIcon';
-import { useAuth } from '../../context/AuthContext';
+import { REGISTERED_PHONE_DIGITS } from '../../constants/auth';
 import type { AuthStackParamList } from '../../types/navigation';
+import {
+  formatPhoneE164,
+  getPhoneDigits,
+  isValidIndianMobile,
+} from '../../utils/phone';
 import { colors, typography } from '../../theme';
 
 const REF_W = 390;
@@ -31,209 +34,229 @@ export default function LoginScreen({ navigation }: Props) {
   const s = width / REF_W;
   const px = (n: number) => Math.round(n * s);
 
-  const { login } = useAuth();
-  const [phone, setPhone]                   = useState('+91 98765 43210');
-  const [password, setPassword]             = useState('');
-  const [showPassword, setShowPassword]     = useState(false);
-  const [phoneError, setPhoneError]         = useState('');
-  const [passwordError, setPasswordError]   = useState('');
+  const [phoneDigits, setPhoneDigits] = useState(REGISTERED_PHONE_DIGITS);
+  const [phoneError, setPhoneError] = useState('');
 
-  const handleLogin = () => {
-    let valid = true;
-    setPhoneError('');
-    setPasswordError('');
-    if (!phone.trim()) {
-      setPhoneError('Please enter mobile number');
-      valid = false;
+  const handlePhoneChange = (value: string) => {
+    const digits = getPhoneDigits(value).slice(0, 10);
+    setPhoneDigits(digits);
+    if (phoneError) setPhoneError('');
+  };
+
+  const handleContinue = () => {
+    if (!isValidIndianMobile(phoneDigits)) {
+      setPhoneError('Enter a valid 10-digit mobile number');
+      return;
     }
-    if (!password.trim()) {
-      setPasswordError('Please enter password');
-      valid = false;
+
+    if (phoneDigits !== REGISTERED_PHONE_DIGITS) {
+      Alert.alert(
+        'Account not found',
+        'This mobile number is not registered. Create an account to get started.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Sign Up', onPress: () => navigation.navigate('CreateAccount') },
+        ],
+      );
+      return;
     }
-    if (valid) login();
+
+    navigation.navigate('OTP', {
+      phone: formatPhoneE164(phoneDigits),
+      flow: 'login',
+    });
   };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
           style={styles.flex}
-          contentContainerStyle={[
-            styles.scroll,
-            {
-              paddingHorizontal: px(24),
-              paddingTop:        px(4),
-              paddingBottom:     px(16),
-            },
-          ]}
+          contentContainerStyle={{
+            flexGrow: 1,
+            paddingHorizontal: px(24),
+            paddingTop: px(24),
+            paddingBottom: px(16),
+            justifyContent: 'space-between',
+          }}
           keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.main}>
-
-            {/* Logo */}
-            <AuthLogo width={px(340)} />
-
-            {/* Welcome heading */}
-            <Text style={{
-              marginTop:  px(20),
-              fontSize:   px(26),
-              fontWeight: typography.weights.extrabold,
-              color:      colors.dark,
-              textAlign:  'center',
-            }}>
-              Welcome Back 👋
-            </Text>
-
-            {/* Subtitle */}
-            <Text style={{
-              marginTop:    px(6),
-              marginBottom: px(24),
-              fontSize:     px(14),
-              color:        colors.grey,
-              textAlign:    'center',
-              lineHeight:   px(20),
-            }}>
-              Login to your account to continue
-            </Text>
-
-            {/* Mobile Number */}
-            <FormField
-              variant="outlined"
-              compact
-              scale={s}
-              label="Mobile Number"
-              Icon={Phone}
-              value={phone}
-              onChangeText={text => {
-                setPhone(text);
-                if (phoneError) setPhoneError('');
-              }}
-              keyboardType="phone-pad"
-              returnKeyType="next"
-              error={phoneError}
-            />
-
-            {/* Password */}
-            <FormField
-              variant="outlined"
-              compact
-              scale={s}
-              label="Password"
-              Icon={Lock}
-              value={password}
-              onChangeText={text => {
-                setPassword(text);
-                if (passwordError) setPasswordError('');
-              }}
-              placeholder="Enter your password"
-              secureTextEntry={!showPassword}
-              autoCapitalize="none"
-              returnKeyType="done"
-              error={passwordError}
-              rightElement={
-                <Pressable onPress={() => setShowPassword(v => !v)} hitSlop={8}>
-                  {showPassword ? (
-                    <EyeOff size={px(20)} color={colors.grey} />
-                  ) : (
-                    <Eye size={px(20)} color={colors.grey} />
-                  )}
-                </Pressable>
-              }
-            />
-
-            {/* Forgot Password */}
-            <Pressable
+          showsVerticalScrollIndicator={false}>
+          <View>
+            <Text
               style={{
-                alignSelf:    'flex-end',
-                marginTop:    px(6),
-                marginBottom: px(20),
-              }}
-              onPress={() => navigation.navigate('ForgotPassword')}
-            >
-              <Text style={{
-                color:      colors.primary,
-                fontWeight: typography.weights.semibold,
-                fontSize:   px(14),
+                fontSize: px(28),
+                fontWeight: typography.weights.extrabold,
+                color: colors.dark,
+                marginBottom: px(8),
               }}>
-                Forgot Password?
-              </Text>
-            </Pressable>
+              Enter mobile number
+            </Text>
+            <Text
+              style={{
+                fontSize: px(14),
+                color: colors.grey,
+                lineHeight: px(20),
+                marginBottom: px(28),
+              }}>
+              We'll send you a one-time password (OTP) to verify your number
+            </Text>
 
-            {/* Login Button */}
+            <Text
+              style={{
+                fontSize: px(12),
+                fontWeight: typography.weights.semibold,
+                color: colors.grey,
+                marginBottom: px(8),
+              }}>
+              Mobile Number
+            </Text>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                borderWidth: 1.5,
+                borderColor: phoneError ? colors.error : colors.border,
+                borderRadius: px(14),
+                backgroundColor: colors.background,
+                height: px(54),
+                paddingHorizontal: px(14),
+                marginBottom: phoneError ? px(6) : px(20),
+              }}>
+              <View
+                style={{
+                  paddingRight: px(12),
+                  marginRight: px(12),
+                  borderRightWidth: 1,
+                  borderRightColor: colors.border,
+                }}>
+                <Text
+                  style={{
+                    fontSize: px(15),
+                    fontWeight: typography.weights.bold,
+                    color: colors.dark,
+                  }}>
+                  +91
+                </Text>
+              </View>
+              <TextInput
+                value={phoneDigits}
+                onChangeText={handlePhoneChange}
+                keyboardType="number-pad"
+                maxLength={10}
+                placeholder="10-digit mobile number"
+                placeholderTextColor={colors.grey}
+                style={{
+                  flex: 1,
+                  fontSize: px(16),
+                  fontWeight: typography.weights.semibold,
+                  color: colors.dark,
+                  padding: 0,
+                }}
+              />
+            </View>
+            {phoneError ? (
+              <Text
+                style={{
+                  fontSize: px(12),
+                  color: colors.error,
+                  marginBottom: px(16),
+                }}>
+                {phoneError}
+              </Text>
+            ) : null}
+
+            <Text
+              style={{
+                fontSize: px(11),
+                color: colors.grey,
+                lineHeight: px(16),
+                marginBottom: px(20),
+              }}>
+              By continuing, you agree to our{' '}
+              <Text style={{ color: colors.primary, fontWeight: typography.weights.semibold }}>
+                Terms of Service
+              </Text>{' '}
+              &{' '}
+              <Text style={{ color: colors.primary, fontWeight: typography.weights.semibold }}>
+                Privacy Policy
+              </Text>
+            </Text>
+
             <GoldButton
-              label="Login"
-              onPress={handleLogin}
+              label="Continue"
+              onPress={handleContinue}
               style={{ width: '100%' }}
               height={px(54)}
               labelSize={px(17)}
               borderRadius={px(14)}
             />
 
-            {/* Divider */}
-            <View style={{
-              flexDirection:  'row',
-              alignItems:     'center',
-              marginVertical: px(20),
-            }}>
-              <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />
-              <Text style={{
-                marginHorizontal: px(12),
-                fontSize:         px(13),
-                color:            colors.grey,
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                marginVertical: px(22),
               }}>
-                or continue with
+              <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />
+              <Text style={{ marginHorizontal: px(12), fontSize: px(13), color: colors.grey }}>
+                or
               </Text>
               <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />
             </View>
 
-            {/* Continue with Google — icon + text centered together */}
             <Pressable
               style={{
-                flexDirection:     'row',
-                alignItems:        'center',
-                justifyContent:    'center',
-                height:            px(54),
-                borderRadius:      px(14),
-                borderWidth:       1.5,
-                borderColor:       colors.border,
-                backgroundColor:   colors.background,
-                paddingHorizontal: px(16),
-                gap:               px(10),
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: px(54),
+                borderRadius: px(14),
+                borderWidth: 1.5,
+                borderColor: colors.border,
+                backgroundColor: colors.background,
+                gap: px(10),
               }}
-              onPress={() => Alert.alert('Google Sign-In', 'Google sign-in coming soon')}
-            >
+              onPress={() => Alert.alert('Google Sign-In', 'Google sign-in coming soon')}>
               <GoogleIcon size={px(24)} />
-              <Text style={{
-                fontSize:   px(16),
-                fontWeight: typography.weights.semibold,
-                color:      colors.dark,
-              }}>
+              <Text
+                style={{
+                  fontSize: px(16),
+                  fontWeight: typography.weights.semibold,
+                  color: colors.dark,
+                }}>
                 Continue with Google
               </Text>
             </Pressable>
 
+            {__DEV__ ? (
+              <Text
+                style={{
+                  marginTop: px(14),
+                  textAlign: 'center',
+                  fontSize: px(11),
+                  color: colors.grey,
+                  lineHeight: px(16),
+                }}>
+                Demo login: {REGISTERED_PHONE_DIGITS} → OTP 247392
+              </Text>
+            ) : null}
           </View>
 
-          {/* Footer */}
-          <View style={[styles.footer, { paddingTop: px(4) }]}>
-            <Text style={{ color: colors.grey, fontSize: px(14) }}>
-              Don't have an account?{' '}
-            </Text>
+          <View style={[styles.footer, { paddingTop: px(8) }]}>
+            <Text style={{ color: colors.grey, fontSize: px(14) }}>New to RACE? </Text>
             <Pressable onPress={() => navigation.navigate('CreateAccount')}>
-              <Text style={{
-                color:      colors.primary,
-                fontWeight: typography.weights.bold,
-                fontSize:   px(14),
-              }}>
-                Sign Up
+              <Text
+                style={{
+                  color: colors.primary,
+                  fontWeight: typography.weights.bold,
+                  fontSize: px(14),
+                }}>
+                Create account
               </Text>
             </Pressable>
           </View>
-
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -242,22 +265,15 @@ export default function LoginScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   safe: {
-    flex:            1,
+    flex: 1,
     backgroundColor: colors.background,
   },
   flex: {
     flex: 1,
   },
-  scroll: {
-    flexGrow:       1,
-    justifyContent: 'space-between',
-  },
-  main: {
-    width: '100%',
-  },
   footer: {
-    flexDirection:  'row',
+    flexDirection: 'row',
     justifyContent: 'center',
-    alignItems:     'center',
+    alignItems: 'center',
   },
 });

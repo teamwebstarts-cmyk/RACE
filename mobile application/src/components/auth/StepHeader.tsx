@@ -31,7 +31,7 @@ export default function StepHeader({
       <View style={[styles.row, { marginBottom: px(12) }]}>
         {onBack ? (
           <Pressable onPress={onBack} hitSlop={12} style={styles.backBtn}>
-            <ArrowLeft size={px(24)} color={colors.dark} />
+            <ArrowLeft size={px(22)} color={colors.dark} strokeWidth={2.5} />
           </Pressable>
         ) : (
           <View style={styles.backBtn} />
@@ -63,7 +63,7 @@ export function AuthBackHeader({ onBack, rightElement }: AuthBackHeaderProps) {
   return (
     <View style={styles.authRow}>
       <Pressable onPress={onBack} hitSlop={12}>
-        <ArrowLeft size={24} color={colors.dark} />
+        <ArrowLeft size={22} color={colors.dark} strokeWidth={2.5} />
       </Pressable>
       <View style={styles.flex} />
       {rightElement}

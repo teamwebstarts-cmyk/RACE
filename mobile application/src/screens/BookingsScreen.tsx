@@ -2,14 +2,12 @@ import React, { useState } from 'react';
 import {
   Linking,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   useWindowDimensions,
   View,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Bell, Headphones, Phone, SlidersHorizontal } from 'lucide-react-native';
+import { Headphones, Phone, SlidersHorizontal } from 'lucide-react-native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 import { useNavigation } from '@react-navigation/native';
@@ -17,13 +15,14 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import ActiveBookingCard from '../components/bookings/ActiveBookingCard';
 import BookingHistoryRow from '../components/bookings/BookingHistoryRow';
+import AppScreenLayout from '../components/ui/AppScreenLayout';
+import TabRootHeader from '../components/ui/TabRootHeader';
 import {
   BOOKING_TABS,
   COMPLETED_BOOKINGS,
   ONGOING_BOOKINGS,
   type BookingTabId,
 } from '../constants/bookingsScreen';
-import { USER } from '../constants/demo';
 import { brand } from '../theme/brand';
 import type { BookingsStackParamList, RootTabParamList } from '../types/navigation';
 import { colors, typography } from '../theme';
@@ -38,7 +37,6 @@ type BookingsNav = CompositeNavigationProp<
 export default function BookingsScreen() {
   const navigation = useNavigation<BookingsNav>();
   const { width } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
   const s = width / REF_W;
   const px = (n: number) => Math.round(n * s);
   const [activeTab, setActiveTab] = useState<BookingTabId>('all');
@@ -58,57 +56,13 @@ export default function BookingsScreen() {
   };
 
   return (
-    <View style={styles.root}>
-      <SafeAreaView style={styles.safe} edges={['top']}>
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{
-            paddingBottom: px(16) + insets.bottom,
-          }}>
-          <View style={{ marginHorizontal: px(20) }}>
-            <View style={styles.headerRow}>
-              <View style={{ flex: 1 }}>
-                <Text
-                  style={{
-                    fontSize: px(28),
-                    fontWeight: typography.weights.extrabold,
-                    color: colors.dark,
-                  }}>
-                  Bookings
-                </Text>
-                <Text
-                  style={{
-                    marginTop: px(4),
-                    fontSize: px(13),
-                    color: colors.grey,
-                    lineHeight: px(18),
-                  }}>
-                  Track and manage your service requests
-                </Text>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: px(12) }}>
-                <Pressable hitSlop={8} style={styles.bellWrap}>
-                  <Bell size={px(22)} color={colors.dark} strokeWidth={2} />
-                  <View style={styles.bellDot} />
-                </Pressable>
-                <View
-                  style={[
-                    styles.avatar,
-                    { width: px(40), height: px(40), borderRadius: px(20) },
-                  ]}>
-                  <Text
-                    style={{
-                      fontSize: px(15),
-                      fontWeight: typography.weights.bold,
-                      color: colors.dark,
-                    }}>
-                    {USER.name.charAt(0)}
-                  </Text>
-                </View>
-              </View>
-            </View>
-
+    <AppScreenLayout
+      header={
+        <TabRootHeader
+          title="Bookings"
+          subtitle="Track and manage your service requests"
+        />
+      }>
             <View
               style={{
                 flexDirection: 'row',
@@ -281,46 +235,8 @@ export default function BookingsScreen() {
                 </Text>
               </Pressable>
             </View>
-          </View>
-        </ScrollView>
-      </SafeAreaView>
-    </View>
+    </AppScreenLayout>
   );
 }
 
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.background,
-    overflow: 'hidden',
-  },
-  safe: {
-    flex: 1,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-  },
-  bellWrap: {
-    position: 'relative',
-  },
-  bellDot: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.primary,
-    borderWidth: 1.5,
-    borderColor: colors.background,
-  },
-  avatar: {
-    backgroundColor: colors.goldLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: colors.primary,
-  },
-});
+const styles = StyleSheet.create({});

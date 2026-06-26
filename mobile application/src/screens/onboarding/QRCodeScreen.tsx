@@ -14,7 +14,6 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Check, Download, Hospital, Share2 } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-import AuthLogo from '../../components/auth/AuthLogo';
 import QRCodePlaceholder from '../../components/auth/QRCodePlaceholder';
 import StepHeader from '../../components/auth/StepHeader';
 import { DEMO_VEHICLE, QR_ACTIONS } from '../../constants/auth';
@@ -113,7 +112,6 @@ export default function QRCodeScreen({ navigation }: Props) {
               marginBottom: px(22),
             },
           ]}>
-          <AuthLogo width={px(100)} />
           <Text
             style={{
               marginTop: px(8),

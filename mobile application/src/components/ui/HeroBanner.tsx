@@ -3,7 +3,6 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { colors, radius, spacing, typography } from '../../theme';
 import type { Brand } from '../../types/models';
-import BrandLogo from './BrandLogo';
 
 interface HeroBannerProps {
   brand: Brand;
@@ -13,7 +12,6 @@ export default function HeroBanner({ brand }: HeroBannerProps) {
   return (
     <View style={styles.hero}>
       <View style={styles.topRow}>
-        <BrandLogo size="large" />
         <View style={styles.badge}>
           <Text style={styles.badgeText}>24/7 {brand.productName}</Text>
         </View>

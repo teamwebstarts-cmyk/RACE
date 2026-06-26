@@ -13,7 +13,6 @@ import type { ProfileStackParamList } from '../../types/navigation';
 import { colors, shadows, typography } from '../../theme';
 
 const SETTINGS_ROUTES: Partial<Record<string, keyof ProfileStackParamList>> = {
-  password: 'ChangePassword',
   pin: 'CreatePin',
   mobile: 'ChangeMobileNumber',
 };

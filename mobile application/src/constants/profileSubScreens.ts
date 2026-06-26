@@ -5,7 +5,6 @@ import {
   FileText,
   Globe,
   KeyRound,
-  Lock,
   Mail,
   MapPin,
   MessageCircle,
@@ -24,6 +23,7 @@ export const PROFILE_PERSONAL = {
 export const PROFILE_MENU_ROUTES = {
   personal: 'PersonalInformation',
   vehicles: 'MyVehicles',
+  sos: 'SosDetails',
   locations: 'SavedLocations',
   payments: 'PaymentMethods',
   notifications: 'Notifications',
@@ -69,7 +69,6 @@ export const SETTINGS_SECTIONS: Array<{
   {
     title: 'ACCOUNT SETTINGS',
     items: [
-      { id: 'password', title: 'Change Password', subtitle: 'Update your login password', Icon: Lock, kind: 'nav' },
       { id: 'pin', title: 'Change PIN', subtitle: 'Update your 4-digit PIN', Icon: KeyRound, kind: 'nav' },
       {
         id: 'mobile',

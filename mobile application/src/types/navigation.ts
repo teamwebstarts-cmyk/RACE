@@ -55,7 +55,11 @@ export type AuthStackParamList = {
   Onboarding: undefined;
   Login: undefined;
   CreateAccount: undefined;
-  OTP: undefined;
+  OTP: {
+    phone: string;
+    flow: 'login' | 'signup';
+    name?: string;
+  };
   ForgotPassword: undefined;
   ResetPassword: { phone: string };
   ProfileSetup: undefined;
@@ -115,6 +119,7 @@ export type ProfileStackParamList = {
   PersonalInformation: undefined;
   MyVehicles: undefined;
   AddVehicle: undefined;
+  SosDetails: undefined;
   SavedLocations: undefined;
   PaymentMethods: undefined;
   Notifications: undefined;

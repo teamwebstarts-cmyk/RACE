@@ -1,13 +1,12 @@
 import React from 'react';
 import {
+  Alert,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   useWindowDimensions,
   View,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
@@ -24,7 +23,10 @@ import {
 
 import { PROFILE_MENU_ITEMS, PROFILE_QUICK_STATS } from '../constants/profileScreen';
 import { PROFILE_MENU_ROUTES } from '../constants/profileSubScreens';
+import AppScreenLayout from '../components/ui/AppScreenLayout';
+import TabRootHeader from '../components/ui/TabRootHeader';
 import { USER } from '../constants/demo';
+import { useAuth } from '../context/AuthContext';
 import type { ProfileStackParamList } from '../types/navigation';
 import { colors, shadows, typography } from '../theme';
 
@@ -56,48 +58,35 @@ function ProfileAvatar({ size, px }: { size: number; px: (n: number) => number }
 
 export default function ProfileScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const { logout } = useAuth();
   const { width } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
   const s = width / REF_W;
   const px = (n: number) => Math.round(n * s);
 
-  return (
-    <View style={styles.root}>
-      <SafeAreaView style={styles.safe} edges={['top']}>
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: px(16) + insets.bottom }}>
-          <View style={{ marginHorizontal: px(20) }}>
-            <View style={styles.headerRow}>
-              <View style={{ flex: 1 }}>
-                <Text
-                  style={{
-                    fontSize: px(28),
-                    fontWeight: typography.weights.extrabold,
-                    color: colors.dark,
-                  }}>
-                  Profile
-                </Text>
-                <Text
-                  style={{
-                    marginTop: px(4),
-                    fontSize: px(13),
-                    color: colors.grey,
-                    lineHeight: px(18),
-                  }}>
-                  Manage your account and preferences
-                </Text>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: px(12) }}>
-                <Pressable hitSlop={8} style={styles.bellWrap} onPress={() => navigation.navigate('Notifications')}>
-                  <Bell size={px(22)} color={colors.dark} strokeWidth={2} />
-                  <View style={styles.bellDot} />
-                </Pressable>
-                <ProfileAvatar size={px(40)} px={px} />
-              </View>
-            </View>
+  const handleLogout = () => {
+    Alert.alert('Logout', 'Are you sure you want to logout?', [
+      { text: 'No', style: 'cancel' },
+      { text: 'Yes', onPress: logout },
+    ]);
+  };
 
+  return (
+    <AppScreenLayout
+      header={
+        <TabRootHeader
+          title="Profile"
+          subtitle="Manage your account and preferences"
+          actions={
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: px(12) }}>
+              <Pressable hitSlop={8} style={styles.bellWrap} onPress={() => navigation.navigate('Notifications')}>
+                <Bell size={px(22)} color={colors.dark} strokeWidth={2} />
+                <View style={styles.bellDot} />
+              </Pressable>
+              <ProfileAvatar size={px(40)} px={px} />
+            </View>
+          }
+        />
+      }>
             <View
               style={[
                 {
@@ -377,6 +366,7 @@ export default function ProfileScreen() {
             </View>
 
             <Pressable
+              onPress={handleLogout}
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -395,27 +385,11 @@ export default function ProfileScreen() {
               </Text>
               <ChevronRight size={px(16)} color={colors.error} strokeWidth={2} />
             </Pressable>
-          </View>
-        </ScrollView>
-      </SafeAreaView>
-    </View>
+    </AppScreenLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.background,
-    overflow: 'hidden',
-  },
-  safe: {
-    flex: 1,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-  },
   bellWrap: {
     position: 'relative',
   },

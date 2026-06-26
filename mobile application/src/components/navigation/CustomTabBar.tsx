@@ -9,14 +9,14 @@ import {
   Calendar,
   Home,
   LayoutGrid,
-  Phone,
   User,
   type LucideIcon,
 } from 'lucide-react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { colors, layout, shadows, spacing, typography } from '../../theme';
+import { SOS_COLORS } from '../../constants/sosTheme';
+import { colors, layout, spacing, typography } from '../../theme';
 import type { RootTabParamList } from '../../types/navigation';
 
 type TabRouteName = Exclude<keyof RootTabParamList, 'Call'>;
@@ -62,7 +62,7 @@ export default function CustomTabBar({
                 ]}
                 accessibilityRole="button"
                 accessibilityLabel="Emergency SOS">
-                <Phone color={colors.background} size={26} strokeWidth={2.5} />
+                <Text style={styles.fabLabel}>SOS</Text>
               </Pressable>
             </View>
           );
@@ -118,6 +118,7 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
     paddingTop: spacing.sm,
     paddingHorizontal: spacing.xs,
+    overflow: 'visible',
   },
   tab: {
     flex: 1,
@@ -147,16 +148,30 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'flex-end',
-    marginTop: -28,
+    minHeight: 52,
   },
   fab: {
-    width: layout.fabSize,
-    height: layout.fabSize,
-    borderRadius: layout.fabSize / 2,
-    backgroundColor: colors.primary,
+    position: 'absolute',
+    top: -20,
+    width: layout.fabSize + 6,
+    height: layout.fabSize + 6,
+    borderRadius: (layout.fabSize + 6) / 2,
+    backgroundColor: SOS_COLORS.red,
     alignItems: 'center',
     justifyContent: 'center',
-    ...shadows.fab,
+    borderWidth: 3,
+    borderColor: colors.background,
+    shadowColor: SOS_COLORS.red,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  fabLabel: {
+    color: SOS_COLORS.white,
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.extrabold,
+    letterSpacing: 0.8,
   },
   fabPressed: {
     opacity: 0.92,

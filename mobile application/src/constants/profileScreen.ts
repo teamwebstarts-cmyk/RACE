@@ -6,6 +6,7 @@ import {
   Headphones,
   MapPin,
   Settings,
+  Siren,
   Star,
   Ticket,
   User as UserIcon,
@@ -44,6 +45,12 @@ export const PROFILE_MENU_ITEMS: Array<{
     title: 'My Vehicles',
     subtitle: 'Manage your vehicles',
     Icon: Car,
+  },
+  {
+    id: 'sos',
+    title: 'SOS Details',
+    subtitle: 'Emergency contacts & vehicle info',
+    Icon: Siren,
   },
   {
     id: 'locations',

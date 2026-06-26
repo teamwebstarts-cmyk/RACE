@@ -11,24 +11,24 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Check, Eye, EyeOff, Lock, Mail, Phone, User } from 'lucide-react-native';
+import { Check, Mail, Phone, User } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-import AuthLogo from '../../components/auth/AuthLogo';
 import FormField from '../../components/auth/FormField';
 import GoldButton from '../../components/auth/GoldButton';
 import GoogleIcon from '../../components/auth/GoogleIcon';
 import { AuthBackHeader } from '../../components/auth/StepHeader';
-import { AUTH_USER } from '../../constants/auth';
+import { REGISTERED_PHONE_DIGITS } from '../../constants/auth';
 import type { AuthStackParamList } from '../../types/navigation';
+import { formatPhoneE164, getPhoneDigits, isValidIndianMobile } from '../../utils/phone';
 import { colors, typography } from '../../theme';
 
 const REF_W = 390;
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'CreateAccount'>;
 
-function getPhoneDigits(phone: string) {
-  return phone.replace(/\D/g, '').slice(-10);
+function getPhoneDigitsLocal(phone: string) {
+  return getPhoneDigits(phone);
 }
 
 export default function CreateAccountScreen({ navigation }: Props) {
@@ -36,13 +36,9 @@ export default function CreateAccountScreen({ navigation }: Props) {
   const s = width / REF_W;
   const px = (n: number) => Math.round(n * s);
 
-  const [name, setName] = useState(AUTH_USER.name);
-  const [phone, setPhone] = useState(AUTH_USER.phone);
-  const [email, setEmail] = useState('rahul@gmail.com');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(true);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -62,14 +58,11 @@ export default function CreateAccountScreen({ navigation }: Props) {
     if (!name.trim()) {
       nextErrors.name = 'Please enter your name';
     }
-    if (getPhoneDigits(phone).length !== 10) {
+    if (getPhoneDigitsLocal(phone).length !== 10) {
       nextErrors.phone = 'Enter valid 10-digit number';
     }
-    if (!password.trim()) {
-      nextErrors.password = 'Please enter password';
-    }
-    if (password !== confirmPassword) {
-      nextErrors.confirmPassword = 'Passwords do not match';
+    if (getPhoneDigitsLocal(phone) === REGISTERED_PHONE_DIGITS) {
+      nextErrors.phone = 'Number already registered. Please login instead.';
     }
     if (!termsAccepted) {
       Alert.alert('Terms Required', 'Please accept terms');
@@ -78,7 +71,11 @@ export default function CreateAccountScreen({ navigation }: Props) {
 
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length === 0) {
-      navigation.navigate('OTP');
+      navigation.navigate('OTP', {
+        phone: formatPhoneE164(getPhoneDigitsLocal(phone)),
+        flow: 'signup',
+        name: name.trim(),
+      });
     }
   };
 
@@ -104,11 +101,9 @@ export default function CreateAccountScreen({ navigation }: Props) {
               <AuthBackHeader onBack={() => navigation.goBack()} />
             </View>
 
-            <AuthLogo width={px(140)} />
-
             <Text
               style={{
-                marginTop: px(14),
+                marginTop: px(8),
                 fontSize: px(26),
                 fontWeight: typography.weights.extrabold,
                 color: colors.dark,
@@ -126,7 +121,7 @@ export default function CreateAccountScreen({ navigation }: Props) {
                 textAlign: 'center',
                 lineHeight: px(20),
               }}>
-              Create your account to get started.
+              Create your account with your mobile number. We'll send an OTP to verify.
             </Text>
 
             <FormField
@@ -175,60 +170,6 @@ export default function CreateAccountScreen({ navigation }: Props) {
               }
             />
 
-            <FormField
-              variant="outlined"
-              compact
-              scale={s}
-              label="Password"
-              required
-              Icon={Lock}
-              value={password}
-              onChangeText={text => {
-                setPassword(text);
-                clearError('password');
-              }}
-              placeholder="Enter your password"
-              secureTextEntry={!showPassword}
-              autoCapitalize="none"
-              error={errors.password}
-              rightElement={
-                <Pressable onPress={() => setShowPassword(v => !v)} hitSlop={8}>
-                  {showPassword ? (
-                    <EyeOff size={px(20)} color={colors.grey} />
-                  ) : (
-                    <Eye size={px(20)} color={colors.grey} />
-                  )}
-                </Pressable>
-              }
-            />
-
-            <FormField
-              variant="outlined"
-              compact
-              scale={s}
-              label="Confirm Password"
-              required
-              Icon={Lock}
-              value={confirmPassword}
-              onChangeText={text => {
-                setConfirmPassword(text);
-                clearError('confirmPassword');
-              }}
-              placeholder="Confirm your password"
-              secureTextEntry={!showConfirm}
-              autoCapitalize="none"
-              error={errors.confirmPassword}
-              rightElement={
-                <Pressable onPress={() => setShowConfirm(v => !v)} hitSlop={8}>
-                  {showConfirm ? (
-                    <EyeOff size={px(20)} color={colors.grey} />
-                  ) : (
-                    <Eye size={px(20)} color={colors.grey} />
-                  )}
-                </Pressable>
-              }
-            />
-
             <Pressable
               style={[styles.termsRow, { marginBottom: px(20), gap: px(10) }]}
               onPress={() => setTermsAccepted(v => !v)}>
@@ -255,7 +196,7 @@ export default function CreateAccountScreen({ navigation }: Props) {
             </Pressable>
 
             <GoldButton
-              label="Sign Up"
+              label="Continue"
               onPress={handleSignUp}
               style={{ width: '100%' }}
               height={px(54)}

@@ -4,7 +4,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import PrimaryButton from '../components/ui/PrimaryButton';
-import BrandLogo from '../components/ui/BrandLogo';
 import Screen, { ScreenContent } from '../components/ui/Screen';
 import type { HomeStackParamList } from '../types/navigation';
 import { brand, colors, spacing, typography } from '../theme';
@@ -23,7 +22,6 @@ export default function SelectServiceScreen({ route }: Props) {
       <SafeAreaView style={styles.safeArea}>
         <ScreenContent style={styles.content}>
           <View style={styles.hero}>
-            <BrandLogo size="medium" style={styles.logo} />
             <Text style={styles.kicker}>Book with {brand.name}</Text>
             <Text style={styles.title}>{serviceLabel}</Text>
             {serviceDescription ? (
@@ -55,9 +53,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: spacing.xxl,
     alignItems: 'center',
-  },
-  logo: {
-    marginBottom: spacing.lg,
   },
   kicker: {
     color: colors.primary,

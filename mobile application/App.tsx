@@ -4,18 +4,21 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import AppNavigator from './src/navigation/AppNavigator';
 import { AuthProvider } from './src/context/AuthContext';
+import { SosDetailsProvider } from './src/context/SosDetailsContext';
 import { colors } from './src/theme';
 
 export default function App() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
-        <StatusBar
-          barStyle="dark-content"
-          backgroundColor={colors.background}
-          translucent={Platform.OS === 'android'}
-        />
-        <AppNavigator />
+        <SosDetailsProvider>
+          <StatusBar
+            barStyle="dark-content"
+            backgroundColor={colors.background}
+            translucent={Platform.OS === 'android'}
+          />
+          <AppNavigator />
+        </SosDetailsProvider>
       </AuthProvider>
     </SafeAreaProvider>
   );
