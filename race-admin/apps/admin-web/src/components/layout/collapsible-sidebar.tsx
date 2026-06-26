@@ -6,7 +6,6 @@ import {
   ChevronLeft,
   ClipboardList,
   CreditCard,
-  Headphones,
   IndianRupee,
   LayoutDashboard,
   Settings,
@@ -125,27 +124,6 @@ export function CollapsibleSidebar() {
           </div>
         ))}
       </nav>
-
-      <div className={cn('shrink-0 border-t border-border p-3', collapsed && 'px-2')}>
-        {!collapsed ? (
-          <div className="rounded-xl border border-border-subtle bg-surface-muted p-3">
-            <div className="flex items-start gap-2.5">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/15">
-                <Headphones className="h-4 w-4 text-primary-dark" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs font-semibold text-heading">Need help?</p>
-                <p className="mt-0.5 text-[11px] leading-relaxed text-muted">
-                  Contact{' '}
-                  <a href="mailto:support@raceservice.com" className="text-primary-dark hover:underline">
-                    support@raceservice.com
-                  </a>
-                </p>
-              </div>
-            </div>
-          </div>
-        ) : null}
-      </div>
     </aside>
   );
 }
