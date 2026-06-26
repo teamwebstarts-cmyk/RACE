@@ -128,5 +128,3 @@ export function CollapsibleSidebar() {
   );
 }
 
-/** @deprecated Use CollapsibleSidebar */
-export const Sidebar = CollapsibleSidebar;

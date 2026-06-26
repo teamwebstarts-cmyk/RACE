@@ -8,6 +8,7 @@ export interface RaceLogoProps {
   className?: string;
   showTagline?: boolean;
   layout?: RaceLogoLayout;
+  align?: 'left' | 'center';
 }
 
 /**
@@ -20,6 +21,7 @@ export function RaceLogo({
   className,
   showTagline = false,
   layout = 'default',
+  align = 'left',
 }: RaceLogoProps) {
   if (layout === 'sidebar') {
     return (
@@ -58,13 +60,22 @@ export function RaceLogo({
   }
 
   return (
-    <div className={cn('inline-flex flex-col items-start', className)}>
+    <div
+      className={cn(
+        'inline-flex flex-col',
+        align === 'center' ? 'w-full items-center' : 'items-start',
+        className,
+      )}
+    >
       <img
         src="/race-logo.png"
         alt="RACE Service"
         width={typeof width === 'number' ? width : undefined}
         height={typeof height === 'number' ? height : undefined}
-        className="h-auto max-w-full object-contain object-left"
+        className={cn(
+          'h-auto max-w-full object-contain',
+          align === 'center' ? 'mx-auto object-center' : 'object-left',
+        )}
         style={{
           width: typeof width === 'number' ? width : width,
           height: height === 'auto' ? undefined : height,

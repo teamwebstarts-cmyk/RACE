@@ -93,4 +93,4 @@ Controller → Service → Repository → Model
 3. Use managed Redis (Upstash / Elasticache)
 4. Set `NODE_ENV=production` and restrict `CORS_ORIGIN`
 5. Wire SMS provider for OTP (currently logged in dev)
-6. GCS config ready in `src/configs/gcs.ts` for future uploads
+6. GCS config ready in `src/config/gcs.ts` for future uploads

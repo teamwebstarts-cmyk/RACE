@@ -1,8 +1,8 @@
 import jwt, { type SignOptions } from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 
-import { env } from '../../configs/env';
-import { getCache } from '../../configs/cache';
+import { env } from '../../config/env';
+import { getCache } from '../../config/cache';
 
 export interface AccessTokenPayload {
   sub: string;

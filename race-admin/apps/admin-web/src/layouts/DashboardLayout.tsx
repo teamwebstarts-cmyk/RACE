@@ -1,11 +1,11 @@
 import { Outlet } from 'react-router-dom';
 
-import { AppLayout } from '@/components/layout/app-layout';
+import { AppShell } from '@/components/layout/app-shell';
 
 export function DashboardLayout() {
   return (
-    <AppLayout>
+    <AppShell>
       <Outlet />
-    </AppLayout>
+    </AppShell>
   );
 }

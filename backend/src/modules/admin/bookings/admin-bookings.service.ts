@@ -9,7 +9,6 @@ import { TransactionModel } from '../models/transaction.model';
 import { escapeRegex, paginate } from '../shared/pagination';
 import { logActivity } from '../shared/activity-logger';
 import { createNotification } from '../shared/notification-service';
-import { getEntityActivities } from '../shared/entity-activities';
 import { mapLocationPoint } from '../shared/response-mappers';
 import { generateBookingFinancials, generateRefund } from '../shared/transaction-engine';
 import { NotFoundError } from '../../../shared/utils/errors';
@@ -127,10 +126,9 @@ export const adminBookingsService = {
       vendorId = driver?.vendorId;
     }
 
-    const [customer, vendor, activities, payments] = await Promise.all([
+    const [customer, vendor, payments] = await Promise.all([
       UserModel.findById(booking.customerId).lean(),
       vendorId ? VendorModel.findById(vendorId).lean() : null,
-      getEntityActivities('booking', id),
       TransactionModel.find({ bookingId: booking._id }).sort({ createdAt: -1 }).lean(),
     ]);
 

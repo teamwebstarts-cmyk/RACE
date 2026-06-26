@@ -1,7 +1,7 @@
-import type { AppSettings, AuditLogEntry, PaginatedResponse } from '@race/types';
+import type { AppSettings } from '@race/types';
 
+import { DEFAULT_SETTINGS } from '../constants/default-settings';
 import { apiGet, apiPut } from '../http';
-import { DEFAULT_SETTINGS } from '../mocks/settings.mock';
 
 export async function getSettings(): Promise<AppSettings> {
   const raw = await apiGet<{
@@ -69,9 +69,4 @@ export async function saveSettings(settings: AppSettings): Promise<AppSettings> 
 
 export async function resetSettings(): Promise<AppSettings> {
   return saveSettings(DEFAULT_SETTINGS);
-}
-
-export async function getAuditLogs(filters: Record<string, unknown> = {}): Promise<AuditLogEntry[]> {
-  const result = await apiGet<PaginatedResponse<AuditLogEntry>>('/activity-logs', filters);
-  return result.items;
 }

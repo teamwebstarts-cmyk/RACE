@@ -39,7 +39,7 @@ export function LoginForm() {
 
   return (
     <div className="w-full">
-      <div className="mb-8 text-center">
+      <div className="login-animate-fade-up login-delay-3 mb-8 text-center">
         <h1 className="text-[1.65rem] font-bold leading-tight text-[#1A1A2E]">
           Welcome Back! <span aria-hidden>👋</span>
         </h1>
@@ -64,7 +64,7 @@ export function LoginForm() {
         </div>
       ) : null}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
+      <form onSubmit={handleSubmit(onSubmit)} className="login-animate-fade-up login-delay-4 space-y-5" noValidate>
         <div>
           <label htmlFor="identifier" className="mb-2 block text-sm font-bold text-[#1A1A2E]">
             Email or Mobile Number
@@ -150,7 +150,7 @@ export function LoginForm() {
         </Button>
       </form>
 
-      <div className="mt-6 flex items-center justify-center gap-2 text-center text-xs text-[#9CA3AF]">
+      <div className="login-animate-fade-in login-delay-4 mt-6 flex items-center justify-center gap-2 text-center text-xs text-[#9CA3AF]">
         <Shield className="h-3.5 w-3.5 shrink-0" />
         <span>Authorized access only. Activity may be monitored.</span>
       </div>

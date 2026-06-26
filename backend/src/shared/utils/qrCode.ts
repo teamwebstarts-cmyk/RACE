@@ -1,6 +1,6 @@
 import QRCode from 'qrcode';
 
-import { env } from '../../configs/env';
+import { env } from '../../config/env';
 
 export function getVehicleQrPayload(vehicleId: string): string {
   return `${env.APP_BASE_URL}/api/v1/qr/${vehicleId}`;

@@ -4,7 +4,7 @@ import express from 'express';
 import helmet from 'helmet';
 import path from 'path';
 
-import { env } from './configs/env';
+import { env } from './config/env';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware';
 import { loggerMiddleware } from './middleware/logger.middleware';
 import { globalRateLimiter } from './middleware/rateLimiter.middleware';

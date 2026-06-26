@@ -1,7 +1,7 @@
 import { createApp } from './app';
-import { connectDatabase, disconnectDatabase } from './configs/database';
-import { connectCache, disconnectCache } from './configs/cache';
-import { env } from './configs/env';
+import { connectDatabase, disconnectDatabase } from './config/database';
+import { connectCache, disconnectCache } from './config/cache';
+import { env } from './config/env';
 import { logger } from './shared/utils/logger';
 
 async function bootstrap(): Promise<void> {

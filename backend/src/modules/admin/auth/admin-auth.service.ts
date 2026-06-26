@@ -2,7 +2,7 @@ import crypto from 'crypto';
 
 import bcrypt from 'bcryptjs';
 
-import { env } from '../../../configs/env';
+import { env } from '../../../config/env';
 import { AdminModel } from '../models/admin.model';
 import { getPermissionsForRole } from '../shared/rbac';
 import {

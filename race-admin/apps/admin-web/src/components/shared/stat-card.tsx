@@ -82,5 +82,3 @@ export function MetricCard({ metric }: { metric: StatMetric }) {
   );
 }
 
-/** @deprecated Use MetricCard */
-export const StatCard = MetricCard;

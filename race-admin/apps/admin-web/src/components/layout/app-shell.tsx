@@ -33,5 +33,3 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** @deprecated Use AppShell */
-export const AppLayout = AppShell;

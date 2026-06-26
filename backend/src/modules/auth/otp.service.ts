@@ -1,5 +1,5 @@
-import { env } from '../../configs/env';
-import { getCache } from '../../configs/cache';
+import { env } from '../../config/env';
+import { getCache } from '../../config/cache';
 import { TooManyRequestsError } from '../../shared/utils/errors';
 import { generateOtp } from '../../shared/utils/otp';
 import { logger } from '../../shared/utils/logger';

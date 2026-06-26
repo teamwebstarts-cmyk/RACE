@@ -2,8 +2,8 @@ import { createReadStream, existsSync, mkdirSync, writeFileSync } from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 
-import { env } from '../../configs/env';
-import { gcsConfig } from '../../configs/gcs';
+import { env } from '../../config/env';
+import { gcsConfig } from '../../config/gcs';
 import { AppError } from '../utils/errors';
 import { logger } from '../utils/logger';
 

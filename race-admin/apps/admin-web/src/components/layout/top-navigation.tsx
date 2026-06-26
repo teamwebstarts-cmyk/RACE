@@ -206,5 +206,3 @@ export function TopNavigation() {
   );
 }
 
-/** @deprecated Use TopNavigation */
-export const Header = TopNavigation;
