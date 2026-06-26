@@ -1,10 +1,10 @@
 import dotenv from 'dotenv';
 
-import { connectDatabase, disconnectDatabase } from '../configs/database';
-import { brandRepository } from '../modules/brand/brand.repository';
-import { serviceRepository } from '../modules/services/service.repository';
-import type { IService } from '../modules/services/service.model';
-import { logger } from '../shared/utils/logger';
+import { connectDatabase, disconnectDatabase } from '../config/database';
+import { brandRepository } from '../repositories/brand';
+import { catalogRepository } from '../repositories/catalog';
+import type { ICatalogService } from '../models/catalog';
+import { logger } from '../utils/logger';
 
 import brandData from './seed-data/brand.json';
 import colorsData from './seed-data/colors.json';
@@ -22,7 +22,7 @@ interface SeedCategory {
 
 async function seedServices(): Promise<number> {
   const categories = servicesData as SeedCategory[];
-  const records: Partial<IService>[] = [];
+  const records: Partial<ICatalogService>[] = [];
   let sortOrder = 0;
 
   for (const category of categories) {
@@ -42,7 +42,7 @@ async function seedServices(): Promise<number> {
     }
   }
 
-  await serviceRepository.upsertMany(records);
+  await catalogRepository.upsertMany(records);
   return records.length;
 }
 

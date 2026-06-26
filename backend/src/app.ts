@@ -3,12 +3,15 @@ import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
 
-import { env } from './configs/env';
-import { errorHandler, notFoundHandler } from './middleware/error.middleware';
-import { loggerMiddleware } from './middleware/logger.middleware';
-import { globalRateLimiter } from './middleware/rateLimiter.middleware';
-import apiRoutes from './routes/index';
-import healthRoutes from './routes/health.routes';
+import { env } from './config/env';
+import apiRoutes from './controller';
+import healthRoutes from './controller/health';
+import {
+  errorHandler,
+  globalRateLimiter,
+  loggerMiddleware,
+  notFoundHandler,
+} from './middleware';
 
 export function createApp() {
   const app = express();
