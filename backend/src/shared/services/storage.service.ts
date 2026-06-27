@@ -1,0 +1,153 @@
+import { createReadStream, existsSync, mkdirSync, writeFileSync } from 'fs';
+import path from 'path';
+import { v4 as uuidv4 } from 'uuid';
+
+import { env } from '../../config/env';
+import { gcsConfig } from '../../config/gcs';
+import { AppError } from '../utils/errors';
+import { logger } from '../utils/logger';
+
+export type VendorStorageCategory =
+  | 'towing-companies'
+  | 'tow-drivers'
+  | 'full-time-drivers'
+  | 'part-time-drivers'
+  | 'mechanics';
+
+const VENDOR_TYPE_FOLDER: Record<string, VendorStorageCategory> = {
+  towing_company: 'towing-companies',
+  tow_truck_driver: 'tow-drivers',
+  full_time_driver: 'full-time-drivers',
+  part_time_driver: 'part-time-drivers',
+  mechanic: 'mechanics',
+};
+
+const DOCUMENT_FOLDER: Record<string, string> = {
+  aadhaar: 'documents/aadhaar',
+  pan: 'documents/pan',
+  gst: 'documents/gst',
+  shop_license: 'documents/shop-license',
+  msme: 'documents/msme',
+  cancelled_cheque: 'documents/cheque',
+  commercial_licence: 'documents/licenses',
+  driving_license: 'documents/licenses',
+  police_verification: 'documents/verification',
+  medical_certificate: 'documents/verification',
+  vehicle_insurance: 'documents/insurance',
+  fitness_certificate: 'documents/permits',
+  puc: 'documents/permits',
+  commercial_permit: 'documents/permits',
+  selfie: 'verification/selfies',
+  vehicle_photo: 'documents/vehicle',
+  other: 'documents/other',
+};
+
+const ALLOWED_MIME = new Set([
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'application/pdf',
+]);
+
+const MAX_BYTES = 10 * 1024 * 1024;
+
+export interface UploadFileInput {
+  buffer: Buffer;
+  mimeType: string;
+  originalName: string;
+  vendorType: string;
+  documentType: string;
+}
+
+export interface UploadResult {
+  fileUrl: string;
+  fileName: string;
+  storagePath: string;
+}
+
+function resolveFolder(vendorType: string, documentType: string): string {
+  const vendorFolder = VENDOR_TYPE_FOLDER[vendorType] ?? 'vendors';
+  const docFolder = DOCUMENT_FOLDER[documentType] ?? 'documents/other';
+  return `vendors/${vendorFolder}/${docFolder}`;
+}
+
+function getLocalUploadsRoot(): string {
+  return path.join(process.cwd(), 'uploads');
+}
+
+function ensureDir(dir: string): void {
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true });
+  }
+}
+
+function buildFileName(originalName: string): string {
+  const ext = path.extname(originalName).toLowerCase() || '.bin';
+  return `${Date.now()}-${uuidv4()}${ext}`;
+}
+
+async function uploadToGcs(input: UploadFileInput, storagePath: string, fileName: string): Promise<UploadResult> {
+  const { Storage } = await import('@google-cloud/storage');
+  const storage = new Storage({
+    projectId: gcsConfig.projectId,
+    keyFilename: gcsConfig.keyFile || undefined,
+  });
+  const bucket = storage.bucket(gcsConfig.bucketName);
+  const objectPath = `${storagePath}/${fileName}`;
+  const file = bucket.file(objectPath);
+
+  await file.save(input.buffer, {
+    contentType: input.mimeType,
+    resumable: false,
+    metadata: { cacheControl: 'private, max-age=3600' },
+  });
+
+  const fileUrl = `https://storage.googleapis.com/${gcsConfig.bucketName}/${objectPath}`;
+  return { fileUrl, fileName: input.originalName, storagePath: objectPath };
+}
+
+function uploadToLocal(input: UploadFileInput, storagePath: string, fileName: string): UploadResult {
+  const absoluteDir = path.join(getLocalUploadsRoot(), storagePath);
+  ensureDir(absoluteDir);
+  const absolutePath = path.join(absoluteDir, fileName);
+  writeFileSync(absolutePath, input.buffer);
+  const fileUrl = `${env.APP_BASE_URL}/uploads/${storagePath}/${fileName}`.replace(/\\/g, '/');
+  return { fileUrl, fileName: input.originalName, storagePath: `${storagePath}/${fileName}` };
+}
+
+export class StorageService {
+  validateFile(buffer: Buffer, mimeType: string): void {
+    if (buffer.length > MAX_BYTES) {
+      throw new AppError('File exceeds 10MB limit', 400);
+    }
+    if (!ALLOWED_MIME.has(mimeType.toLowerCase())) {
+      throw new AppError('Only JPG, PNG, and PDF files are allowed', 400);
+    }
+  }
+
+  async uploadVendorDocument(input: UploadFileInput): Promise<UploadResult> {
+    this.validateFile(input.buffer, input.mimeType);
+    const storagePath = resolveFolder(input.vendorType, input.documentType);
+    const fileName = buildFileName(input.originalName);
+
+    if (gcsConfig.isConfigured) {
+      try {
+        return await uploadToGcs(input, storagePath, fileName);
+      } catch (error) {
+        logger.warn('GCS upload failed, falling back to local storage', { error });
+      }
+    }
+
+    return uploadToLocal(input, storagePath, fileName);
+  }
+
+  getLocalFileStream(relativePath: string) {
+    const absolutePath = path.join(getLocalUploadsRoot(), relativePath);
+    if (!existsSync(absolutePath)) {
+      throw new AppError('File not found', 404);
+    }
+    return createReadStream(absolutePath);
+  }
+}
+
+export const storageService = new StorageService();

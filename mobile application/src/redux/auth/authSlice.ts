@@ -10,6 +10,8 @@ export interface AuthState {
   loading: boolean;
   onboardingRequired: boolean;
   pendingMobileNumber: string | null;
+  /** When true, an approved vendor sees the customer app instead of the partner app. */
+  useCustomerExperience: boolean;
 }
 
 type PersistedAuthPayload = Pick<
@@ -25,6 +27,7 @@ const initialState: AuthState = {
   loading: false,
   onboardingRequired: false,
   pendingMobileNumber: null,
+  useCustomerExperience: false,
 };
 
 const authSlice = createSlice({
@@ -60,7 +63,14 @@ const authSlice = createSlice({
     completeProfileSuccess(state, action: PayloadAction<AuthUser>) {
       state.user = action.payload;
       state.onboardingRequired = false;
+      state.loading = false;
+    },
+    completeOnboarding(state, action: PayloadAction<AuthUser | undefined>) {
+      if (action.payload) {
+        state.user = action.payload;
+      }
       state.isAuthenticated = true;
+      state.onboardingRequired = false;
       state.loading = false;
     },
     updateTokens(
@@ -70,6 +80,12 @@ const authSlice = createSlice({
       state.accessToken = action.payload.accessToken;
       state.refreshToken = action.payload.refreshToken;
     },
+    updateUser(state, action: PayloadAction<AuthUser>) {
+      state.user = action.payload;
+    },
+    setUseCustomerExperience(state, action: PayloadAction<boolean>) {
+      state.useCustomerExperience = action.payload;
+    },
     logout(state) {
       state.user = null;
       state.accessToken = null;
@@ -78,6 +94,7 @@ const authSlice = createSlice({
       state.loading = false;
       state.onboardingRequired = false;
       state.pendingMobileNumber = null;
+      state.useCustomerExperience = false;
     },
     rehydrateAuth(state, action: PayloadAction<PersistedAuthPayload>) {
       state.user = action.payload.user;
@@ -95,6 +112,9 @@ export const {
   setPendingMobileNumber,
   setCredentials,
   completeProfileSuccess,
+  completeOnboarding,
+  updateUser,
+  setUseCustomerExperience,
   updateTokens,
   logout,
   rehydrateAuth,

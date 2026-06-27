@@ -15,7 +15,8 @@ import AuthToast, { AuthLoadingOverlay } from '../../components/auth/AuthToast';
 import OtpInput from '../../components/auth/OtpInput';
 import BrandLogo from '../../components/ui/BrandLogo';
 import PrimaryButton from '../../components/ui/PrimaryButton';
-import { useAppSelector } from '../../redux/hooks';
+import { useAppDispatch, useAppSelector } from '../../redux/hooks';
+import { clearSignupPath } from '../../redux/onboarding/onboardingSlice';
 import {
   getApiErrorMessage,
   useSendOtpMutation,
@@ -29,12 +30,16 @@ type Props = NativeStackScreenProps<AuthStackParamList, 'OtpVerification'>;
 const RESEND_SECONDS = 60;
 
 export default function OtpVerificationScreen({ navigation, route }: Props) {
+  const dispatch = useAppDispatch();
   const { mobileNumber, devOtp, isExistingUser = false } = route.params;
   const loading = useAppSelector((state) => state.auth.loading);
+  const partnerSignupRequired = useAppSelector((state) => state.onboarding.partnerSignupRequired);
+  const signupVendorType = useAppSelector((state) => state.onboarding.signupVendorType);
   const [otp, setOtp] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [secondsLeft, setSecondsLeft] = useState(RESEND_SECONDS);
+  const [verified, setVerified] = useState(false);
 
   const verifyOtpMutation = useVerifyOtpMutation();
   const sendOtpMutation = useSendOtpMutation();
@@ -50,6 +55,10 @@ export default function OtpVerificationScreen({ navigation, route }: Props) {
   }, [secondsLeft]);
 
   const handleVerify = async () => {
+    if (verified || loading) {
+      return;
+    }
+
     setError('');
     setSuccess('');
 
@@ -60,10 +69,21 @@ export default function OtpVerificationScreen({ navigation, route }: Props) {
 
     try {
       const result = await verifyOtpMutation.mutateAsync({ mobileNumber, otp });
-      if (result.onboardingRequired && !result.user.isProfileCompleted) {
-        navigation.replace('ProfileCompletion');
+      setVerified(true);
+      setSuccess(isExistingUser ? 'Login successful' : 'OTP verified');
+
+      if (isExistingUser || result.user.isProfileCompleted) {
+        dispatch(clearSignupPath());
       }
-      // Returning users: RootNavigator switches to Main automatically
+      if (result.onboardingRequired && !result.user.isProfileCompleted) {
+        navigation.replace('ProfileWizard');
+        return;
+      }
+      if (partnerSignupRequired && signupVendorType && result.user.isProfileCompleted) {
+        navigation.replace('VendorWizard', { vendorType: signupVendorType });
+        return;
+      }
+      // Returning users: RootNavigator switches to Main/Partner when isAuthenticated updates
     } catch (err) {
       setError(getApiErrorMessage(err, 'Invalid OTP'));
     }
@@ -135,14 +155,16 @@ export default function OtpVerificationScreen({ navigation, route }: Props) {
 
             <PrimaryButton
               label={
-                loading
-                  ? 'Verifying...'
-                  : isExistingUser
-                    ? 'Login'
-                    : 'Verify & Sign Up'
+                verified
+                  ? 'Success!'
+                  : loading
+                    ? 'Verifying...'
+                    : isExistingUser
+                      ? 'Login'
+                      : 'Verify & Sign Up'
               }
               onPress={handleVerify}
-              disabled={otp.length !== 6 || loading}
+              disabled={otp.length !== 6 || loading || verified}
             />
           </View>
         </ScrollView>

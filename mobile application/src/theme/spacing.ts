@@ -15,6 +15,7 @@ export const radius = {
   button: 14,
   input: 12,
   xl: 20,
+  card: 20,
   pill: 999,
 } as const;
 

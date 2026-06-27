@@ -1,14 +1,16 @@
 import dotenv from 'dotenv';
 
-import { connectDatabase, disconnectDatabase } from '../config/database';
-import { brandRepository } from '../repositories/brand';
-import { catalogRepository } from '../repositories/catalog';
-import type { ICatalogService } from '../models/catalog';
-import { logger } from '../utils/logger';
+import { connectDatabase, disconnectDatabase } from './connection';
+import { ensureDatabaseIndexes } from './indexes';
+import { brandRepository } from '../modules/brand/brand.repository';
+import { serviceRepository } from '../modules/services/service.repository';
+import type { IService } from '../modules/services/service.model';
+import { logger } from '../shared/utils/logger';
 
 import brandData from './seed-data/brand.json';
 import colorsData from './seed-data/colors.json';
 import servicesData from './seed-data/services.json';
+import { seedAdminPlatform } from './admin-seed';
 
 dotenv.config();
 
@@ -22,7 +24,7 @@ interface SeedCategory {
 
 async function seedServices(): Promise<number> {
   const categories = servicesData as SeedCategory[];
-  const records: Partial<ICatalogService>[] = [];
+  const records: Partial<IService>[] = [];
   let sortOrder = 0;
 
   for (const category of categories) {
@@ -42,7 +44,7 @@ async function seedServices(): Promise<number> {
     }
   }
 
-  await catalogRepository.upsertMany(records);
+  await serviceRepository.upsertMany(records);
   return records.length;
 }
 
@@ -69,11 +71,13 @@ async function seedBrand(): Promise<void> {
 
 async function runSeed(): Promise<void> {
   await connectDatabase();
+  await ensureDatabaseIndexes();
 
   const serviceCount = await seedServices();
   await seedBrand();
+  await seedAdminPlatform();
 
-  logger.info('Database seed completed', { services: serviceCount, brand: 1 });
+  logger.info('Database seed completed', { services: serviceCount, brand: 1, adminPlatform: true });
   await disconnectDatabase();
 }
 

@@ -29,6 +29,16 @@ module.exports = {
       'expo-font',
       'expo-secure-store',
       '@react-native-community/datetimepicker',
+      [
+        'expo-image-picker',
+        {
+          photosPermission: 'Allow RACE to access your photos for document upload.',
+          cameraPermission: 'Allow RACE to use your camera for selfie verification.',
+        },
+      ],
     ],
+    extra: {
+      apiUrl: process.env.EXPO_PUBLIC_API_URL ?? 'http://192.168.1.7:3000',
+    },
   },
 };

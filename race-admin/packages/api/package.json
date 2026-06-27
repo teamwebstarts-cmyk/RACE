@@ -1,0 +1,19 @@
+{
+  "name": "@race/api",
+  "version": "0.0.1",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@race/config": "*",
+    "@race/types": "*",
+    "@race/utils": "*",
+    "axios": "^1.9.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  }
+}

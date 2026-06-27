@@ -2,20 +2,23 @@ import React, { useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
+  Image,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 
+import { images } from '../../assets';
 import { API_CONFIG } from '../../config/api';
 import AuthToast, { AuthLoadingOverlay } from '../../components/auth/AuthToast';
-import BrandLogo from '../../components/ui/BrandLogo';
-import PrimaryButton from '../../components/ui/PrimaryButton';
-import { useAppSelector } from '../../redux/hooks';
+import { useAppDispatch, useAppSelector } from '../../redux/hooks';
+import { clearSignupPath } from '../../redux/onboarding/onboardingSlice';
 import { getApiErrorMessage, useSendOtpMutation } from '../../services/auth/useAuthMutations';
 import type { AuthStackParamList } from '../../types/navigation';
 import { colors, radius, spacing, typography } from '../../theme';
@@ -25,9 +28,22 @@ type Props = NativeStackScreenProps<AuthStackParamList, 'MobileNumber'>;
 const MOBILE_REGEX = /^[6-9]\d{9}$/;
 
 export default function MobileNumberScreen({ navigation }: Props) {
+  const dispatch = useAppDispatch();
   const loading = useAppSelector((state) => state.auth.loading);
+  const signupAccountType = useAppSelector((state) => state.onboarding.signupAccountType);
+  const signupVendorType = useAppSelector((state) => state.onboarding.signupVendorType);
   const [mobileNumber, setMobileNumber] = useState('');
+  const [passwordHint, setPasswordHint] = useState('');
   const [error, setError] = useState('');
+
+  const signupLabel =
+    signupAccountType === 'customer'
+      ? 'Customer sign up'
+      : signupAccountType === 'vendor'
+        ? 'Vendor sign up'
+        : signupAccountType === 'driver'
+          ? 'Driver sign up'
+          : null;
 
   const sendOtpMutation = useSendOtpMutation();
 
@@ -43,6 +59,9 @@ export default function MobileNumberScreen({ navigation }: Props) {
 
     try {
       const result = await sendOtpMutation.mutateAsync({ mobileNumber });
+      if (result.isExistingUser) {
+        dispatch(clearSignupPath());
+      }
       navigation.navigate('OtpVerification', {
         mobileNumber,
         devOtp: result.devOtp,
@@ -63,13 +82,18 @@ export default function MobileNumberScreen({ navigation }: Props) {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
           <View style={styles.header}>
-            <BrandLogo size="large" />
-            <Text style={styles.badge}>RACE SERVICE</Text>
-            <Text style={styles.title}>Login or Sign Up</Text>
-            <Text style={styles.subtitle}>
-              Enter your mobile number. Returning users verify OTP to login. New users complete a
-              quick profile once.
+            <Image source={images.logo} style={styles.logo} resizeMode="contain" />
+            <Text style={styles.title}>
+              {signupLabel ? signupLabel : 'Welcome Back 👋'}
             </Text>
+            <Text style={styles.subtitle}>
+              {signupLabel
+                ? 'Verify your mobile number to continue.'
+                : 'Please login to continue.'}
+            </Text>
+            {signupVendorType ? (
+              <Text style={styles.pathHint}>Selected: {signupVendorType.replace(/_/g, ' ')}</Text>
+            ) : null}
           </View>
 
           <View style={styles.card}>
@@ -89,17 +113,71 @@ export default function MobileNumberScreen({ navigation }: Props) {
               />
             </View>
 
+            {!signupLabel ? (
+              <View style={styles.inputRow}>
+                <View style={styles.countryCode}>
+                  <Ionicons name="lock-closed-outline" size={18} color={colors.textMuted} />
+                </View>
+                <TextInput
+                  style={styles.input}
+                  value={passwordHint}
+                  onChangeText={setPasswordHint}
+                  secureTextEntry
+                  placeholder="••••••"
+                  placeholderTextColor={colors.textMuted}
+                />
+              </View>
+            ) : null}
+
             <AuthToast message={error} />
 
             {__DEV__ ? (
               <Text style={styles.devHint}>API: {API_CONFIG.baseUrl}</Text>
             ) : null}
 
-            <PrimaryButton
-              label={loading ? 'Sending...' : 'Send OTP'}
+            <Pressable
+              style={[styles.loginButton, (!isValid || loading) && styles.loginButtonDisabled]}
               onPress={handleSendOtp}
-              disabled={!isValid || loading}
-            />
+              disabled={!isValid || loading}>
+              <Text style={styles.loginButtonText}>
+                {loading ? 'Sending...' : signupLabel ? 'Continue' : 'Login'}
+              </Text>
+            </Pressable>
+
+            {!signupLabel ? (
+              <>
+                <Pressable style={styles.forgotWrap}>
+                  <Text style={styles.forgotText}>Forgot Password?</Text>
+                </Pressable>
+                <View style={styles.dividerWrap}>
+                  <View style={styles.divider} />
+                  <Text style={styles.dividerText}>or continue with</Text>
+                  <View style={styles.divider} />
+                </View>
+                <View style={styles.socialRow}>
+                  <Pressable style={styles.socialButton}>
+                    <Ionicons name="logo-google" size={22} color={colors.textDark} />
+                  </Pressable>
+                  <Pressable style={styles.socialButton}>
+                    <Ionicons name="logo-apple" size={22} color={colors.textDark} />
+                  </Pressable>
+                  <Pressable style={styles.socialButton}>
+                    <Ionicons name="logo-whatsapp" size={22} color="#25D366" />
+                  </Pressable>
+                </View>
+                <Pressable
+                  style={styles.signupPressable}
+                  onPress={() => navigation.navigate('AccountType')}>
+                  <Text style={styles.signupText}>
+                    Don't have an account? <Text style={styles.signupLink}>Sign Up</Text>
+                  </Text>
+                </Pressable>
+              </>
+            ) : (
+              <Pressable style={styles.switchTypeButton} onPress={() => navigation.navigate('AccountType')}>
+                <Text style={styles.switchTypeText}>Change account type</Text>
+              </Pressable>
+            )}
           </View>
         </ScrollView>
         <AuthLoadingOverlay visible={loading} label="Sending OTP..." />
@@ -111,7 +189,7 @@ export default function MobileNumberScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.surfaceDarker,
+    backgroundColor: colors.background,
   },
   flex: {
     flex: 1,
@@ -125,16 +203,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.xl,
   },
-  badge: {
-    marginTop: spacing.md,
-    color: colors.primary,
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.bold,
-    letterSpacing: 1.2,
+  logo: {
+    width: 72,
+    height: 72,
   },
   title: {
     marginTop: spacing.sm,
-    color: colors.textLight,
+    color: colors.textDark,
     fontSize: typography.sizes.xxl,
     fontWeight: typography.weights.bold,
   },
@@ -146,12 +221,19 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     maxWidth: 320,
   },
+  pathHint: {
+    marginTop: spacing.sm,
+    color: colors.primary,
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
+    textTransform: 'capitalize',
+  },
   card: {
     backgroundColor: colors.background,
     borderRadius: radius.lg,
     padding: spacing.lg,
     borderWidth: 1,
-    borderColor: 'rgba(255, 195, 38, 0.25)',
+    borderColor: colors.border,
   },
   label: {
     color: colors.textDark,
@@ -168,9 +250,11 @@ const styles = StyleSheet.create({
     minWidth: 72,
     height: 52,
     borderRadius: radius.md,
-    backgroundColor: colors.surfaceDark,
+    backgroundColor: colors.backgroundSoft,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   countryCodeText: {
     color: colors.primary,
@@ -194,5 +278,84 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: typography.sizes.xs,
     textAlign: 'center',
+  },
+  forgotWrap: {
+    alignItems: 'flex-end',
+    marginBottom: spacing.sm,
+  },
+  forgotText: {
+    color: colors.primary,
+    fontWeight: typography.weights.semibold,
+  },
+  dividerWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  divider: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.border,
+  },
+  dividerText: {
+    color: colors.textMuted,
+    fontSize: typography.sizes.sm,
+  },
+  socialRow: {
+    flexDirection: 'row',
+    marginBottom: spacing.md,
+  },
+  socialButton: {
+    flex: 1,
+    height: 52,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    marginHorizontal: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.backgroundSoft,
+  },
+  loginButton: {
+    height: 56,
+    borderRadius: 12,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  loginButtonDisabled: {
+    opacity: 0.5,
+  },
+  loginButtonText: {
+    color: colors.textDark,
+    fontSize: typography.sizes.xl,
+    fontWeight: typography.weights.bold,
+  },
+  signupPressable: {
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+  },
+  signupText: {
+    color: colors.text,
+    fontSize: typography.sizes.md,
+  },
+  signupLink: {
+    color: colors.primary,
+    fontWeight: typography.weights.bold,
+  },
+  switchTypeButton: {
+    height: 52,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  switchTypeText: {
+    color: colors.primary,
+    fontWeight: typography.weights.semibold,
+    fontSize: typography.sizes.md,
   },
 });

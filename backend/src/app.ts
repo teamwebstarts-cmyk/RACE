@@ -2,16 +2,14 @@ import compression from 'compression';
 import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
+import path from 'path';
 
 import { env } from './config/env';
-import apiRoutes from './controller';
-import healthRoutes from './controller/health';
-import {
-  errorHandler,
-  globalRateLimiter,
-  loggerMiddleware,
-  notFoundHandler,
-} from './middleware';
+import { errorHandler, notFoundHandler } from './middleware/error.middleware';
+import { loggerMiddleware } from './middleware/logger.middleware';
+import { globalRateLimiter } from './middleware/rateLimiter.middleware';
+import apiRoutes from './routes/index';
+import healthRoutes from './routes/health.routes';
 
 export function createApp() {
   const app = express();
@@ -30,6 +28,8 @@ export function createApp() {
   app.use(express.urlencoded({ extended: true }));
   app.use(loggerMiddleware);
   app.use(globalRateLimiter);
+
+  app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
   app.use('/health', healthRoutes);
   app.use(apiRoutes);

@@ -4,20 +4,44 @@ import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
+import BookingDetailScreen from '../screens/booking/BookingDetailScreen';
+import BookingFlowScreen from '../screens/booking/BookingFlowScreen';
+import BookingsScreen from '../screens/booking/BookingsScreen';
+import LiveTrackingScreen from '../screens/booking/LiveTrackingScreen';
+import RatingReviewScreen from '../screens/booking/RatingReviewScreen';
 import HomeScreen from '../screens/HomeScreen';
-import PlaceholderScreen from '../screens/PlaceholderScreen';
+import MoreServicesScreen from '../screens/MoreServicesScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import EmergencySosScreen from '../screens/profile/EmergencySosScreen';
+import MyQrScreen from '../screens/profile/MyQrScreen';
+import NotificationsScreen from '../screens/profile/NotificationsScreen';
+import PaymentMethodsScreen from '../screens/profile/PaymentMethodsScreen';
+import SavedLocationsScreen from '../screens/profile/SavedLocationsScreen';
+import SettingsScreen from '../screens/profile/SettingsScreen';
+import SubscriptionPlansScreen from '../screens/profile/SubscriptionPlansScreen';
+import SupportCenterScreen from '../screens/profile/SupportCenterScreen';
 import SelectServiceScreen from '../screens/SelectServiceScreen';
 import ServiceListScreen from '../screens/ServiceListScreen';
+import VendorTypeSelectScreen from '../screens/vendor/VendorTypeSelectScreen';
+import VendorWizardScreen from '../screens/vendor/VendorWizardScreen';
+import ReviewSubmissionScreen from '../screens/vendor/ReviewSubmissionScreen';
+import VerificationStatusScreen from '../screens/vendor/VerificationStatusScreen';
 import AddVehicleScreen from '../screens/vehicles/AddVehicleScreen';
 import VehicleDetailScreen from '../screens/vehicles/VehicleDetailScreen';
+import VehicleQrEmergencyScreen from '../screens/vehicles/VehicleQrEmergencyScreen';
 import VehicleListScreen from '../screens/vehicles/VehicleListScreen';
 import BrandLogo from '../components/ui/BrandLogo';
-import type { HomeStackParamList, ProfileStackParamList, RootTabParamList } from '../types/navigation';
+import type {
+  BookingsStackParamList,
+  HomeStackParamList,
+  ProfileStackParamList,
+  RootTabParamList,
+} from '../types/navigation';
 import { colors, typography } from '../theme';
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
 const HomeStack = createNativeStackNavigator<HomeStackParamList>();
+const BookingsStack = createNativeStackNavigator<BookingsStackParamList>();
 const ProfileStack = createNativeStackNavigator<ProfileStackParamList>();
 
 const stackScreenOptions = {
@@ -33,20 +57,13 @@ const stackScreenOptions = {
 function HomeStackNavigator() {
   return (
     <HomeStack.Navigator screenOptions={stackScreenOptions}>
-      <HomeStack.Screen
-        name="HomeMain"
-        component={HomeScreen}
-        options={{ headerShown: false }}
-      />
+      <HomeStack.Screen name="HomeMain" component={HomeScreen} options={{ headerShown: false }} />
       <HomeStack.Screen
         name="ServiceList"
         component={ServiceListScreen}
         options={({ route }) => ({
           headerTitle: route.params.categoryTitle || 'Services',
-          headerTitleStyle: {
-            fontWeight: typography.weights.bold,
-            color: colors.textLight,
-          },
+          headerTitleStyle: { fontWeight: typography.weights.bold, color: colors.textLight },
         })}
       />
       <HomeStack.Screen
@@ -54,13 +71,94 @@ function HomeStackNavigator() {
         component={SelectServiceScreen}
         options={{
           headerTitle: 'Book Service',
-          headerTitleStyle: {
-            fontWeight: typography.weights.bold,
-            color: colors.textLight,
-          },
+          headerTitleStyle: { fontWeight: typography.weights.bold, color: colors.textLight },
+        }}
+      />
+      <HomeStack.Screen
+        name="MoreServices"
+        component={MoreServicesScreen}
+        options={{
+          headerTitle: 'More Services',
+          headerTitleStyle: { fontWeight: typography.weights.bold, color: colors.textLight },
+        }}
+      />
+      <HomeStack.Screen
+        name="BookingFlow"
+        component={BookingFlowScreen}
+        options={{
+          headerTitle: 'Book Service',
+          headerTitleStyle: { fontWeight: typography.weights.bold, color: colors.textLight },
+        }}
+      />
+      <HomeStack.Screen
+        name="LiveTracking"
+        component={LiveTrackingScreen}
+        options={{
+          headerTitle: 'Live Tracking',
+          headerTitleStyle: { fontWeight: typography.weights.bold, color: colors.textLight },
+        }}
+      />
+      <HomeStack.Screen
+        name="RatingReview"
+        component={RatingReviewScreen}
+        options={{
+          headerTitle: 'Rate Experience',
+          headerTitleStyle: { fontWeight: typography.weights.bold, color: colors.textLight },
+        }}
+      />
+      <HomeStack.Screen
+        name="VehicleQrEmergency"
+        component={VehicleQrEmergencyScreen}
+        options={{
+          headerTitle: 'Emergency QR',
+          headerTitleStyle: { fontWeight: typography.weights.bold, color: colors.textLight },
         }}
       />
     </HomeStack.Navigator>
+  );
+}
+
+function BookingsStackNavigator() {
+  return (
+    <BookingsStack.Navigator screenOptions={stackScreenOptions}>
+      <BookingsStack.Screen
+        name="BookingsMain"
+        component={BookingsScreen}
+        options={{ headerShown: false }}
+      />
+      <BookingsStack.Screen
+        name="BookingDetail"
+        component={BookingDetailScreen}
+        options={{
+          headerTitle: 'Booking Detail',
+          headerTitleStyle: { fontWeight: typography.weights.bold, color: colors.textLight },
+        }}
+      />
+      <BookingsStack.Screen
+        name="LiveTracking"
+        component={LiveTrackingScreen}
+        options={{
+          headerTitle: 'Live Tracking',
+          headerTitleStyle: { fontWeight: typography.weights.bold, color: colors.textLight },
+        }}
+      />
+      <BookingsStack.Screen
+        name="RatingReview"
+        component={RatingReviewScreen}
+        options={{
+          headerTitle: 'Rate Experience',
+          headerTitleStyle: { fontWeight: typography.weights.bold, color: colors.textLight },
+        }}
+      />
+      <BookingsStack.Screen
+        name="BookingFlow"
+        component={BookingFlowScreen}
+        options={{
+          headerTitle: 'Book Service',
+          headerTitleStyle: { fontWeight: typography.weights.bold, color: colors.textLight },
+        }}
+      />
+    </BookingsStack.Navigator>
   );
 }
 
@@ -81,7 +179,6 @@ function TabIcon({
   focused: boolean;
 }) {
   const icons = TAB_ICONS[routeName];
-
   return (
     <View style={[tabIconStyles.wrap, focused && tabIconStyles.active]}>
       <Ionicons
@@ -96,35 +193,22 @@ function TabIcon({
 function ProfileStackNavigator() {
   return (
     <ProfileStack.Navigator screenOptions={stackScreenOptions}>
-      <ProfileStack.Screen
-        name="ProfileMain"
-        component={ProfileScreen}
-        options={{ headerShown: false }}
-      />
-      <ProfileStack.Screen
-        name="MyVehicles"
-        component={VehicleListScreen}
-        options={{
-          headerTitle: 'My Vehicles',
-          headerTitleStyle: { fontWeight: typography.weights.bold, color: colors.textLight },
-        }}
-      />
-      <ProfileStack.Screen
-        name="AddVehicle"
-        component={AddVehicleScreen}
-        options={{
-          headerTitle: 'Add Vehicle',
-          headerTitleStyle: { fontWeight: typography.weights.bold, color: colors.textLight },
-        }}
-      />
-      <ProfileStack.Screen
-        name="VehicleDetail"
-        component={VehicleDetailScreen}
-        options={{
-          headerTitle: 'Vehicle Details',
-          headerTitleStyle: { fontWeight: typography.weights.bold, color: colors.textLight },
-        }}
-      />
+      <ProfileStack.Screen name="ProfileMain" component={ProfileScreen} options={{ headerShown: false }} />
+      <ProfileStack.Screen name="MyVehicles" component={VehicleListScreen} options={{ headerTitle: 'My Vehicles', headerTitleStyle: { fontWeight: typography.weights.bold, color: colors.textLight } }} />
+      <ProfileStack.Screen name="AddVehicle" component={AddVehicleScreen} options={{ headerTitle: 'Add Vehicle', headerTitleStyle: { fontWeight: typography.weights.bold, color: colors.textLight } }} />
+      <ProfileStack.Screen name="VehicleDetail" component={VehicleDetailScreen} options={{ headerTitle: 'Vehicle Details', headerTitleStyle: { fontWeight: typography.weights.bold, color: colors.textLight } }} />
+      <ProfileStack.Screen name="MyQr" component={MyQrScreen} options={{ headerTitle: 'My QR Code', headerTitleStyle: { fontWeight: typography.weights.bold, color: colors.textLight } }} />
+      <ProfileStack.Screen name="SavedLocations" component={SavedLocationsScreen} options={{ headerTitle: 'Saved Locations', headerTitleStyle: { fontWeight: typography.weights.bold, color: colors.textLight } }} />
+      <ProfileStack.Screen name="PaymentMethods" component={PaymentMethodsScreen} options={{ headerTitle: 'Payment Methods', headerTitleStyle: { fontWeight: typography.weights.bold, color: colors.textLight } }} />
+      <ProfileStack.Screen name="Notifications" component={NotificationsScreen} options={{ headerTitle: 'Notifications', headerTitleStyle: { fontWeight: typography.weights.bold, color: colors.textLight } }} />
+      <ProfileStack.Screen name="SupportCenter" component={SupportCenterScreen} options={{ headerTitle: 'Support Center', headerTitleStyle: { fontWeight: typography.weights.bold, color: colors.textLight } }} />
+      <ProfileStack.Screen name="Settings" component={SettingsScreen} options={{ headerTitle: 'Settings', headerTitleStyle: { fontWeight: typography.weights.bold, color: colors.textLight } }} />
+      <ProfileStack.Screen name="SubscriptionPlans" component={SubscriptionPlansScreen} options={{ headerTitle: 'Subscription Plans', headerTitleStyle: { fontWeight: typography.weights.bold, color: colors.textLight } }} />
+      <ProfileStack.Screen name="EmergencySos" component={EmergencySosScreen} options={{ headerTitle: 'Emergency SOS', headerTitleStyle: { fontWeight: typography.weights.bold, color: colors.textLight } }} />
+      <ProfileStack.Screen name="VendorTypeSelect" component={VendorTypeSelectScreen} options={{ headerTitle: 'Become a Partner', headerTitleStyle: { fontWeight: typography.weights.bold, color: colors.textLight } }} />
+      <ProfileStack.Screen name="VendorWizard" component={VendorWizardScreen} options={{ headerTitle: 'Partner Registration', headerTitleStyle: { fontWeight: typography.weights.bold, color: colors.textLight } }} />
+      <ProfileStack.Screen name="VendorReview" component={ReviewSubmissionScreen} options={{ headerTitle: 'Review Submission', headerTitleStyle: { fontWeight: typography.weights.bold, color: colors.textLight } }} />
+      <ProfileStack.Screen name="VendorVerificationStatus" component={VerificationStatusScreen} options={{ headerTitle: 'Verification Status', headerTitleStyle: { fontWeight: typography.weights.bold, color: colors.textLight } }} />
     </ProfileStack.Navigator>
   );
 }
@@ -150,17 +234,8 @@ export default function MainNavigator() {
         tabBarIcon: ({ focused }) => <TabIcon routeName={route.name} focused={focused} />,
       })}>
       <Tab.Screen name="Home" component={HomeStackNavigator} options={{ title: 'Home' }} />
-      <Tab.Screen
-        name="Bookings"
-        children={() => (
-          <PlaceholderScreen
-            title="My Bookings"
-            subtitle="You have no active bookings. Call RACE Service to schedule towing, drivers, or roadside help."
-            actionLabel="Call to Book"
-          />
-        )}
-      />
-      <Tab.Screen name="Profile" component={ProfileStackNavigator} />
+      <Tab.Screen name="Bookings" component={BookingsStackNavigator} options={{ title: 'Bookings' }} />
+      <Tab.Screen name="Profile" component={ProfileStackNavigator} options={{ title: 'Profile' }} />
     </Tab.Navigator>
   );
 }

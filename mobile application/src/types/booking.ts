@@ -1,0 +1,101 @@
+export type BookingStatus =
+  | 'CREATED'
+  | 'ASSIGNED'
+  | 'ACCEPTED'
+  | 'EN_ROUTE'
+  | 'ARRIVED'
+  | 'SERVICE_STARTED'
+  | 'SERVICE_COMPLETED'
+  | 'PAYMENT_PENDING'
+  | 'PAID';
+
+export interface BookingDriver {
+  id: string;
+  name: string;
+  rating: number;
+  phone: string;
+  avatarUrl?: string;
+  experience?: string;
+  verified?: boolean;
+}
+
+export interface BookingLocation {
+  label: string;
+  address: string;
+  latitude?: number;
+  longitude?: number;
+}
+
+export interface BookingTimelineEvent {
+  status: BookingStatus;
+  label: string;
+  timestamp: string;
+  completed: boolean;
+}
+
+export interface BookingInvoice {
+  baseFare: number;
+  distanceCharge?: number;
+  platformFee?: number;
+  discount?: number;
+  total: number;
+  currency: string;
+  paymentMethod?: string;
+}
+
+export interface Booking {
+  id: string;
+  bookingNumber: string;
+  categoryId: string;
+  serviceId: string;
+  serviceLabel: string;
+  serviceDescription?: string;
+  status: BookingStatus;
+  vehicleId: string;
+  vehicleNumber: string;
+  vehicleLabel?: string;
+  pickup: BookingLocation;
+  dropoff?: BookingLocation;
+  scheduledAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  driver?: BookingDriver;
+  etaMinutes?: number;
+  distanceKm?: number;
+  durationMinutes?: number;
+  invoice?: BookingInvoice;
+  timeline: BookingTimelineEvent[];
+  rating?: number;
+  review?: string;
+}
+
+export interface CreateBookingRequest {
+  categoryId: string;
+  serviceId: string;
+  serviceLabel: string;
+  serviceDescription?: string;
+  vehicleId: string;
+  pickup: BookingLocation;
+  dropoff?: BookingLocation;
+  scheduledAt?: string;
+  estimatedTotal?: number;
+}
+
+export interface SubmitRatingRequest {
+  rating: number;
+  review?: string;
+  tipAmount?: number;
+  tags?: string[];
+}
+
+export interface BookingDraft {
+  categoryId: string;
+  serviceId: string;
+  serviceLabel: string;
+  serviceDescription?: string;
+  vehicleId?: string;
+  pickup?: BookingLocation;
+  dropoff?: BookingLocation;
+  scheduledAt?: string;
+  estimatedTotal?: number;
+}

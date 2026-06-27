@@ -1,0 +1,84 @@
+import {
+  Building2,
+  Car,
+  CheckCircle2,
+  ClipboardList,
+  Hourglass,
+  IndianRupee,
+  TrendingDown,
+  TrendingUp,
+  Users,
+  type LucideIcon,
+} from 'lucide-react';
+
+import type { StatMetric } from '@race/types';
+import { formatNumber } from '@race/utils';
+import { Card, CardContent } from '@race/ui';
+import { cn } from '@race/utils';
+
+const ICONS: Record<string, LucideIcon> = {
+  Users,
+  Building2,
+  Car,
+  ClipboardList,
+  CheckCircle2,
+  IndianRupee,
+  Hourglass,
+};
+
+const VARIANT_STYLES = {
+  default: 'from-primary/10 to-primary/5 text-primary',
+  warning: 'from-warning/15 to-warning/5 text-warning',
+  success: 'from-success/15 to-success/5 text-success',
+};
+
+export function MetricCard({ metric }: { metric: StatMetric }) {
+  const Icon = metric.icon ? ICONS[metric.icon] ?? Users : Users;
+  const displayValue =
+    typeof metric.value === 'number' ? formatNumber(metric.value) : metric.value;
+  const variant = metric.variant ?? 'default';
+
+  return (
+    <Card className="group overflow-hidden transition-all hover:-translate-y-0.5">
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-medium text-muted">{metric.label}</p>
+            <p className="mt-1.5 text-2xl font-bold tracking-tight text-heading">{displayValue}</p>
+            {metric.trend ? (
+              <div className="mt-2 flex items-center gap-1.5">
+                <span
+                  className={cn(
+                    'inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[11px] font-semibold',
+                    metric.trend.direction === 'up' && 'bg-success/10 text-success',
+                    metric.trend.direction === 'down' && 'bg-error/10 text-error',
+                    metric.trend.direction === 'neutral' && 'bg-[#F4F5F7] text-muted',
+                  )}
+                >
+                  {metric.trend.direction === 'up' ? (
+                    <TrendingUp className="h-3 w-3" />
+                  ) : metric.trend.direction === 'down' ? (
+                    <TrendingDown className="h-3 w-3" />
+                  ) : null}
+                  {metric.trend.value}
+                </span>
+                {metric.trend.label ? (
+                  <span className="text-[11px] text-muted">{metric.trend.label}</span>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+          <div
+            className={cn(
+              'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br',
+              VARIANT_STYLES[variant],
+            )}
+          >
+            <Icon className="h-5 w-5" />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+

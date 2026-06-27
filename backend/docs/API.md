@@ -165,6 +165,84 @@ Verifies vehicle exists via QR scan.
 
 ---
 
+## Bookings (Protected)
+
+Header: `Authorization: Bearer <accessToken>`
+
+### POST /api/v1/bookings
+
+Create a service booking. Body includes `categoryId`, `serviceId`, `serviceLabel`, `vehicleId`, `pickup`, optional `dropoff` and `scheduledAt`.
+
+### GET /api/v1/bookings
+
+List bookings. Optional: `?status=PAID`.
+
+### GET /api/v1/bookings/:id
+
+### GET /api/v1/bookings/:id/tracking
+
+### POST /api/v1/bookings/:id/rating
+
+Body: `{ "rating": 1-5, "review?", "tipAmount?", "tags?" }`
+
+### POST /api/v1/bookings/:id/advance
+
+Demo: advance booking status (dev/testing).
+
+---
+
+## Profile Extensions (Protected)
+
+### GET/POST/PUT/DELETE /api/v1/profile/locations
+
+Saved addresses CRUD.
+
+### GET/POST/DELETE /api/v1/profile/payment-methods
+
+Payment methods. POST body: `{ "type": "upi|card|wallet|netbanking", "label", "details" }`
+
+### GET /api/v1/profile/wallet
+
+Returns `{ balance, currency }`.
+
+### GET /api/v1/profile/notifications
+
+Returns `{ notifications[], unreadCount }`.
+
+### PATCH /api/v1/profile/notifications/read-all
+
+### GET/PATCH /api/v1/profile/notifications/preferences
+
+---
+
+## Subscriptions
+
+### GET /api/v1/subscriptions/plans (Public)
+
+### GET/POST /api/v1/subscriptions (Protected)
+
+POST body: `{ "planSlug": "towing_premium_monthly" }`
+
+### POST /api/v1/subscriptions/cancel (Protected)
+
+---
+
+## SOS / Emergency
+
+### GET /api/v1/sos/config (Public)
+
+Support and emergency phone numbers, trust indicators.
+
+### GET /api/v1/sos/context (Protected)
+
+Owner, vehicle, and emergency contact for SOS screen.
+
+### POST /api/v1/sos/alert (Protected)
+
+Body: `{ "action": "sos|towing|ambulance|share_location|notify_contacts", "vehicleId?", "latitude?", "longitude?", "address?" }`
+
+---
+
 ## Error Codes
 
 | Code | Meaning |
