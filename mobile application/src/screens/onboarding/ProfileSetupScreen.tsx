@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -42,7 +42,7 @@ export default function ProfileSetupScreen({ navigation }: Props) {
   const s = width / REF_W;
   const px = (n: number) => Math.round(n * s);
 
-  const { updateProfile, isLoading } = useProfileStore();
+  const { profile, updateProfile, isLoading } = useProfileStore();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -51,6 +51,26 @@ export default function ProfileSetupScreen({ navigation }: Props) {
   const [emergency, setEmergency] = useState('');
   const [address, setAddress] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!profile) return;
+
+    setName(profile.fullName ?? '');
+    setEmail(profile.email ?? '');
+    setDob(profile.dateOfBirth ?? '');
+    if (profile.gender) {
+      const label = profile.gender.charAt(0).toUpperCase() + profile.gender.slice(1);
+      setGender(label === 'Prefer_not_to_say' ? 'Other' : label);
+    }
+    setEmergency(profile.emergencyContact?.mobileNumber ?? '');
+    const addressParts = [
+      profile.address?.line1,
+      profile.address?.line2,
+      profile.address?.city,
+      profile.address?.state,
+    ].filter(Boolean);
+    setAddress(addressParts.join(', '));
+  }, [profile]);
 
   const clearError = (key: string) => {
     if (errors[key]) {
@@ -91,7 +111,12 @@ export default function ProfileSetupScreen({ navigation }: Props) {
           gender,
           dateOfBirth: dob,
           emergencyPhone: emergency,
+          emergencyName: profile?.emergencyContact?.name,
           addressLine1: address,
+          city: profile?.address?.city,
+          state: profile?.address?.state,
+          pincode: profile?.address?.pincode,
+          country: profile?.address?.country,
         }),
       );
       navigation.navigate('VehicleRegistration');

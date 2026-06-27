@@ -73,11 +73,12 @@ export default function CreateAccountScreen({ navigation }: Props) {
 
     setIsSubmitting(true);
     try {
-      await sendOtp(getPhoneDigitsLocal(phone));
+      const result = await sendOtp(getPhoneDigitsLocal(phone));
       navigation.navigate('OTP', {
         phone: formatPhoneE164(getPhoneDigitsLocal(phone)),
         flow: 'signup',
         name: name.trim(),
+        devOtp: result.devOtp,
       });
     } catch (error) {
       setErrors({ phone: getApiErrorMessage(error, 'Unable to send OTP') });

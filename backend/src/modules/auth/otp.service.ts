@@ -37,7 +37,10 @@ export class OtpService {
     });
 
     if (env.NODE_ENV !== 'production') {
-      logger.info('OTP generated (dev only)', { mobileNumber, otp });
+      logger.info('────────────────────────────────────────');
+      logger.info(`DEV OTP → ${mobileNumber} → ${otp}`);
+      logger.info('(HTTP 200 body mein devOtp bhi milta hai — woh OTP use karo)');
+      logger.info('────────────────────────────────────────');
     }
 
     return {

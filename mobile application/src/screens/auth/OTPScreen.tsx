@@ -24,7 +24,7 @@ const REF_W = 390;
 type Props = NativeStackScreenProps<AuthStackParamList, 'OTP'>;
 
 export default function OTPScreen({ navigation, route }: Props) {
-  const { phone, flow } = route.params;
+  const { phone, flow, devOtp: initialDevOtp } = route.params;
   const { login, error: authError, isLoading, clearError } = useAuthActions();
   const { width } = useWindowDimensions();
   const px = (n: number) => Math.round(n * (width / REF_W));
@@ -34,6 +34,7 @@ export default function OTPScreen({ navigation, route }: Props) {
   const [timer, setTimer] = useState(30);
   const [error, setError] = useState('');
   const [isResending, setIsResending] = useState(false);
+  const [devOtp, setDevOtp] = useState(initialDevOtp ?? '');
   const inputRefs = useRef<Array<TextInput | null>>([]);
   const isVerifyingRef = useRef(false);
 
@@ -150,7 +151,10 @@ export default function OTPScreen({ navigation, route }: Props) {
     setError('');
     clearError();
     try {
-      await sendOtp(mobileNumber);
+      const result = await sendOtp(mobileNumber);
+      if (result.devOtp) {
+        setDevOtp(result.devOtp);
+      }
       setTimer(30);
       setDigits(['', '', '', '', '', '']);
       setActiveIndex(0);
@@ -204,6 +208,39 @@ export default function OTPScreen({ navigation, route }: Props) {
           ? 'We have sent a 6-digit code to your mobile number'
           : 'Verify your number to complete sign up'}
       </Text>
+
+      {__DEV__ && devOtp ? (
+        <View
+          style={{
+            marginTop: px(12),
+            paddingHorizontal: px(14),
+            paddingVertical: px(10),
+            borderRadius: px(10),
+            backgroundColor: colors.goldLight,
+            borderWidth: 1,
+            borderColor: colors.primary,
+          }}>
+          <Text
+            style={{
+              fontSize: px(12),
+              color: colors.grey,
+              textAlign: 'center',
+            }}>
+            Dev OTP (backend terminal mein bhi dikhega)
+          </Text>
+          <Text
+            style={{
+              marginTop: px(4),
+              fontSize: px(22),
+              fontWeight: typography.weights.extrabold,
+              color: colors.dark,
+              textAlign: 'center',
+              letterSpacing: 4,
+            }}>
+            {devOtp}
+          </Text>
+        </View>
+      ) : null}
 
       <View
         style={{

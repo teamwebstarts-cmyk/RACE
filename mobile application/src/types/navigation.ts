@@ -59,6 +59,7 @@ export type AuthStackParamList = {
     phone: string;
     flow: 'login' | 'signup';
     name?: string;
+    devOtp?: string;
   };
   ForgotPassword: undefined;
   ResetPassword: { phone: string };

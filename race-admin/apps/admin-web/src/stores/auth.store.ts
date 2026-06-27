@@ -1,5 +1,5 @@
-import { setAccessToken } from '@race/api';
-import type { AdminUser } from '@race/types';
+import { configureAuthHandlers, setAccessToken } from '@race/api';
+import type { AdminUser, AuthTokens } from '@race/types';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
@@ -7,9 +7,13 @@ interface AuthState {
   user: AdminUser | null;
   isAuthenticated: boolean;
   accessToken: string | null;
-  setUser: (user: AdminUser | null, token?: string | null) => void;
+  refreshToken: string | null;
+  hasHydrated: boolean;
+  setUser: (user: AdminUser | null, tokens?: AuthTokens | null) => void;
+  setTokens: (tokens: AuthTokens) => void;
   logout: () => void;
   hydrateToken: () => void;
+  setHasHydrated: (value: boolean) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -18,19 +22,34 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       isAuthenticated: false,
       accessToken: null,
-      setUser: (user, token) => {
-        if (token) {
-          setAccessToken(token);
+      refreshToken: null,
+      hasHydrated: false,
+      setUser: (user, tokens) => {
+        if (tokens) {
+          setAccessToken(tokens.accessToken);
         }
         set({
           user,
           isAuthenticated: Boolean(user),
-          accessToken: token ?? get().accessToken,
+          accessToken: tokens?.accessToken ?? get().accessToken,
+          refreshToken: tokens?.refreshToken ?? get().refreshToken,
+        });
+      },
+      setTokens: (tokens) => {
+        setAccessToken(tokens.accessToken);
+        set({
+          accessToken: tokens.accessToken,
+          refreshToken: tokens.refreshToken,
         });
       },
       logout: () => {
         setAccessToken(null);
-        set({ user: null, isAuthenticated: false, accessToken: null });
+        set({
+          user: null,
+          isAuthenticated: false,
+          accessToken: null,
+          refreshToken: null,
+        });
       },
       hydrateToken: () => {
         const token = get().accessToken;
@@ -38,6 +57,7 @@ export const useAuthStore = create<AuthState>()(
           setAccessToken(token);
         }
       },
+      setHasHydrated: (value) => set({ hasHydrated: value }),
     }),
     {
       name: 'race-admin-auth',
@@ -45,7 +65,27 @@ export const useAuthStore = create<AuthState>()(
         user: state.user,
         isAuthenticated: state.isAuthenticated,
         accessToken: state.accessToken,
+        refreshToken: state.refreshToken,
       }),
+      onRehydrateStorage: () => (state) => {
+        if (state?.accessToken) {
+          setAccessToken(state.accessToken);
+        }
+        useAuthStore.setState({ hasHydrated: true });
+      },
     },
   ),
 );
+
+configureAuthHandlers({
+  getRefreshToken: () => useAuthStore.getState().refreshToken,
+  onTokenRefreshed: (tokens) => {
+    useAuthStore.getState().setTokens(tokens);
+  },
+  onSessionExpired: () => {
+    useAuthStore.getState().logout();
+    if (window.location.pathname !== '/login') {
+      window.location.replace('/login');
+    }
+  },
+});

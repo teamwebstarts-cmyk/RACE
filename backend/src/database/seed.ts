@@ -5,6 +5,7 @@ import { ensureDatabaseIndexes } from './indexes';
 import { brandRepository } from '../modules/brand/brand.repository';
 import { serviceRepository } from '../modules/services/service.repository';
 import type { IService } from '../modules/services/service.model';
+import { UserModel } from '../modules/users/user.model';
 import { logger } from '../shared/utils/logger';
 
 import brandData from './seed-data/brand.json';
@@ -71,6 +72,15 @@ async function seedBrand(): Promise<void> {
 
 async function runSeed(): Promise<void> {
   await connectDatabase();
+
+  await UserModel.deleteMany({
+    mobileNumber: { $regex: /^\+919876543/ },
+  });
+  // Legacy seed format stored without country code (9876543210–9876543229)
+  await UserModel.deleteMany({
+    mobileNumber: { $regex: /^98765432[12][0-9]$/ },
+  });
+
   await ensureDatabaseIndexes();
 
   const serviceCount = await seedServices();

@@ -4,6 +4,7 @@ import type { User, VerifyOtpResponse } from '../types/auth';
 interface SendOtpResult {
   message: string;
   expiresIn: number;
+  devOtp?: string;
 }
 
 export async function sendOtp(mobileNumber: string): Promise<SendOtpResult> {

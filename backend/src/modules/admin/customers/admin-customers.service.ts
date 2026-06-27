@@ -1,6 +1,9 @@
 import { Types } from 'mongoose';
 
+import { normalizeMobileNumber } from '../../../shared/utils/otp';
+import { ConflictError } from '../../../shared/utils/errors';
 import { BookingModel } from '../../bookings/booking.model';
+import { userRepository } from '../../users/user.repository';
 import { UserModel } from '../../users/user.model';
 import { VehicleModel } from '../../vehicles/vehicle.model';
 import { VendorModel } from '../../vendors/vendor.model';
@@ -139,14 +142,19 @@ export const adminCustomersService = {
     state?: string;
     status?: string;
   }, actor: { id: string; name: string }) {
+    const mobileNumber = normalizeMobileNumber(input.phone);
+    const existing = await userRepository.findByMobile(mobileNumber);
+    if (existing) {
+      throw new ConflictError('A customer with this phone number already exists');
+    }
+
     const count = await UserModel.countDocuments({ role: 'customer' });
     const user = await UserModel.create({
-      mobileNumber: input.phone,
+      mobileNumber,
       fullName: input.name,
       email: input.email,
       role: 'customer',
       isVerified: true,
-      isProfileCompleted: true,
       accountStatus: input.status ?? 'ACTIVE',
       customerCode: `CUST${String(count + 1).padStart(4, '0')}`,
       address: { city: input.city, state: input.state ?? 'Odisha', country: 'India' },
@@ -176,7 +184,16 @@ export const adminCustomersService = {
     if (!user) throw new NotFoundError('Customer not found');
 
     if (input.name) user.fullName = input.name;
-    if (input.phone) user.mobileNumber = input.phone;
+    if (input.phone) {
+      const mobileNumber = normalizeMobileNumber(input.phone);
+      if (mobileNumber !== user.mobileNumber) {
+        const existing = await userRepository.findByMobile(mobileNumber);
+        if (existing && existing.id !== user.id) {
+          throw new ConflictError('A customer with this phone number already exists');
+        }
+        user.mobileNumber = mobileNumber;
+      }
+    }
     if (input.email) user.email = input.email;
     if (input.status) user.accountStatus = input.status as never;
     if (input.city || input.state) {

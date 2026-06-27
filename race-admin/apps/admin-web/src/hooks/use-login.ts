@@ -12,7 +12,7 @@ export function useLogin() {
   return useMutation({
     mutationFn: (values: LoginFormValues) => loginWithCredentials(values),
     onSuccess: (response) => {
-      setUser(response.user, response.tokens.accessToken);
+      setUser(response.user, response.tokens);
       navigate('/dashboard', { replace: true });
     },
   });

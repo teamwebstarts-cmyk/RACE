@@ -1,8 +1,28 @@
+import { normalizeMobileNumber } from '../../shared/utils/otp';
 import { UserModel, type IUser } from './user.model';
+
+function legacyMobileFormats(normalized: string): string[] {
+  if (!normalized.startsWith('+91') || normalized.length !== 13) {
+    return [normalized];
+  }
+
+  const digits10 = normalized.slice(3);
+  return [normalized, digits10, `91${digits10}`];
+}
 
 export class UserRepository {
   async findByMobile(mobileNumber: string): Promise<IUser | null> {
-    return UserModel.findOne({ mobileNumber }).exec();
+    const normalized = normalizeMobileNumber(mobileNumber);
+    const formats = legacyMobileFormats(normalized);
+
+    const user = await UserModel.findOne({ mobileNumber: { $in: formats } }).exec();
+    if (!user || user.mobileNumber === normalized) {
+      return user;
+    }
+
+    user.mobileNumber = normalized;
+    await user.save();
+    return user;
   }
 
   async findById(id: string): Promise<IUser | null> {

@@ -32,10 +32,23 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true, error: null });
     try {
       const result = await authService.verifyOtp(mobileNumber, otp);
+
+      let onboardingRequired = result.onboardingRequired;
+      try {
+        await useProfileStore.getState().fetchProfile();
+        const profile = useProfileStore.getState().profile;
+        if (profile) {
+          onboardingRequired = !profile.isProfileCompleted;
+        }
+        await useVehicleStore.getState().fetchVehicles();
+      } catch {
+        // Keep auth response flags if profile/vehicles fail to load.
+      }
+
       set({
         user: result.user,
         isAuthenticated: true,
-        onboardingRequired: result.onboardingRequired,
+        onboardingRequired,
         isLoading: false,
         error: null,
       });

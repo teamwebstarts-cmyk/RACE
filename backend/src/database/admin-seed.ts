@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 
 import { BookingModel } from '../modules/bookings/booking.model';
-import { UserModel } from '../modules/users/user.model';
+import { UserModel, type IUser } from '../modules/users/user.model';
 import { VehicleModel } from '../modules/vehicles/vehicle.model';
 import { VendorModel } from '../modules/vendors/vendor.model';
 import {
@@ -108,12 +108,25 @@ export async function seedAdminPlatform(): Promise<void> {
     TransactionModel.deleteMany({}),
     AdminNotificationModel.deleteMany({}),
     ActivityLogModel.deleteMany({}),
-    BookingModel.deleteMany({}),
-    VehicleModel.deleteMany({}),
+    BookingModel.deleteMany({ bookingNumber: { $regex: /^BK100/ } }),
+    VehicleModel.deleteMany({
+      $or: [
+        { qrCode: { $regex: /^QR-CUST-/ } },
+        { vehicleNumber: { $regex: /^OD-0[1-9]-AB-/ } },
+      ],
+    }),
     VendorModel.deleteMany({}),
     UserSubscriptionModel.deleteMany({}),
     SubscriptionPlanModel.deleteMany({}),
-    UserModel.deleteMany({ role: { $in: ['customer', 'vendor'] } }),
+    UserModel.deleteMany({
+      role: 'customer',
+      $or: [
+        { mobileNumber: { $regex: /^(\+91)?9876543/ } },
+        { email: { $regex: /^customer\d+@example\.com$/ } },
+        { fullName: { $regex: /^Customer \d+$/ } },
+      ],
+    }),
+    UserModel.deleteMany({ role: 'vendor' }),
   ]);
 
   logger.info('Seeding admin platform data...');
@@ -143,31 +156,7 @@ export async function seedAdminPlatform(): Promise<void> {
     lastLoginAt: new Date(),
   });
 
-  const customers = [];
-  for (let i = 0; i < 20; i++) {
-    const customer = await UserModel.create({
-      mobileNumber: `98765${String(43210 + i).padStart(5, '0')}`,
-      fullName: `Customer ${i + 1}`,
-      email: `customer${i + 1}@example.com`,
-      role: 'customer',
-      isVerified: true,
-      isProfileCompleted: true,
-      accountStatus: i % 7 === 0 ? 'SUSPENDED' : 'ACTIVE',
-      customerCode: `CUST${String(i + 1).padStart(4, '0')}`,
-      address: { city: CITIES[i % CITIES.length], state: 'Odisha', country: 'India' },
-    });
-    customers.push(customer);
-
-    await VehicleModel.create({
-      customerId: customer._id,
-      vehicleType: 'car',
-      vehicleNumber: `OD-0${(i % 9) + 1}-AB-${1000 + i}`,
-      brand: 'Maruti',
-      vehicleModel: 'Swift',
-      fuelType: 'petrol',
-      qrCode: `QR-CUST-${i + 1}`,
-    });
-  }
+  const customers: IUser[] = [];
 
   const vendors = [];
   for (let i = 0; i < 5; i++) {
@@ -256,53 +245,55 @@ export async function seedAdminPlatform(): Promise<void> {
     drivers.push(driver);
   }
 
-  for (let i = 0; i < 50; i++) {
-    const customer = customers[i % customers.length];
-    const vehicle = await VehicleModel.findOne({ customerId: customer._id });
-    const status = STATUSES[i % STATUSES.length];
-    const amount = 500 + (i % 20) * 150;
-    const assignedDriver = drivers[i % drivers.length];
+  if (customers.length > 0) {
+    for (let i = 0; i < 50; i++) {
+      const customer = customers[i % customers.length];
+      const vehicle = await VehicleModel.findOne({ customerId: customer._id });
+      const status = STATUSES[i % STATUSES.length];
+      const amount = 500 + (i % 20) * 150;
+      const assignedDriver = drivers[i % drivers.length];
 
-    await BookingModel.create({
-      customerId: customer._id,
-      vendorId: assignedDriver.vendorId,
-      bookingNumber: `BK${1000 + i}${String.fromCharCode(65 + (i % 26))}`,
-      categoryId: 'towing',
-      serviceId: 'towing-standard',
-      serviceLabel: SERVICES[i % SERVICES.length],
-      status,
-      vehicleId: vehicle!._id,
-      vehicleNumber: vehicle!.vehicleNumber,
-      pickup: { label: CITIES[i % CITIES.length], address: `${CITIES[i % CITIES.length]}, Odisha` },
-      driver: {
-        id: assignedDriver._id.toString(),
-        name: assignedDriver.name,
-        rating: assignedDriver.rating,
-        phone: assignedDriver.phone,
-      },
-      invoice: { baseFare: amount, total: amount, currency: 'INR', platformFee: Math.round(amount * 0.125) },
-      statusHistory: [{ status, timestamp: new Date(Date.now() - i * 86400000) }],
-      createdAt: new Date(Date.now() - i * 86400000),
-    });
-  }
+      await BookingModel.create({
+        customerId: customer._id,
+        vendorId: assignedDriver.vendorId,
+        bookingNumber: `BK${1000 + i}${String.fromCharCode(65 + (i % 26))}`,
+        categoryId: 'towing',
+        serviceId: 'towing-standard',
+        serviceLabel: SERVICES[i % SERVICES.length],
+        status,
+        vehicleId: vehicle!._id,
+        vehicleNumber: vehicle!.vehicleNumber,
+        pickup: { label: CITIES[i % CITIES.length], address: `${CITIES[i % CITIES.length]}, Odisha` },
+        driver: {
+          id: assignedDriver._id.toString(),
+          name: assignedDriver.name,
+          rating: assignedDriver.rating,
+          phone: assignedDriver.phone,
+        },
+        invoice: { baseFare: amount, total: amount, currency: 'INR', platformFee: Math.round(amount * 0.125) },
+        statusHistory: [{ status, timestamp: new Date(Date.now() - i * 86400000) }],
+        createdAt: new Date(Date.now() - i * 86400000),
+      });
+    }
 
-  for (let i = 0; i < 100; i++) {
-    const amount = 300 + (i % 50) * 100;
-    const types = ['PAYMENT', 'COMMISSION', 'VENDOR_PAYOUT', 'REFUND', 'SUBSCRIPTION'] as const;
-    const type = types[i % types.length];
-    await TransactionModel.create({
-      transactionCode: `TXN${String(i + 1).padStart(6, '0')}`,
-      type,
-      status: 'COMPLETED',
-      amount,
-      currency: 'INR',
-      customerId: customers[i % customers.length]._id,
-      vendorId: vendors[i % vendors.length]._id,
-      description: `${type} transaction`,
-      reference: `REF-${i + 1}`,
-      completedAt: new Date(Date.now() - i * 43200000),
-      createdAt: new Date(Date.now() - i * 43200000),
-    });
+    for (let i = 0; i < 100; i++) {
+      const amount = 300 + (i % 50) * 100;
+      const types = ['PAYMENT', 'COMMISSION', 'VENDOR_PAYOUT', 'REFUND', 'SUBSCRIPTION'] as const;
+      const type = types[i % types.length];
+      await TransactionModel.create({
+        transactionCode: `TXN${String(i + 1).padStart(6, '0')}`,
+        type,
+        status: 'COMPLETED',
+        amount,
+        currency: 'INR',
+        customerId: customers[i % customers.length]._id,
+        vendorId: vendors[i % vendors.length]._id,
+        description: `${type} transaction`,
+        reference: `REF-${i + 1}`,
+        completedAt: new Date(Date.now() - i * 43200000),
+        createdAt: new Date(Date.now() - i * 43200000),
+      });
+    }
   }
 
   const subscriptionPlans = await SubscriptionPlanModel.insertMany(
@@ -314,28 +305,30 @@ export async function seedAdminPlatform(): Promise<void> {
     })),
   );
 
-  for (let i = 0; i < 18; i++) {
-    const customer = customers[i % customers.length];
-    const plan = subscriptionPlans[i % subscriptionPlans.length];
-    const startedAt = new Date(Date.now() - (i + 1) * 7 * 86400000);
-    const expiresAt = new Date(
-      startedAt.getTime() + (plan.billingCycle === 'monthly' ? 30 : 365) * 86400000,
-    );
+  if (customers.length > 0) {
+    for (let i = 0; i < 18; i++) {
+      const customer = customers[i % customers.length];
+      const plan = subscriptionPlans[i % subscriptionPlans.length];
+      const startedAt = new Date(Date.now() - (i + 1) * 7 * 86400000);
+      const expiresAt = new Date(
+        startedAt.getTime() + (plan.billingCycle === 'monthly' ? 30 : 365) * 86400000,
+      );
 
-    await UserSubscriptionModel.create({
-      userId: customer._id,
-      planId: plan._id,
-      planSlug: plan.slug,
-      planName: plan.name,
-      category: plan.category,
-      billingCycle: plan.billingCycle,
-      price: plan.price,
-      currency: 'INR',
-      status: i % 5 === 0 ? 'cancelled' : 'active',
-      startedAt,
-      expiresAt,
-      cancelledAt: i % 5 === 0 ? new Date() : undefined,
-    });
+      await UserSubscriptionModel.create({
+        userId: customer._id,
+        planId: plan._id,
+        planSlug: plan.slug,
+        planName: plan.name,
+        category: plan.category,
+        billingCycle: plan.billingCycle,
+        price: plan.price,
+        currency: 'INR',
+        status: i % 5 === 0 ? 'cancelled' : 'active',
+        startedAt,
+        expiresAt,
+        cancelledAt: i % 5 === 0 ? new Date() : undefined,
+      });
+    }
   }
 
   await AdminNotificationModel.insertMany([
@@ -434,10 +427,10 @@ export async function seedAdminPlatform(): Promise<void> {
     customers: customers.length,
     vendors: vendors.length,
     drivers: drivers.length,
-    bookings: 50,
-    transactions: 100,
+    bookings: customers.length > 0 ? 50 : 0,
+    transactions: customers.length > 0 ? 100 : 0,
     subscriptionPlans: subscriptionPlans.length,
-    userSubscriptions: 18,
+    userSubscriptions: customers.length > 0 ? 18 : 0,
     notifications: 8,
     activityLogs: activityEntries.length + 1,
   });

@@ -1,4 +1,4 @@
-import { AppError, UnauthorizedError } from '../../shared/utils/errors';
+import { AppError, ForbiddenError, UnauthorizedError } from '../../shared/utils/errors';
 import {
   generateTokenPair,
   isRefreshTokenValid,
@@ -27,10 +27,22 @@ export interface AuthTokensResponse {
   onboardingRequired: boolean;
 }
 
+function assertAccountActive(accountStatus?: string): void {
+  if (accountStatus === 'SUSPENDED') {
+    throw new ForbiddenError('Your account has been suspended. Please contact support.');
+  }
+  if (accountStatus === 'INACTIVE') {
+    throw new ForbiddenError('Your account is inactive. Please contact support.');
+  }
+}
+
 export class AuthService {
   async sendOtp(dto: SendOtpDto) {
     const mobileNumber = normalizeSendOtpDto(dto);
     const user = await userRepository.findByMobile(mobileNumber);
+    if (user) {
+      assertAccountActive(user.accountStatus);
+    }
     const otpResult = await otpService.sendOtp(mobileNumber);
 
     const profileCompleted = user ? computeProfileCompleted(user) : false;
@@ -61,6 +73,8 @@ export class AuthService {
       });
       onboardingRequired = true;
     } else {
+      assertAccountActive(user.accountStatus);
+
       if (!user.isVerified) {
         user.isVerified = true;
       }
@@ -111,6 +125,8 @@ export class AuthService {
     if (!user) {
       throw new UnauthorizedError('User not found');
     }
+
+    assertAccountActive(user.accountStatus);
 
     await revokeRefreshToken(payload.sub, payload.jti);
     const tokens = await generateTokenPair(user.id, user.role, user.mobileNumber);

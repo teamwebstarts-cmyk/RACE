@@ -10,6 +10,7 @@ import { PermissionGuard } from '@/components/guards/permission-guard';
 import { PageHeader } from '@/components/layout/page-header';
 import { useCustomerDetail } from '@/hooks/use-customer-detail';
 import { useAuthStore } from '@/stores/auth.store';
+import { getApiErrorMessage } from '@race/api';
 import type { ColumnDef } from '@tanstack/react-table';
 import type {
   CustomerBookingHistoryItem,
@@ -147,11 +148,13 @@ const subscriptionColumns: ColumnDef<CustomerSubscription, unknown>[] = [
 
 export function CustomerDetailContent({ customerId }: { customerId: string }) {
   const user = useAuthStore((s) => s.user);
-  const { data: customer, isLoading, isError, refetch } = useCustomerDetail(customerId);
+  const hasHydrated = useAuthStore((s) => s.hasHydrated);
+  const { data: customer, isLoading, isError, error, refetch } = useCustomerDetail(customerId);
 
-  if (isLoading) return <LoadingState message="Loading customer..." />;
+  if (!hasHydrated || isLoading) return <LoadingState message="Loading customer..." />;
   if (isError || !customer) {
-    return <ErrorState message="Customer not found" onRetry={() => void refetch()} />;
+    const message = getApiErrorMessage(error, 'Customer not found');
+    return <ErrorState message={message} onRetry={() => void refetch()} />;
   }
 
   return (

@@ -54,10 +54,11 @@ export default function LoginScreen({ navigation }: Props) {
     setIsSubmitting(true);
     setPhoneError('');
     try {
-      await sendOtp(getPhoneDigits(phoneDigits));
+      const result = await sendOtp(getPhoneDigits(phoneDigits));
       navigation.navigate('OTP', {
         phone: formatPhoneE164(phoneDigits),
         flow: 'login',
+        devOtp: result.devOtp,
       });
     } catch (error) {
       setPhoneError(getApiErrorMessage(error, 'Unable to send OTP'));
