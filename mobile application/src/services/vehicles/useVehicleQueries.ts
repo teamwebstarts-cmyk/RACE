@@ -1,5 +1,6 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useEffect, useState } from 'react';
 
+import { useVehicleStore } from '../../store/vehicleStore';
 import type { CreateVehicleRequest, UpdateVehicleRequest } from '../../types/vehicle';
 import { getApiErrorMessage } from '../api/apiClient';
 import {
@@ -11,49 +12,82 @@ import {
 } from './vehicleApi';
 
 export function useVehiclesQuery() {
-  return useQuery({
-    queryKey: ['vehicles'],
-    queryFn: listVehicles,
-  });
+  const { vehicles, isLoading, error, fetchVehicles } = useVehicleStore();
+
+  useEffect(() => {
+    void fetchVehicles();
+  }, [fetchVehicles]);
+
+  return {
+    data: vehicles,
+    isLoading,
+    isError: Boolean(error),
+    error,
+    refetch: fetchVehicles,
+    isRefetching: isLoading,
+  };
 }
 
 export function useVehicleQuery(id: string) {
-  return useQuery({
-    queryKey: ['vehicles', id],
-    queryFn: () => getVehicle(id),
-    enabled: Boolean(id),
-  });
+  const { selectedVehicle, isLoading, error, fetchVehicle } = useVehicleStore();
+
+  useEffect(() => {
+    if (id) {
+      void fetchVehicle(id);
+    }
+  }, [fetchVehicle, id]);
+
+  return {
+    data: selectedVehicle?.id === id ? selectedVehicle : undefined,
+    isLoading,
+    isError: Boolean(error),
+    error,
+    refetch: () => fetchVehicle(id),
+    isRefetching: isLoading,
+  };
+}
+
+function useVehicleMutation<TVariables>(
+  fn: (variables: TVariables) => Promise<unknown>,
+  onSuccess?: () => void,
+) {
+  const [isPending, setIsPending] = useState(false);
+
+  const mutateAsync = useCallback(
+    async (variables: TVariables) => {
+      setIsPending(true);
+      try {
+        await fn(variables);
+        onSuccess?.();
+      } finally {
+        setIsPending(false);
+      }
+    },
+    [fn, onSuccess],
+  );
+
+  return { mutateAsync, isPending };
 }
 
 export function useCreateVehicleMutation() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (payload: CreateVehicleRequest) => createVehicle(payload),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['vehicles'] });
-    },
-  });
+  const addVehicle = useVehicleStore(state => state.addVehicle);
+
+  return useVehicleMutation<CreateVehicleRequest>(payload => addVehicle(payload));
 }
 
 export function useUpdateVehicleMutation(id: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (payload: UpdateVehicleRequest) => updateVehicle(id, payload),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['vehicles'] });
-      void queryClient.invalidateQueries({ queryKey: ['vehicles', id] });
-    },
-  });
+  const update = useVehicleStore(state => state.updateVehicle);
+
+  return useVehicleMutation<UpdateVehicleRequest>(payload => update(id, payload));
 }
 
 export function useDeleteVehicleMutation() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => deleteVehicle(id),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['vehicles'] });
-    },
-  });
+  const removeVehicle = useVehicleStore(state => state.deleteVehicle);
+
+  return useVehicleMutation<string>(vehicleId => removeVehicle(vehicleId));
 }
 
 export { getApiErrorMessage };
+
+// Legacy direct API access (unused by active screens)
+export { listVehicles, getVehicle, createVehicle, updateVehicle, deleteVehicle };

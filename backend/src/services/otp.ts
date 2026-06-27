@@ -10,12 +10,14 @@ const RESEND_KEY = (mobile: string) => `otp:resend:${mobile}`;
 const VERIFY_KEY = (mobile: string) => `otp:verify:${mobile}`;
 
 export class OtpService {
-  async sendOtp(mobileNumber: string): Promise<{ message: string; expiresIn: number; devOtp?: string }> {
+  async sendOtp(mobileNumber: string): Promise<{ message: string; expiresIn: number }> {
     const cache = getCache();
 
-    const resendCount = Number((await cache.get(RESEND_KEY(mobileNumber))) ?? 0);
-    if (resendCount >= env.OTP_MAX_RESEND_ATTEMPTS) {
-      throw new TooManyRequestsError('Maximum OTP resend attempts exceeded');
+    if (env.NODE_ENV === 'production') {
+      const resendCount = Number((await cache.get(RESEND_KEY(mobileNumber))) ?? 0);
+      if (resendCount >= env.OTP_MAX_RESEND_ATTEMPTS) {
+        throw new TooManyRequestsError('Maximum OTP resend attempts exceeded');
+      }
     }
 
     const otp = generateOtp();
@@ -37,22 +39,26 @@ export class OtpService {
     });
 
     if (env.NODE_ENV !== 'production') {
-      logger.info('OTP generated (dev only)', { mobileNumber, otp });
+      logger.info('────────────────────────────────────────');
+      logger.info(`DEV OTP → ${mobileNumber} → ${otp}`);
+      logger.info('(HTTP log mein jo 200 / 123 dikhe woh OTP NAHI hai)');
+      logger.info('────────────────────────────────────────');
     }
 
     return {
       message: 'OTP sent successfully',
       expiresIn: env.OTP_EXPIRY_SECONDS,
-      ...(env.NODE_ENV !== 'production' ? { devOtp: otp } : {}),
     };
   }
 
   async verifyOtp(mobileNumber: string, otp: string): Promise<boolean> {
     const cache = getCache();
 
-    const attempts = Number((await cache.get(VERIFY_KEY(mobileNumber))) ?? 0);
-    if (attempts >= env.OTP_MAX_VERIFY_ATTEMPTS) {
-      throw new TooManyRequestsError('Maximum OTP verification attempts exceeded');
+    if (env.NODE_ENV === 'production') {
+      const attempts = Number((await cache.get(VERIFY_KEY(mobileNumber))) ?? 0);
+      if (attempts >= env.OTP_MAX_VERIFY_ATTEMPTS) {
+        throw new TooManyRequestsError('Maximum OTP verification attempts exceeded');
+      }
     }
 
     await cache.incr(VERIFY_KEY(mobileNumber));
@@ -62,7 +68,7 @@ export class OtpService {
       return false;
     }
 
-    if (storedOtp !== otp) {
+    if (storedOtp.trim() !== otp.trim()) {
       const log = await authRepository.findLatestPendingOtp(mobileNumber);
       if (log) {
         await authRepository.updateOtpLog(log.id, {

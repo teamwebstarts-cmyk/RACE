@@ -12,6 +12,11 @@ export interface AuthState {
   pendingMobileNumber: string | null;
 }
 
+type PersistedAuthPayload = Pick<
+  AuthState,
+  'user' | 'accessToken' | 'refreshToken' | 'isAuthenticated' | 'onboardingRequired'
+>;
+
 const initialState: AuthState = {
   user: null,
   accessToken: null,
@@ -74,6 +79,14 @@ const authSlice = createSlice({
       state.onboardingRequired = false;
       state.pendingMobileNumber = null;
     },
+    rehydrateAuth(state, action: PayloadAction<PersistedAuthPayload>) {
+      state.user = action.payload.user;
+      state.accessToken = action.payload.accessToken;
+      state.refreshToken = action.payload.refreshToken;
+      state.isAuthenticated = action.payload.isAuthenticated;
+      state.onboardingRequired = action.payload.onboardingRequired;
+      state.loading = false;
+    },
   },
 });
 
@@ -84,6 +97,7 @@ export const {
   completeProfileSuccess,
   updateTokens,
   logout,
+  rehydrateAuth,
 } = authSlice.actions;
 
 export default authSlice.reducer;

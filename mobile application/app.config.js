@@ -24,6 +24,11 @@ module.exports = {
       },
     },
     scheme: 'race-customer',
-    plugins: ['expo-asset', 'expo-font'],
+    plugins: [
+      'expo-asset',
+      'expo-font',
+      'expo-secure-store',
+      '@react-native-community/datetimepicker',
+    ],
   },
 };

@@ -16,6 +16,8 @@ export interface Vehicle {
   updatedAt: string;
 }
 
+export type VehicleInput = CreateVehicleRequest;
+
 export interface CreateVehicleRequest {
   vehicleType: VehicleType;
   vehicleNumber: string;

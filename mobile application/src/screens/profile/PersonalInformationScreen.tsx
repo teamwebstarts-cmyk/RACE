@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import { Alert, Pressable, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native';
 import {
-  Calendar,
   Camera,
   ChevronDown,
+  Mail,
   MapPin,
   Phone,
   Plus,
@@ -11,23 +11,89 @@ import {
 } from 'lucide-react-native';
 
 import FormField from '../../components/auth/FormField';
+import DateOfBirthField from '../../components/auth/DateOfBirthField';
 import GoldButton from '../../components/auth/GoldButton';
 import ProfileSubScreenLayout, { useProfilePx } from '../../components/profile/ProfileSubScreenLayout';
-import { PROFILE_PERSONAL } from '../../constants/profileSubScreens';
-import { USER } from '../../constants/demo';
+import { useProfileStore } from '../../store/profileStore';
+import { getApiErrorMessage } from '../../services/api';
+import { buildUpdateProfilePayload, validateProfileForm } from '../../utils/profilePayload';
 import { colors, shadows, typography } from '../../theme';
 
 export default function PersonalInformationScreen() {
   const px = useProfilePx();
-  const [name, setName] = useState(USER.name);
-  const [dob, setDob] = useState(PROFILE_PERSONAL.dob);
-  const [gender, setGender] = useState(PROFILE_PERSONAL.gender);
-  const [emergency, setEmergency] = useState(PROFILE_PERSONAL.emergency);
-  const [address, setAddress] = useState(PROFILE_PERSONAL.address);
+  const { profile, fetchProfile, updateProfile, isLoading } = useProfileStore();
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [dob, setDob] = useState('');
+  const [gender, setGender] = useState('');
+  const [emergency, setEmergency] = useState('');
+  const [address, setAddress] = useState('');
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    void fetchProfile();
+  }, [fetchProfile]);
+
+  useEffect(() => {
+    if (!profile) return;
+    setName(profile.fullName ?? '');
+    setEmail(profile.email ?? '');
+    setDob(profile.dateOfBirth ?? '');
+    setGender(profile.gender ?? '');
+    setEmergency(profile.emergencyContact?.mobileNumber ?? '');
+    setAddress(profile.address?.line1 ?? '');
+  }, [profile]);
+
+  const handleSave = async () => {
+    const nextErrors = validateProfileForm({
+      fullName: name,
+      email,
+      gender,
+      dateOfBirth: dob,
+      emergencyPhone: emergency,
+      emergencyName: profile?.emergencyContact?.name,
+      addressLine1: address,
+      city: profile?.address?.city,
+      state: profile?.address?.state,
+      pincode: profile?.address?.pincode,
+      country: profile?.address?.country,
+    });
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
+
+    try {
+      await updateProfile(
+        buildUpdateProfilePayload({
+          fullName: name,
+          email,
+          gender,
+          dateOfBirth: dob,
+          emergencyPhone: emergency,
+          emergencyName: profile?.emergencyContact?.name,
+          addressLine1: address,
+          city: profile?.address?.city,
+          state: profile?.address?.state,
+          pincode: profile?.address?.pincode,
+          country: profile?.address?.country,
+        }),
+      );
+      Alert.alert('Saved', 'Your profile has been updated.');
+    } catch (error) {
+      Alert.alert('Profile', getApiErrorMessage(error, 'Unable to update profile'));
+    }
+  };
 
   const optionalTag = (
     <Text style={{ fontSize: px(11), color: colors.grey }}>(Optional)</Text>
   );
+
+  if (isLoading && !profile) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
 
   return (
     <ProfileSubScreenLayout title="Personal Information" subtitle="Update your details">
@@ -87,16 +153,25 @@ export default function PersonalInformationScreen() {
           variant="outlined"
           compact
           required
+          error={errors.name}
         />
         <FormField
-          label="Date of Birth"
-          value={dob}
-          onChangeText={setDob}
-          placeholder="Date of Birth"
-          Icon={Calendar}
+          label="Email"
+          value={email}
+          onChangeText={setEmail}
+          placeholder="john@example.com"
+          Icon={Mail}
           variant="outlined"
           compact
-          rightElement={optionalTag}
+          required
+          keyboardType="email-address"
+          autoCapitalize="none"
+          error={errors.email}
+        />
+        <DateOfBirthField
+          value={dob}
+          onChange={setDob}
+          error={errors.dob}
         />
         <FormField
           label="Gender"
@@ -133,6 +208,8 @@ export default function PersonalInformationScreen() {
             compact
             required
             iconColor={colors.error}
+            keyboardType="phone-pad"
+            error={errors.emergency}
           />
           <Text style={{ marginTop: px(4), fontSize: px(10), color: colors.error }}>
             Used in case of emergency
@@ -147,13 +224,15 @@ export default function PersonalInformationScreen() {
           variant="outlined"
           compact
           required
+          error={errors.address}
         />
       </View>
 
       <GoldButton
-        label="Save Changes"
-        onPress={() => Alert.alert('Saved', 'Your profile has been updated.')}
+        label={isLoading ? 'Saving...' : 'Save Changes'}
+        onPress={() => void handleSave()}
         style={shadows.card}
+        disabled={isLoading}
       />
     </ProfileSubScreenLayout>
   );

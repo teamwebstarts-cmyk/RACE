@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -13,11 +13,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import PrimaryButton from '../../components/ui/PrimaryButton';
 import Screen, { ScreenContent } from '../../components/ui/Screen';
-import {
-  getApiErrorMessage,
-  useDeleteVehicleMutation,
-  useVehicleQuery,
-} from '../../services/vehicles/useVehicleQueries';
+import { useVehicleStore } from '../../store/vehicleStore';
 import type { ProfileStackParamList } from '../../types/navigation';
 import { colors, radius, spacing, typography } from '../../theme';
 
@@ -25,9 +21,11 @@ type Props = NativeStackScreenProps<ProfileStackParamList, 'VehicleDetail'>;
 
 export default function VehicleDetailScreen({ navigation, route }: Props) {
   const { vehicleId } = route.params;
-  const { data: vehicle, isLoading } = useVehicleQuery(vehicleId);
-  const deleteMutation = useDeleteVehicleMutation();
-  const [error, setError] = useState('');
+  const { selectedVehicle, isLoading, error, fetchVehicle, deleteVehicle } = useVehicleStore();
+
+  useEffect(() => {
+    void fetchVehicle(vehicleId);
+  }, [fetchVehicle, vehicleId]);
 
   const handleDelete = () => {
     Alert.alert('Delete vehicle', 'Remove this vehicle from your account?', [
@@ -37,21 +35,32 @@ export default function VehicleDetailScreen({ navigation, route }: Props) {
         style: 'destructive',
         onPress: async () => {
           try {
-            await deleteMutation.mutateAsync(vehicleId);
+            await deleteVehicle(vehicleId);
             navigation.navigate('MyVehicles');
           } catch (err) {
-            setError(getApiErrorMessage(err, 'Unable to delete vehicle'));
+            Alert.alert('Vehicle', err instanceof Error ? err.message : 'Unable to delete vehicle');
           }
         },
       },
     ]);
   };
 
-  if (isLoading || !vehicle) {
+  if (isLoading && !selectedVehicle) {
     return (
       <Screen>
         <View style={styles.loader}>
           <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </Screen>
+    );
+  }
+
+  const vehicle = selectedVehicle;
+  if (!vehicle) {
+    return (
+      <Screen>
+        <View style={styles.loader}>
+          <Text style={styles.error}>{error ?? 'Vehicle not found'}</Text>
         </View>
       </Screen>
     );
@@ -82,12 +91,15 @@ export default function VehicleDetailScreen({ navigation, route }: Props) {
               <Image source={{ uri: vehicle.qrCode }} style={styles.qrImage} resizeMode="contain" />
             </View>
 
-            {error ? <Text style={styles.error}>{error}</Text> : null}
+            <PrimaryButton
+              label="Edit Vehicle"
+              onPress={() => navigation.navigate('EditVehicle', { vehicleId })}
+            />
 
             <PrimaryButton
-              label={deleteMutation.isPending ? 'Deleting...' : 'Delete Vehicle'}
+              label={isLoading ? 'Deleting...' : 'Delete Vehicle'}
               onPress={handleDelete}
-              disabled={deleteMutation.isPending}
+              disabled={isLoading}
               variant="outline"
             />
           </ScreenContent>
@@ -143,7 +155,6 @@ const styles = StyleSheet.create({
   },
   error: {
     color: colors.accentRed,
-    marginBottom: spacing.md,
     textAlign: 'center',
   },
 });

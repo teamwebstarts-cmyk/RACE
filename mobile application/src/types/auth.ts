@@ -9,6 +9,8 @@ export interface AuthUser {
   gender?: string;
 }
 
+export type User = AuthUser;
+
 export interface SendOtpRequest {
   mobileNumber: string;
 }
@@ -16,7 +18,6 @@ export interface SendOtpRequest {
 export interface SendOtpResponse {
   message: string;
   expiresIn: number;
-  devOtp?: string;
   isExistingUser: boolean;
   isProfileCompleted: boolean;
 }

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   Image,
   ImageSourcePropType,
@@ -30,7 +30,10 @@ import {
 } from '../constants/home';
 import AppScreenLayout from '../components/ui/AppScreenLayout';
 import TabRootHeader from '../components/ui/TabRootHeader';
-import { USER } from '../constants/demo';
+import { useAuthStore } from '../store/authStore';
+import { useCatalogStore } from '../store/catalogStore';
+import { useProfileStore } from '../store/profileStore';
+import { getProfileFirstName } from '../utils/profileDisplay';
 import { brand } from '../theme/brand';
 import type { HomeStackParamList, RootTabParamList } from '../types/navigation';
 import { openServiceCategory } from '../utils/serviceNavigation';
@@ -45,6 +48,50 @@ export default function HomeScreen({ navigation }: Props) {
   const s = width / REF_W;
   const px = (n: number) => Math.round(n * s);
 
+  const { services, fetchServices, fetchBrand, brand: apiBrand } = useCatalogStore();
+  const profile = useProfileStore(state => state.profile);
+  const authUser = useAuthStore(state => state.user);
+
+  useEffect(() => {
+    void fetchServices();
+    void fetchBrand();
+  }, [fetchBrand, fetchServices]);
+
+  const quickItems = useMemo(() => {
+    if (!services.length) return QUICK_SERVICES;
+    return services.slice(0, 4).map(category => {
+      const fallback = QUICK_SERVICES.find(item => item.categoryId === category.id);
+      return {
+        id: category.id,
+        label: category.title,
+        categoryId: category.id,
+        categoryTitle: category.title,
+        Icon: fallback?.Icon ?? QUICK_SERVICES[0].Icon,
+      };
+    });
+  }, [services]);
+
+  const popularItems = useMemo(() => {
+    if (!services.length) return POPULAR_SERVICES;
+    const flattened = services.flatMap(category =>
+      category.services.map(service => ({
+        id: service.id,
+        title: service.label,
+        categoryId: category.id,
+        categoryTitle: category.title,
+        price: 0,
+        image: POPULAR_SERVICES[0].image,
+      })),
+    );
+    return flattened.length ? flattened.slice(0, 6) : POPULAR_SERVICES;
+  }, [services]);
+
+  const displayName =
+    getProfileFirstName(profile?.fullName) ||
+    getProfileFirstName(authUser?.fullName) ||
+    'there';
+  const displayLocation = apiBrand?.location ?? brand.location;
+
   const tabNav = navigation.getParent<BottomTabNavigationProp<RootTabParamList>>();
 
   const openCategory = (categoryId: string, categoryTitle: string) => {
@@ -56,7 +103,7 @@ export default function HomeScreen({ navigation }: Props) {
   };
 
   const callSupport = () => {
-    void Linking.openURL(`tel:${brand.phoneRaw}`);
+    void Linking.openURL(`tel:${apiBrand?.phoneRaw ?? brand.phoneRaw}`);
   };
 
   return (
@@ -72,7 +119,7 @@ export default function HomeScreen({ navigation }: Props) {
                   fontWeight: typography.weights.extrabold,
                   color: colors.dark,
                 }}>
-                {getGreeting(USER.name)}
+                {getGreeting(displayName)}
               </Text>
               <Pressable
                 style={{
@@ -88,7 +135,7 @@ export default function HomeScreen({ navigation }: Props) {
                     fontWeight: typography.weights.semibold,
                     color: colors.primary,
                   }}>
-                  {brand.location}
+                  {displayLocation}
                 </Text>
                 <ChevronDown size={px(14)} color={colors.primary} />
               </Pressable>
@@ -236,7 +283,7 @@ export default function HomeScreen({ navigation }: Props) {
 
           {/* Quick services */}
           <View style={{ flexDirection: 'row', gap: px(8), marginBottom: px(18) }}>
-            {QUICK_SERVICES.map(item => (
+            {quickItems.map(item => (
               <Pressable
                 key={item.id}
                 onPress={() => openCategory(item.categoryId, item.categoryTitle)}
@@ -337,7 +384,7 @@ export default function HomeScreen({ navigation }: Props) {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ gap: px(12) }}
             style={{ marginBottom: px(20) }}>
-            {POPULAR_SERVICES.map(item => (
+            {popularItems.map(item => (
               <Pressable
                 key={item.id}
                 onPress={() => openCategory(item.categoryId, item.categoryTitle)}
@@ -374,7 +421,7 @@ export default function HomeScreen({ navigation }: Props) {
                         fontWeight: typography.weights.bold,
                         color: colors.primary,
                       }}>
-                      ₹{item.price}
+                      ₹{item.price || '—'}
                     </Text>
                     <ArrowRight size={px(12)} color={colors.primary} strokeWidth={2.5} />
                   </View>

@@ -12,9 +12,9 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  Calendar,
   Camera,
   ChevronDown,
+  Mail,
   MapPin,
   Phone,
   Plus,
@@ -23,10 +23,13 @@ import {
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import FormField from '../../components/auth/FormField';
+import DateOfBirthField from '../../components/auth/DateOfBirthField';
 import GoldButton from '../../components/auth/GoldButton';
 import StepHeader from '../../components/auth/StepHeader';
-import { AUTH_USER } from '../../constants/auth';
+import { useProfileStore } from '../../store/profileStore';
 import type { AuthStackParamList } from '../../types/navigation';
+import { getApiErrorMessage } from '../../services/api';
+import { buildUpdateProfilePayload, validateProfileForm } from '../../utils/profilePayload';
 import { colors, shadows, typography } from '../../theme';
 
 const REF_W = 390;
@@ -39,11 +42,14 @@ export default function ProfileSetupScreen({ navigation }: Props) {
   const s = width / REF_W;
   const px = (n: number) => Math.round(n * s);
 
-  const [name, setName] = useState(AUTH_USER.name);
-  const [dob, setDob] = useState('12 May 1998');
+  const { updateProfile, isLoading } = useProfileStore();
+
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [dob, setDob] = useState('');
   const [gender, setGender] = useState('Male');
-  const [emergency, setEmergency] = useState('+91 98765 43210');
-  const [address, setAddress] = useState('123, MG Road, Bhubaneswar');
+  const [emergency, setEmergency] = useState('');
+  const [address, setAddress] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const clearError = (key: string) => {
@@ -65,14 +71,32 @@ export default function ProfileSetupScreen({ navigation }: Props) {
     ]);
   };
 
-  const handleContinue = () => {
-    const nextErrors: Record<string, string> = {};
-    if (!name.trim()) nextErrors.name = 'Please enter your name';
-    if (!emergency.trim()) nextErrors.emergency = 'Please enter emergency contact';
-    if (!address.trim()) nextErrors.address = 'Please enter address';
+  const handleContinue = async () => {
+    const nextErrors = validateProfileForm({
+      fullName: name,
+      email,
+      gender,
+      dateOfBirth: dob,
+      emergencyPhone: emergency,
+      addressLine1: address,
+    });
     setErrors(nextErrors);
-    if (Object.keys(nextErrors).length === 0) {
+    if (Object.keys(nextErrors).length > 0) return;
+
+    try {
+      await updateProfile(
+        buildUpdateProfilePayload({
+          fullName: name,
+          email,
+          gender,
+          dateOfBirth: dob,
+          emergencyPhone: emergency,
+          addressLine1: address,
+        }),
+      );
       navigation.navigate('VehicleRegistration');
+    } catch (error) {
+      Alert.alert('Profile', getApiErrorMessage(error, 'Unable to save profile'));
     }
   };
 
@@ -183,12 +207,27 @@ export default function ProfileSetupScreen({ navigation }: Props) {
             variant="outlined"
             compact
             scale={s}
-            label="Date of Birth"
-            Icon={Calendar}
+            label="Email"
+            required
+            Icon={Mail}
+            value={email}
+            onChangeText={text => {
+              setEmail(text);
+              clearError('email');
+            }}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            error={errors.email}
+          />
+
+          <DateOfBirthField
+            scale={s}
             value={dob}
-            onPress={() => Alert.alert('Date of Birth', 'Date picker coming soon')}
-            editable={false}
-            rightElement={optionalTag}
+            onChange={text => {
+              setDob(text);
+              clearError('dob');
+            }}
+            error={errors.dob}
           />
 
           <FormField
@@ -253,12 +292,13 @@ export default function ProfileSetupScreen({ navigation }: Props) {
             borderTopColor: colors.border,
           }}>
           <GoldButton
-            label="Save & Continue"
-            onPress={handleContinue}
+            label={isLoading ? 'Saving...' : 'Save & Continue'}
+            onPress={() => void handleContinue()}
             style={[styles.fullBtn, shadows.card]}
             height={px(54)}
             labelSize={px(17)}
             borderRadius={px(14)}
+            disabled={isLoading}
           />
         </View>
       </KeyboardAvoidingView>

@@ -10,10 +10,11 @@ async function bootstrap(): Promise<void> {
 
   const app = createApp();
 
-  const server = app.listen(env.PORT, () => {
+  const server = app.listen(env.PORT, '0.0.0.0', () => {
     logger.info(`RACE API running on port ${env.PORT}`, {
       env: env.NODE_ENV,
       apiPrefix: env.API_PREFIX,
+      urls: [`http://localhost:${env.PORT}`, `http://127.0.0.1:${env.PORT}`],
     });
   });
 

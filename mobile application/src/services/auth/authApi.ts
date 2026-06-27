@@ -1,40 +1,47 @@
-import { API_ENDPOINTS } from '../../config/api';
+import * as authService from '../authService';
+import * as profileService from '../profileService';
+import { unwrapApi, api } from '../api';
 import type {
-  ApiSuccessResponse,
+  AuthUser,
   CompleteProfileRequest,
   SendOtpRequest,
   SendOtpResponse,
   VerifyOtpRequest,
   VerifyOtpResponse,
-  AuthUser,
 } from '../../types/auth';
-import { apiClient } from '../api/apiClient';
+import type { Profile } from '../../types/models';
+
+function toAuthUser(profile: Profile): AuthUser {
+  return {
+    id: profile.id,
+    mobileNumber: profile.mobileNumber,
+    role: profile.role,
+    isVerified: profile.isVerified,
+    isProfileCompleted: profile.isProfileCompleted,
+    fullName: profile.fullName,
+    email: profile.email,
+    gender: profile.gender,
+  };
+}
 
 export async function sendOtp(payload: SendOtpRequest): Promise<SendOtpResponse> {
-  const { data } = await apiClient.post<ApiSuccessResponse<SendOtpResponse>>(
-    API_ENDPOINTS.sendOtp,
-    payload,
+  return unwrapApi(
+    api.post('/api/v1/auth/send-otp', { mobileNumber: payload.mobileNumber }),
   );
-  return data.data;
 }
 
 export async function verifyOtp(payload: VerifyOtpRequest): Promise<VerifyOtpResponse> {
-  const { data } = await apiClient.post<ApiSuccessResponse<VerifyOtpResponse>>(
-    API_ENDPOINTS.verifyOtp,
-    payload,
-  );
-  return data.data;
+  return authService.verifyOtp(payload.mobileNumber, payload.otp);
 }
 
 export async function completeProfile(payload: CompleteProfileRequest): Promise<AuthUser> {
-  const { data } = await apiClient.put<ApiSuccessResponse<AuthUser>>(
-    API_ENDPOINTS.profileComplete,
-    payload,
+  const profile = await unwrapApi<Profile>(
+    api.put('/api/v1/profile/complete', payload),
   );
-  return data.data;
+  return toAuthUser(profile);
 }
 
 export async function getProfile(): Promise<AuthUser> {
-  const { data } = await apiClient.get<ApiSuccessResponse<AuthUser>>(API_ENDPOINTS.profile);
-  return data.data;
+  const profile = await profileService.getProfile();
+  return toAuthUser(profile);
 }

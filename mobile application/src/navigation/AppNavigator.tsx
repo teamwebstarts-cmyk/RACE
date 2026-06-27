@@ -9,7 +9,7 @@ import StackBackButton from '../components/navigation/StackBackButton';
 import { DriverBookingProvider } from '../context/DriverBookingContext';
 import { RoadsideBookingProvider } from '../context/RoadsideBookingContext';
 import { TowingBookingProvider } from '../context/TowingBookingContext';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
 import ResetPasswordScreen from '../screens/auth/ResetPasswordScreen';
 import CreateAccountScreen from '../screens/auth/CreateAccountScreen';
@@ -46,8 +46,10 @@ import VehicleRegistrationScreen from '../screens/onboarding/VehicleRegistration
 import HomeScreen from '../screens/HomeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import PersonalInformationScreen from '../screens/profile/PersonalInformationScreen';
-import MyVehiclesScreen from '../screens/profile/MyVehiclesScreen';
-import AddVehicleScreen from '../screens/profile/AddVehicleScreen';
+import MyVehiclesScreen from '../screens/vehicles/VehicleListScreen';
+import AddVehicleScreen from '../screens/vehicles/AddVehicleScreen';
+import VehicleDetailScreen from '../screens/vehicles/VehicleDetailScreen';
+import EditVehicleScreen from '../screens/vehicles/EditVehicleScreen';
 import SosDetailsScreen from '../screens/profile/SosDetailsScreen';
 import SavedLocationsScreen from '../screens/profile/SavedLocationsScreen';
 import PaymentMethodsScreen from '../screens/profile/PaymentMethodsScreen';
@@ -388,6 +390,8 @@ function ProfileStackNavigator() {
       <ProfileStack.Screen name="PersonalInformation" component={PersonalInformationScreen} />
       <ProfileStack.Screen name="MyVehicles" component={MyVehiclesScreen} />
       <ProfileStack.Screen name="AddVehicle" component={AddVehicleScreen} />
+      <ProfileStack.Screen name="VehicleDetail" component={VehicleDetailScreen} />
+      <ProfileStack.Screen name="EditVehicle" component={EditVehicleScreen} />
       <ProfileStack.Screen name="SosDetails" component={SosDetailsScreen} />
       <ProfileStack.Screen name="SavedLocations" component={SavedLocationsScreen} />
       <ProfileStack.Screen name="PaymentMethods" component={PaymentMethodsScreen} />
@@ -419,6 +423,22 @@ function MainTabNavigator() {
         </RoadsideBookingProvider>
       </DriverBookingProvider>
     </TowingBookingProvider>
+  );
+}
+
+function OnboardingStackNavigator() {
+  return (
+    <AuthStack.Navigator
+      initialRouteName="ProfileSetup"
+      screenOptions={{ headerShown: false }}>
+      <AuthStack.Screen name="ProfileSetup" component={ProfileSetupScreen} />
+      <AuthStack.Screen
+        name="VehicleRegistration"
+        component={VehicleRegistrationScreen}
+      />
+      <AuthStack.Screen name="QRCode" component={QRCodeScreen} />
+      <AuthStack.Screen name="CreatePin" component={CreatePinAuthScreen} />
+    </AuthStack.Navigator>
   );
 }
 
@@ -460,15 +480,17 @@ const navigationTheme = {
 };
 
 export default function AppNavigator() {
-  const { isLoggedIn } = useAuth();
+  const { isAuthenticated, onboardingRequired } = useAuth();
 
   return (
     <NavigationContainer theme={navigationTheme}>
       <RootStack.Navigator screenOptions={{ headerShown: false }}>
-        {isLoggedIn ? (
-          <RootStack.Screen name="Main" component={MainTabNavigator} />
-        ) : (
+        {!isAuthenticated ? (
           <RootStack.Screen name="Auth" component={AuthStackNavigator} />
+        ) : onboardingRequired ? (
+          <RootStack.Screen name="Onboarding" component={OnboardingStackNavigator} />
+        ) : (
+          <RootStack.Screen name="Main" component={MainTabNavigator} />
         )}
       </RootStack.Navigator>
     </NavigationContainer>

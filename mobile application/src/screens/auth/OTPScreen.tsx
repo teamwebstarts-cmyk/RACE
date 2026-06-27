@@ -12,9 +12,11 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import AuthFormLayout from '../../components/auth/AuthFormLayout';
 import GoldButton from '../../components/auth/GoldButton';
-import { useAuth } from '../../context/AuthContext';
-import { DEMO_OTP } from '../../constants/auth';
+import { useAuthActions } from '../../hooks/useAuth';
+import { sendOtp } from '../../services/authService';
+import { getApiErrorMessage } from '../../services/api';
 import type { AuthStackParamList } from '../../types/navigation';
+import { getPhoneDigits } from '../../utils/phone';
 import { colors, shadows, typography } from '../../theme';
 
 const REF_W = 390;
@@ -23,7 +25,7 @@ type Props = NativeStackScreenProps<AuthStackParamList, 'OTP'>;
 
 export default function OTPScreen({ navigation, route }: Props) {
   const { phone, flow } = route.params;
-  const { login } = useAuth();
+  const { login, error: authError, isLoading, clearError } = useAuthActions();
   const { width } = useWindowDimensions();
   const px = (n: number) => Math.round(n * (width / REF_W));
 
@@ -31,30 +33,60 @@ export default function OTPScreen({ navigation, route }: Props) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [timer, setTimer] = useState(30);
   const [error, setError] = useState('');
+  const [isResending, setIsResending] = useState(false);
   const inputRefs = useRef<Array<TextInput | null>>([]);
+  const isVerifyingRef = useRef(false);
 
   const otpValue = digits.join('');
   const isLoginFlow = flow === 'login';
+  const mobileNumber = getPhoneDigits(phone);
 
   const verifyOtp = useCallback(
-    (value: string) => {
-      if (value.length < 6) {
+    async (value: string) => {
+      const code = value.replace(/\D/g, '').slice(0, 6);
+      if (code.length < 6) {
         setError('Please enter the 6-digit OTP');
         return;
       }
-      if (value !== DEMO_OTP) {
-        setError('Invalid OTP. Please try again');
+      if (isVerifyingRef.current) {
         return;
       }
 
-      if (isLoginFlow) {
-        login();
-        return;
+      isVerifyingRef.current = true;
+      clearError();
+      setError('');
+      try {
+        await login(mobileNumber, code);
+        if (!isLoginFlow) {
+          navigation.navigate('ProfileSetup');
+        }
+      } catch (err) {
+        setError(getApiErrorMessage(err, 'Invalid OTP. Please try again'));
+      } finally {
+        isVerifyingRef.current = false;
       }
-
-      navigation.navigate('ProfileSetup');
     },
-    [isLoginFlow, login, navigation],
+    [clearError, isLoginFlow, login, mobileNumber, navigation],
+  );
+
+  const applyOtpValue = useCallback(
+    (raw: string) => {
+      const chars = raw.replace(/\D/g, '').slice(0, 6).split('');
+      const next = ['', '', '', '', '', ''];
+      chars.forEach((char, index) => {
+        next[index] = char;
+      });
+      setDigits(next);
+      if (error) setError('');
+      const nextIndex = Math.min(chars.length, 5);
+      setActiveIndex(nextIndex);
+      if (chars.length === 6) {
+        void verifyOtp(chars.join(''));
+      } else {
+        inputRefs.current[nextIndex]?.focus();
+      }
+    },
+    [error, verifyOtp],
   );
 
   useEffect(() => {
@@ -74,12 +106,18 @@ export default function OTPScreen({ navigation, route }: Props) {
     setDigits(next);
     if (error) setError('');
     if (next.join('').length === 6) {
-      verifyOtp(next.join(''));
+      void verifyOtp(next.join(''));
     }
   };
 
   const handleDigitInput = (index: number, value: string) => {
-    const char = value.replace(/\D/g, '').slice(-1);
+    const digitsOnly = value.replace(/\D/g, '');
+    if (digitsOnly.length > 1) {
+      applyOtpValue(digitsOnly);
+      return;
+    }
+
+    const char = digitsOnly.slice(-1);
     const next = [...digits];
     next[index] = char;
     updateDigits(next);
@@ -106,14 +144,23 @@ export default function OTPScreen({ navigation, route }: Props) {
     }
   };
 
-  const handleResend = () => {
-    if (timer > 0) return;
-    setTimer(30);
-    setDigits(['', '', '', '', '', '']);
-    setActiveIndex(0);
+  const handleResend = async () => {
+    if (timer > 0 || isResending) return;
+    setIsResending(true);
     setError('');
-    inputRefs.current[0]?.focus();
-    Alert.alert('OTP Sent', `A new OTP has been sent to ${phone}`);
+    clearError();
+    try {
+      await sendOtp(mobileNumber);
+      setTimer(30);
+      setDigits(['', '', '', '', '', '']);
+      setActiveIndex(0);
+      inputRefs.current[0]?.focus();
+      Alert.alert('OTP Sent', `A new OTP has been sent to ${phone}`);
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Unable to resend OTP'));
+    } finally {
+      setIsResending(false);
+    }
   };
 
   const timerLabel = `00:${String(timer).padStart(2, '0')}`;
@@ -194,6 +241,14 @@ export default function OTPScreen({ navigation, route }: Props) {
           gap: px(8),
           marginBottom: px(18),
         }}>
+        <TextInput
+          value=""
+          onChangeText={applyOtpValue}
+          textContentType="oneTimeCode"
+          autoComplete="sms-otp"
+          keyboardType="number-pad"
+          style={{ position: 'absolute', width: 1, height: 1, opacity: 0 }}
+        />
         {digits.map((digit, index) => {
           const isActive = activeIndex === index;
           return (
@@ -240,7 +295,7 @@ export default function OTPScreen({ navigation, route }: Props) {
         })}
       </View>
 
-      {error ? (
+      {(error || authError) ? (
         <Text
           style={{
             color: colors.error,
@@ -248,7 +303,7 @@ export default function OTPScreen({ navigation, route }: Props) {
             fontSize: px(13),
             marginBottom: px(12),
           }}>
-          {error}
+          {error || authError}
         </Text>
       ) : null}
 
@@ -261,38 +316,30 @@ export default function OTPScreen({ navigation, route }: Props) {
         }}>
         Didn't receive OTP? Resend in {timerLabel}
       </Text>
-      <Pressable onPress={handleResend} disabled={timer > 0} style={{ marginBottom: px(20) }}>
+      <Pressable
+        onPress={() => void handleResend()}
+        disabled={timer > 0 || isResending}
+        style={{ marginBottom: px(20) }}>
         <Text
           style={{
             textAlign: 'center',
             fontSize: px(14),
             fontWeight: typography.weights.bold,
-            color: timer > 0 ? colors.border : colors.primary,
+            color: timer > 0 || isResending ? colors.border : colors.primary,
           }}>
-          Resend OTP
+          {isResending ? 'Resending...' : 'Resend OTP'}
         </Text>
       </Pressable>
 
       <GoldButton
-        label={isLoginFlow ? 'Verify & Login' : 'Verify & Continue'}
-        onPress={() => verifyOtp(otpValue)}
+        label={isLoading ? 'Verifying...' : isLoginFlow ? 'Verify & Login' : 'Verify & Continue'}
+        onPress={() => void verifyOtp(otpValue)}
         style={[shadows.card, { width: '100%' }]}
         height={px(54)}
         labelSize={px(17)}
         borderRadius={px(14)}
+        disabled={isLoading}
       />
-
-      {__DEV__ ? (
-        <Text
-          style={{
-            marginTop: px(16),
-            textAlign: 'center',
-            fontSize: px(11),
-            color: colors.grey,
-          }}>
-          Demo OTP: {DEMO_OTP}
-        </Text>
-      ) : null}
     </AuthFormLayout>
   );
 }

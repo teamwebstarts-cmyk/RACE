@@ -18,7 +18,8 @@ import FormField from '../../components/auth/FormField';
 import GoldButton from '../../components/auth/GoldButton';
 import GoogleIcon from '../../components/auth/GoogleIcon';
 import { AuthBackHeader } from '../../components/auth/StepHeader';
-import { REGISTERED_PHONE_DIGITS } from '../../constants/auth';
+import { sendOtp } from '../../services/authService';
+import { getApiErrorMessage } from '../../services/api';
 import type { AuthStackParamList } from '../../types/navigation';
 import { formatPhoneE164, getPhoneDigits, isValidIndianMobile } from '../../utils/phone';
 import { colors, typography } from '../../theme';
@@ -41,6 +42,7 @@ export default function CreateAccountScreen({ navigation }: Props) {
   const [email, setEmail] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(true);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const clearError = (key: string) => {
     if (errors[key]) {
@@ -52,7 +54,7 @@ export default function CreateAccountScreen({ navigation }: Props) {
     }
   };
 
-  const handleSignUp = () => {
+  const handleSignUp = async () => {
     const nextErrors: Record<string, string> = {};
 
     if (!name.trim()) {
@@ -61,21 +63,26 @@ export default function CreateAccountScreen({ navigation }: Props) {
     if (getPhoneDigitsLocal(phone).length !== 10) {
       nextErrors.phone = 'Enter valid 10-digit number';
     }
-    if (getPhoneDigitsLocal(phone) === REGISTERED_PHONE_DIGITS) {
-      nextErrors.phone = 'Number already registered. Please login instead.';
-    }
     if (!termsAccepted) {
       Alert.alert('Terms Required', 'Please accept terms');
       return;
     }
 
     setErrors(nextErrors);
-    if (Object.keys(nextErrors).length === 0) {
+    if (Object.keys(nextErrors).length > 0) return;
+
+    setIsSubmitting(true);
+    try {
+      await sendOtp(getPhoneDigitsLocal(phone));
       navigation.navigate('OTP', {
         phone: formatPhoneE164(getPhoneDigitsLocal(phone)),
         flow: 'signup',
         name: name.trim(),
       });
+    } catch (error) {
+      setErrors({ phone: getApiErrorMessage(error, 'Unable to send OTP') });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -196,12 +203,13 @@ export default function CreateAccountScreen({ navigation }: Props) {
             </Pressable>
 
             <GoldButton
-              label="Continue"
-              onPress={handleSignUp}
+              label={isSubmitting ? 'Sending OTP...' : 'Continue'}
+              onPress={() => void handleSignUp()}
               style={{ width: '100%' }}
               height={px(54)}
               labelSize={px(17)}
               borderRadius={px(14)}
+              disabled={isSubmitting}
             />
 
             <View

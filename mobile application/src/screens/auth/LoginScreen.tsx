@@ -16,7 +16,8 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import GoldButton from '../../components/auth/GoldButton';
 import GoogleIcon from '../../components/auth/GoogleIcon';
-import { REGISTERED_PHONE_DIGITS } from '../../constants/auth';
+import { sendOtp } from '../../services/authService';
+import { getApiErrorMessage } from '../../services/api';
 import type { AuthStackParamList } from '../../types/navigation';
 import {
   formatPhoneE164,
@@ -34,8 +35,9 @@ export default function LoginScreen({ navigation }: Props) {
   const s = width / REF_W;
   const px = (n: number) => Math.round(n * s);
 
-  const [phoneDigits, setPhoneDigits] = useState(REGISTERED_PHONE_DIGITS);
+  const [phoneDigits, setPhoneDigits] = useState('');
   const [phoneError, setPhoneError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handlePhoneChange = (value: string) => {
     const digits = getPhoneDigits(value).slice(0, 10);
@@ -43,28 +45,25 @@ export default function LoginScreen({ navigation }: Props) {
     if (phoneError) setPhoneError('');
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (!isValidIndianMobile(phoneDigits)) {
       setPhoneError('Enter a valid 10-digit mobile number');
       return;
     }
 
-    if (phoneDigits !== REGISTERED_PHONE_DIGITS) {
-      Alert.alert(
-        'Account not found',
-        'This mobile number is not registered. Create an account to get started.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Sign Up', onPress: () => navigation.navigate('CreateAccount') },
-        ],
-      );
-      return;
+    setIsSubmitting(true);
+    setPhoneError('');
+    try {
+      await sendOtp(getPhoneDigits(phoneDigits));
+      navigation.navigate('OTP', {
+        phone: formatPhoneE164(phoneDigits),
+        flow: 'login',
+      });
+    } catch (error) {
+      setPhoneError(getApiErrorMessage(error, 'Unable to send OTP'));
+    } finally {
+      setIsSubmitting(false);
     }
-
-    navigation.navigate('OTP', {
-      phone: formatPhoneE164(phoneDigits),
-      flow: 'login',
-    });
   };
 
   return (
@@ -185,12 +184,13 @@ export default function LoginScreen({ navigation }: Props) {
             </Text>
 
             <GoldButton
-              label="Continue"
-              onPress={handleContinue}
+              label={isSubmitting ? 'Sending OTP...' : 'Continue'}
+              onPress={() => void handleContinue()}
               style={{ width: '100%' }}
               height={px(54)}
               labelSize={px(17)}
               borderRadius={px(14)}
+              disabled={isSubmitting}
             />
 
             <View
@@ -239,7 +239,7 @@ export default function LoginScreen({ navigation }: Props) {
                   color: colors.grey,
                   lineHeight: px(16),
                 }}>
-                Demo login: {REGISTERED_PHONE_DIGITS} → OTP 247392
+                Dev: OTP backend terminal mein dikhega (npm run dev).
               </Text>
             ) : null}
           </View>

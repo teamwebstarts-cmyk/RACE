@@ -10,9 +10,11 @@ export const globalRateLimiter = rateLimit({
   message: { success: false, message: 'Too many requests, please try again later' },
 });
 
+const isDev = env.NODE_ENV !== 'production';
+
 export const authRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20,
+  max: isDev ? 10_000 : 20,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: 'Too many authentication attempts' },
@@ -20,7 +22,7 @@ export const authRateLimiter = rateLimit({
 
 export const otpRateLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
-  max: 10,
+  max: isDev ? 10_000 : 10,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: 'OTP rate limit exceeded' },

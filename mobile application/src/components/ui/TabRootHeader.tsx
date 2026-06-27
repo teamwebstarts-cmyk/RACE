@@ -1,9 +1,11 @@
 import React, { type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Bell } from 'lucide-react-native';
+import { Bell, UserRound } from 'lucide-react-native';
 
 import { useScreenPx } from '../../hooks/useScreenPx';
-import { USER } from '../../constants/demo';
+import { useAuthStore } from '../../store/authStore';
+import { useProfileStore } from '../../store/profileStore';
+import { getProfileInitial } from '../../utils/profileDisplay';
 import { colors, typography } from '../../theme';
 
 type Props = {
@@ -19,11 +21,17 @@ export default function TabRootHeader({
   title,
   subtitle,
   leading,
-  avatarLabel = USER.name.charAt(0),
+  avatarLabel,
   showActions = true,
   actions,
 }: Props) {
   const px = useScreenPx();
+  const profile = useProfileStore(state => state.profile);
+  const authUser = useAuthStore(state => state.user);
+  const resolvedAvatarLabel =
+    avatarLabel ??
+    getProfileInitial(profile?.fullName ?? authUser?.fullName) ??
+    '';
 
   return (
     <View
@@ -71,14 +79,18 @@ export default function TabRootHeader({
                 styles.avatar,
                 { width: px(40), height: px(40), borderRadius: px(20) },
               ]}>
-              <Text
-                style={{
-                  fontSize: px(15),
-                  fontWeight: typography.weights.bold,
-                  color: colors.dark,
-                }}>
-                {avatarLabel}
-              </Text>
+              {resolvedAvatarLabel ? (
+                <Text
+                  style={{
+                    fontSize: px(15),
+                    fontWeight: typography.weights.bold,
+                    color: colors.dark,
+                  }}>
+                  {resolvedAvatarLabel}
+                </Text>
+              ) : (
+                <UserRound size={px(18)} color={colors.primary} strokeWidth={2} />
+              )}
             </View>
           </View>
         ) : null)}

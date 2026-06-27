@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -19,13 +20,16 @@ import type { ProfileStackParamList } from '../../types/navigation';
 import type { FuelType, VehicleType } from '../../types/vehicle';
 import { colors, radius, spacing, typography } from '../../theme';
 
-type Props = NativeStackScreenProps<ProfileStackParamList, 'AddVehicle'>;
+type Props = NativeStackScreenProps<ProfileStackParamList, 'EditVehicle'>;
 
 const VEHICLE_TYPES: VehicleType[] = ['car', 'bike', 'truck', 'bus', 'other'];
 const FUEL_TYPES: FuelType[] = ['petrol', 'diesel', 'cng', 'electric', 'hybrid', 'other'];
 
-export default function AddVehicleScreen({ navigation }: Props) {
-  const { addVehicle, isLoading, error: storeError } = useVehicleStore();
+export default function EditVehicleScreen({ navigation, route }: Props) {
+  const { vehicleId } = route.params;
+  const { selectedVehicle, fetchVehicle, updateVehicle, isLoading, error: storeError } =
+    useVehicleStore();
+
   const [vehicleType, setVehicleType] = useState<VehicleType>('car');
   const [fuelType, setFuelType] = useState<FuelType>('petrol');
   const [vehicleNumber, setVehicleNumber] = useState('');
@@ -33,6 +37,20 @@ export default function AddVehicleScreen({ navigation }: Props) {
   const [model, setModel] = useState('');
   const [color, setColor] = useState('');
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    void fetchVehicle(vehicleId);
+  }, [fetchVehicle, vehicleId]);
+
+  useEffect(() => {
+    if (!selectedVehicle || selectedVehicle.id !== vehicleId) return;
+    setVehicleType(selectedVehicle.vehicleType);
+    setFuelType(selectedVehicle.fuelType);
+    setVehicleNumber(selectedVehicle.vehicleNumber);
+    setBrand(selectedVehicle.brand);
+    setModel(selectedVehicle.model);
+    setColor(selectedVehicle.color ?? '');
+  }, [selectedVehicle, vehicleId]);
 
   const handleSubmit = async () => {
     setError('');
@@ -42,7 +60,7 @@ export default function AddVehicleScreen({ navigation }: Props) {
     }
 
     try {
-      await addVehicle({
+      await updateVehicle(vehicleId, {
         vehicleType,
         fuelType,
         vehicleNumber: vehicleNumber.trim().toUpperCase(),
@@ -52,9 +70,19 @@ export default function AddVehicleScreen({ navigation }: Props) {
       });
       navigation.goBack();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to add vehicle');
+      setError(err instanceof Error ? err.message : 'Unable to update vehicle');
     }
   };
+
+  if (isLoading && !selectedVehicle) {
+    return (
+      <Screen>
+        <View style={styles.loader}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </Screen>
+    );
+  }
 
   return (
     <Screen>
@@ -64,7 +92,7 @@ export default function AddVehicleScreen({ navigation }: Props) {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
             <ScreenContent>
-              <Text style={styles.title}>Add Vehicle</Text>
+              <Text style={styles.title}>Edit Vehicle</Text>
 
               <ChipRow label="Vehicle Type" options={VEHICLE_TYPES} value={vehicleType} onChange={setVehicleType} />
               <ChipRow label="Fuel Type" options={FUEL_TYPES} value={fuelType} onChange={setFuelType} />
@@ -77,7 +105,7 @@ export default function AddVehicleScreen({ navigation }: Props) {
               <AuthToast message={error || storeError || ''} />
 
               <PrimaryButton
-                label={isLoading ? 'Saving...' : 'Save Vehicle'}
+                label={isLoading ? 'Saving...' : 'Update Vehicle'}
                 onPress={() => void handleSubmit()}
                 disabled={isLoading}
               />
@@ -148,6 +176,7 @@ function ChipRow<T extends string>({
 const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   flex: { flex: 1 },
+  loader: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   content: { paddingBottom: spacing.xxl },
   title: {
     fontSize: typography.sizes.xxl,

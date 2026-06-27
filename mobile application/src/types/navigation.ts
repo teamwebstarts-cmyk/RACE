@@ -83,6 +83,7 @@ export type CallStackParamList = {
 
 export type RootStackParamList = {
   Auth: undefined;
+  Onboarding: undefined;
   Main: undefined;
 };
 
@@ -119,6 +120,8 @@ export type ProfileStackParamList = {
   PersonalInformation: undefined;
   MyVehicles: undefined;
   AddVehicle: undefined;
+  VehicleDetail: { vehicleId: string };
+  EditVehicle: { vehicleId: string };
   SosDetails: undefined;
   SavedLocations: undefined;
   PaymentMethods: undefined;

@@ -1,37 +1,71 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { configureStore } from '@reduxjs/toolkit';
+import { configureStore, type Middleware } from '@reduxjs/toolkit';
+
+import authReducer, {
+  completeProfileSuccess,
+  logout,
+  rehydrateAuth,
+  setCredentials,
+  updateTokens,
+  type AuthState,
+} from './auth/authSlice';
 import {
-  FLUSH,
-  PAUSE,
-  PERSIST,
-  PURGE,
-  REGISTER,
-  REHYDRATE,
-  persistReducer,
-  persistStore,
-} from 'redux-persist';
+  clearPersistedAuthState,
+  loadPersistedAuthState,
+  savePersistedAuthState,
+} from './secureAuthStorage';
+import { clearTokens, saveTokens } from '../services/api';
 
-import authReducer from './auth/authSlice';
+function pickPersistedAuth(state: AuthState) {
+  return {
+    user: state.user,
+    accessToken: state.accessToken,
+    refreshToken: state.refreshToken,
+    isAuthenticated: state.isAuthenticated,
+    onboardingRequired: state.onboardingRequired,
+  };
+}
 
-const authPersistConfig = {
-  key: 'auth',
-  storage: AsyncStorage,
-  whitelist: ['user', 'accessToken', 'refreshToken', 'isAuthenticated', 'onboardingRequired'],
+const persistAuthMiddleware: Middleware = (storeApi) => (next) => (action) => {
+  const result = next(action);
+
+  if (
+    setCredentials.match(action) ||
+    completeProfileSuccess.match(action) ||
+    updateTokens.match(action)
+  ) {
+    const auth = storeApi.getState().auth as AuthState;
+    void savePersistedAuthState(pickPersistedAuth(auth));
+    if (auth.accessToken && auth.refreshToken) {
+      void saveTokens(auth.accessToken, auth.refreshToken);
+    }
+  }
+
+  if (logout.match(action)) {
+    void clearPersistedAuthState();
+    void clearTokens();
+  }
+
+  return result;
 };
 
 export const store = configureStore({
   reducer: {
-    auth: persistReducer(authPersistConfig, authReducer),
+    auth: authReducer,
   },
   middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware({
-      serializableCheck: {
-        ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
-      },
-    }),
+    getDefaultMiddleware().concat(persistAuthMiddleware),
 });
 
-export const persistor = persistStore(store);
+export async function hydrateAuthStore(): Promise<void> {
+  const persisted = await loadPersistedAuthState();
+  if (!persisted) return;
+
+  store.dispatch(rehydrateAuth(persisted));
+
+  if (persisted.accessToken && persisted.refreshToken) {
+    await saveTokens(persisted.accessToken, persisted.refreshToken);
+  }
+}
 
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;

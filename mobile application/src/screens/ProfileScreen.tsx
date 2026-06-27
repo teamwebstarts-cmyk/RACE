@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Pressable,
   StyleSheet,
@@ -25,8 +26,10 @@ import { PROFILE_MENU_ITEMS, PROFILE_QUICK_STATS } from '../constants/profileScr
 import { PROFILE_MENU_ROUTES } from '../constants/profileSubScreens';
 import AppScreenLayout from '../components/ui/AppScreenLayout';
 import TabRootHeader from '../components/ui/TabRootHeader';
-import { USER } from '../constants/demo';
-import { useAuth } from '../context/AuthContext';
+import { getProfileFirstName } from '../utils/profileDisplay';
+import { useAuthActions } from '../hooks/useAuth';
+import { useAuthStore } from '../store/authStore';
+import { useProfileStore } from '../store/profileStore';
 import type { ProfileStackParamList } from '../types/navigation';
 import { colors, shadows, typography } from '../theme';
 
@@ -58,17 +61,42 @@ function ProfileAvatar({ size, px }: { size: number; px: (n: number) => number }
 
 export default function ProfileScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
-  const { logout } = useAuth();
+  const { logout } = useAuthActions();
+  const authUser = useAuthStore(state => state.user);
+  const { profile, fetchProfile, isLoading } = useProfileStore();
   const { width } = useWindowDimensions();
   const s = width / REF_W;
   const px = (n: number) => Math.round(n * s);
 
+  useEffect(() => {
+    void fetchProfile();
+  }, [fetchProfile]);
+
+  const displayName =
+    getProfileFirstName(profile?.fullName) ||
+    getProfileFirstName(authUser?.fullName) ||
+    'User';
+  const displayPhone = profile?.mobileNumber ?? authUser?.mobileNumber ?? '';
+
   const handleLogout = () => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
       { text: 'No', style: 'cancel' },
-      { text: 'Yes', onPress: logout },
+      {
+        text: 'Yes',
+        onPress: () => {
+          void logout();
+        },
+      },
     ]);
   };
+
+  if (isLoading && !profile) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
 
   return (
     <AppScreenLayout
@@ -117,17 +145,17 @@ export default function ProfileScreen() {
                         fontWeight: typography.weights.bold,
                         color: colors.dark,
                       }}>
-                      {USER.name}
+                      {displayName}
                     </Text>
                     <Pencil size={px(14)} color={colors.grey} strokeWidth={2} />
                   </View>
                   <Text style={{ fontSize: px(12), color: colors.grey, marginBottom: px(2) }}>
-                    {USER.phone}
+                    {displayPhone}
                   </Text>
                   <Text
                     numberOfLines={1}
                     style={{ fontSize: px(12), color: colors.grey, marginBottom: px(8) }}>
-                    {USER.email}
+                    {profile?.email ?? ''}
                   </Text>
                   <View
                     style={{
