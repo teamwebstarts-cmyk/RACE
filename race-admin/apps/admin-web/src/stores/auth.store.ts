@@ -71,11 +71,21 @@ export const useAuthStore = create<AuthState>()(
         if (state?.accessToken) {
           setAccessToken(state.accessToken);
         }
-        useAuthStore.setState({ hasHydrated: true });
       },
     },
   ),
 );
+
+if (useAuthStore.persist.hasHydrated()) {
+  useAuthStore.getState().setHasHydrated(true);
+} else {
+  useAuthStore.persist.onFinishHydration((state) => {
+    if (state?.accessToken) {
+      setAccessToken(state.accessToken);
+    }
+    useAuthStore.getState().setHasHydrated(true);
+  });
+}
 
 configureAuthHandlers({
   getRefreshToken: () => useAuthStore.getState().refreshToken,

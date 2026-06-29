@@ -2,8 +2,7 @@ import { create } from 'zustand';
 
 import * as authService from '../services/authService';
 import { getApiErrorMessage } from '../services/api';
-import { useProfileStore } from './profileStore';
-import { useVehicleStore } from './vehicleStore';
+import { clearSessionStores, loadSessionAfterLogin } from './authSession';
 import type { User } from '../types/auth';
 
 interface AuthState {
@@ -33,17 +32,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const result = await authService.verifyOtp(mobileNumber, otp);
 
-      let onboardingRequired = result.onboardingRequired;
-      try {
-        await useProfileStore.getState().fetchProfile();
-        const profile = useProfileStore.getState().profile;
-        if (profile) {
-          onboardingRequired = !profile.isProfileCompleted;
-        }
-        await useVehicleStore.getState().fetchVehicles();
-      } catch {
-        // Keep auth response flags if profile/vehicles fail to load.
-      }
+      const sessionOnboarding = await loadSessionAfterLogin();
+      const onboardingRequired = sessionOnboarding ?? result.onboardingRequired;
 
       set({
         user: result.user,
@@ -63,8 +53,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   logout: async () => {
     await authService.logout();
-    useProfileStore.getState().clearProfile();
-    useVehicleStore.getState().clearVehicles();
+    clearSessionStores();
     set({
       user: null,
       isAuthenticated: false,
