@@ -4,8 +4,6 @@ import { ShieldCheck, Clock, Users, type LucideIcon } from 'lucide-react-native'
 
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 
-const PARTNER_RED = '#C41E1E';
-
 const FEATURES: Array<{ icon: LucideIcon; label: string }> = [
   { icon: ShieldCheck, label: 'Trusted &\nSecure' },
   { icon: Clock, label: '24/7\nSupport' },
@@ -22,7 +20,7 @@ export default function PartnerWelcomeTrustCard() {
         return (
           <View key={feature.label} style={[styles.item, !isLast && styles.itemDivider]}>
             <View style={styles.iconWrap}>
-              <Icon size={22} color={PARTNER_RED} strokeWidth={2.2} />
+              <Icon size={22} color={colors.primary} strokeWidth={2.2} />
             </View>
             <Text style={styles.label}>{feature.label}</Text>
           </View>

@@ -5,6 +5,8 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import { useAuth } from '../hooks/useAuth';
 import PartnerAuthNavigator from './PartnerAuthNavigator';
+import PartnerRegistrationNavigator from './PartnerRegistrationNavigator';
+import PartnerSelectSheet from '../components/partner/PartnerSelectSheet';
 import type { PartnerRootStackParamList } from '../types/partnerNavigation';
 import { colors } from '../theme';
 
@@ -39,10 +41,12 @@ export default function PartnerAppNavigator() {
 
   return (
     <NavigationContainer theme={navigationTheme}>
+      <PartnerSelectSheet />
       <RootStack.Navigator
         initialRouteName="PartnerBootstrap"
         screenOptions={{ headerShown: false }}>
         <RootStack.Screen name="PartnerBootstrap" component={PartnerAuthNavigator} />
+        <RootStack.Screen name="PartnerRegistration" component={PartnerRegistrationNavigator} />
         <RootStack.Screen name="PartnerMain">
           {() => (
             <Suspense

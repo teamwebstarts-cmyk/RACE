@@ -3,8 +3,8 @@ import { StyleSheet, View } from 'react-native';
 
 import { colors, spacing } from '../../theme';
 
-const DOT_ACTIVE = colors.accentRed;
-const DOT_INACTIVE = '#F5C6CB';
+const DOT_ACTIVE = colors.primary;
+const DOT_INACTIVE = '#F5D98A';
 
 interface PartnerPageDotsProps {
   total?: number;

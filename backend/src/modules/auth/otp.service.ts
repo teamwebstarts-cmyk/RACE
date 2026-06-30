@@ -5,6 +5,8 @@ import { generateOtp } from '../../shared/utils/otp';
 import { logger } from '../../shared/utils/logger';
 import { authRepository } from './auth.repository';
 
+const DEV_DEMO_OTP = '247392';
+
 const OTP_KEY = (mobile: string) => `otp:${mobile}`;
 const RESEND_KEY = (mobile: string) => `otp:resend:${mobile}`;
 const VERIFY_KEY = (mobile: string) => `otp:verify:${mobile}`;
@@ -18,7 +20,7 @@ export class OtpService {
       throw new TooManyRequestsError('Maximum OTP resend attempts exceeded');
     }
 
-    const otp = generateOtp();
+    const otp = env.NODE_ENV === 'production' ? generateOtp() : DEV_DEMO_OTP;
     const expiresAt = new Date(Date.now() + env.OTP_EXPIRY_SECONDS * 1000);
 
     await cache.set(OTP_KEY(mobileNumber), otp, 'EX', env.OTP_EXPIRY_SECONDS);

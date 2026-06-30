@@ -13,7 +13,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { images } from '../../../assets';
-import PartnerBrandLogo from '../../../components/partner/PartnerBrandLogo';
 import PartnerWelcomeTrustCard from '../../../components/partner/PartnerWelcomeTrustCard';
 import type { PartnerAuthStackParamList } from '../../../types/partnerNavigation';
 import { colors, layout, radius, spacing, typography } from '../../../theme';
@@ -21,7 +20,6 @@ import { colors, layout, radius, spacing, typography } from '../../../theme';
 type Props = NativeStackScreenProps<PartnerAuthStackParamList, 'PartnerWelcome'>;
 
 const REF_W = 390;
-const PARTNER_RED = '#C41E1E';
 
 export default function PartnerWelcomeScreen({ navigation }: Props) {
   const { width } = useWindowDimensions();
@@ -37,64 +35,63 @@ export default function PartnerWelcomeScreen({ navigation }: Props) {
       <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
 
       <ScrollView
+        style={styles.scroll}
         bounces={false}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
           styles.scrollContent,
           {
-            paddingTop: insets.top + px(spacing.md),
+            paddingTop: insets.top + px(spacing.xxxl),
             paddingBottom: insets.bottom + px(spacing.lg),
             paddingHorizontal: px(layout.screenPadding),
           },
         ]}>
-        <View style={styles.logoSection}>
-          <PartnerBrandLogo maxWidth={px(248)} />
-        </View>
+        <View style={[styles.mainBlock, { paddingVertical: px(spacing.xxl) }]}>
+          <View style={styles.titleSection}>
+            <Text style={[styles.titleLead, { fontSize: px(18) }]}>Welcome to</Text>
+            <Text style={[styles.titleAccent, { fontSize: px(32), lineHeight: px(40), marginTop: px(2) }]}>
+              RACE Service
+            </Text>
+            <View style={[styles.accentLine, { width: px(48), marginTop: px(10) }]} />
+            <Text style={[styles.subtitle, { fontSize: px(14), lineHeight: px(21), marginTop: px(12) }]}>
+              Your trusted partner for managing your business and deliveries seamlessly.
+            </Text>
+          </View>
 
-        <View style={styles.titleSection}>
-          <Text style={[styles.titleLead, { fontSize: px(18) }]}>Welcome to</Text>
-          <Text style={[styles.titleAccent, { fontSize: px(32), lineHeight: px(40), marginTop: px(2) }]}>
-            RACE Service
-          </Text>
-          <View style={[styles.accentLine, { width: px(48), marginTop: px(10) }]} />
-          <Text style={[styles.subtitle, { fontSize: px(14), lineHeight: px(21), marginTop: px(12) }]}>
-            Your trusted partner for managing your business and deliveries seamlessly.
-          </Text>
-        </View>
+          <View style={[styles.illustrationWrap, { marginTop: px(spacing.xl) }]}>
+            <Image
+              source={images.partnerWelcomeIllustration}
+              style={[styles.illustration, { height: px(220) }]}
+              resizeMode="contain"
+              accessibilityLabel="RACE partner and customer service illustration"
+            />
+          </View>
 
-        <View style={[styles.illustrationWrap, { marginTop: px(spacing.md) }]}>
-          <Image
-            source={images.partnerWelcomeIllustration}
-            style={[styles.illustration, { height: px(220) }]}
-            resizeMode="contain"
-            accessibilityLabel="RACE partner and customer service illustration"
-          />
-        </View>
+          <View style={{ marginTop: px(spacing.lg) }}>
+            <PartnerWelcomeTrustCard />
+          </View>
 
-        <View style={{ marginTop: px(spacing.lg) }}>
-          <PartnerWelcomeTrustCard />
-        </View>
+          <View style={[styles.actions, { marginTop: px(spacing.xl), gap: px(12) }]}>
+            <Pressable
+              onPress={goToRoleSelection}
+              style={({ pressed }) => [
+                styles.primaryButton,
+                { borderRadius: px(10), minHeight: px(52) },
+                pressed && styles.buttonPressed,
+              ]}>
+              <Text style={[styles.primaryButtonLabel, { fontSize: px(17) }]}>Get Started</Text>
+            </Pressable>
 
-        <View style={[styles.actions, { marginTop: px(spacing.xl), gap: px(12) }]}>
-          <Pressable
-            onPress={goToRoleSelection}
-            style={({ pressed }) => [
-              styles.primaryButton,
-              { borderRadius: px(10), minHeight: px(52) },
-              pressed && styles.buttonPressed,
-            ]}>
-            <Text style={[styles.primaryButtonLabel, { fontSize: px(17) }]}>Get Started</Text>
-          </Pressable>
-
-          <Pressable
-            onPress={goToLogin}
-            style={({ pressed }) => [
-              styles.outlineButton,
-              { borderRadius: px(10), minHeight: px(52) },
-              pressed && styles.buttonPressed,
-            ]}>
-            <Text style={[styles.outlineButtonLabel, { fontSize: px(17) }]}>Login</Text>
-          </Pressable>
+            <Pressable
+              onPress={goToLogin}
+              style={({ pressed }) => [
+                styles.outlineButton,
+                { borderRadius: px(10), minHeight: px(52) },
+                pressed && styles.buttonPressed,
+              ]}>
+              <Text style={[styles.outlineButtonLabel, { fontSize: px(17) }]}>Login</Text>
+            </Pressable>
+          </View>
         </View>
 
         <Pressable
@@ -115,16 +112,19 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  scroll: {
+    flex: 1,
+  },
   scrollContent: {
     flexGrow: 1,
+    justifyContent: 'space-between',
   },
-  logoSection: {
-    alignItems: 'center',
-    width: '100%',
+  mainBlock: {
+    flexGrow: 1,
+    justifyContent: 'center',
   },
   titleSection: {
     alignItems: 'center',
-    marginTop: spacing.md,
   },
   titleLead: {
     color: colors.dark,
@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   titleAccent: {
-    color: PARTNER_RED,
+    color: colors.primary,
     fontWeight: typography.weights.extrabold,
     textAlign: 'center',
   },
@@ -160,12 +160,12 @@ const styles = StyleSheet.create({
   primaryButton: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: PARTNER_RED,
+    backgroundColor: colors.primary,
     borderWidth: 1,
-    borderColor: PARTNER_RED,
+    borderColor: colors.primary,
   },
   primaryButtonLabel: {
-    color: colors.background,
+    color: colors.dark,
     fontWeight: typography.weights.bold,
   },
   outlineButton: {
@@ -173,10 +173,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.background,
     borderWidth: 1.5,
-    borderColor: PARTNER_RED,
+    borderColor: colors.primary,
   },
   outlineButtonLabel: {
-    color: PARTNER_RED,
+    color: colors.primary,
     fontWeight: typography.weights.bold,
   },
   buttonPressed: {
@@ -186,15 +186,15 @@ const styles = StyleSheet.create({
   footerLink: {
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: spacing.md,
     marginTop: spacing.lg,
-    paddingVertical: spacing.sm,
   },
   footerText: {
     color: colors.dark,
     textAlign: 'center',
   },
   footerLinkText: {
-    color: PARTNER_RED,
+    color: colors.primary,
     fontWeight: typography.weights.bold,
   },
 });

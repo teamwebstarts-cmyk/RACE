@@ -1,20 +1,12 @@
 import React, { useState } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { ArrowLeft, Info } from 'lucide-react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Info } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { images } from '../../../assets';
-import PartnerBrandLogo from '../../../components/partner/PartnerBrandLogo';
 import PartnerProgressBar from '../../../components/partner/PartnerProgressBar';
 import PartnerRoleCard from '../../../components/partner/PartnerRoleCard';
+import PartnerScreenLayout from '../../../components/partner/PartnerScreenLayout';
 import { useAppDispatch } from '../../../redux/hooks';
 import { setSignupPath } from '../../../redux/onboarding/onboardingSlice';
 import {
@@ -22,7 +14,7 @@ import {
   type PartnerRole,
 } from '../../../store/partnerOnboardingStore';
 import type { PartnerAuthStackParamList } from '../../../types/partnerNavigation';
-import { colors, layout, radius, spacing, typography } from '../../../theme';
+import { colors, radius, spacing, typography } from '../../../theme';
 
 type Props = NativeStackScreenProps<PartnerAuthStackParamList, 'PartnerRoleSelection'>;
 
@@ -43,9 +35,9 @@ const ROLE_OPTIONS: Array<{
       'Manage customer orders, assign drivers, track earnings, manage services and grow your business.',
     badge: 'For business owners and service providers',
     illustration: images.homeHeroTruck,
-    accentColor: colors.partnerRed,
-    idleBackground: '#FFF5F5',
-    idleBorder: '#FECACA',
+    accentColor: colors.primary,
+    idleBackground: colors.goldLight,
+    idleBorder: '#F5D98A',
   },
   {
     role: 'driver',
@@ -54,14 +46,13 @@ const ROLE_OPTIONS: Array<{
       'Accept delivery assignments, navigate routes, complete services, and earn through RACE Service.',
     badge: 'For tow truck and roadside partners',
     illustration: images.homePopularDriver,
-    accentColor: colors.accentOrange,
-    idleBackground: colors.partnerOrangeLight,
-    idleBorder: '#FCD34D',
+    accentColor: colors.primaryDark,
+    idleBackground: colors.goldLight,
+    idleBorder: '#F5D98A',
   },
 ];
 
 export default function PartnerRoleSelectionScreen({ navigation }: Props) {
-  const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
   const setSelectedRole = usePartnerOnboardingStore((state) => state.setSelectedRole);
   const [selectedRole, setLocalRole] = useState<PartnerRole | null>(null);
@@ -86,131 +77,62 @@ export default function PartnerRoleSelectionScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={styles.root}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
-
-      <View style={[styles.headerBar, { paddingTop: insets.top + spacing.sm }]}>
-        <Pressable
-          onPress={() => navigation.goBack()}
-          hitSlop={10}
-          style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
-          accessibilityRole="button"
-          accessibilityLabel="Go back">
-          <ArrowLeft size={22} color={colors.dark} strokeWidth={2.5} />
-        </Pressable>
-      </View>
-
-      <ScrollView
-        bounces={false}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={[
-          styles.content,
-          {
-            paddingBottom: insets.bottom + spacing.xl,
-            paddingHorizontal: layout.screenPadding,
-          },
-        ]}>
-        <PartnerBrandLogo maxWidth={200} />
-
-        <Text style={styles.title}>Choose Your Role</Text>
-        <Text style={styles.subtitle}>
-          Select how you want to partner with RACE Service.
-        </Text>
-
-        <View style={styles.progressWrap}>
-          <PartnerProgressBar total={4} activeIndex={1} />
-        </View>
-
-        {ROLE_OPTIONS.map((option) => (
-          <PartnerRoleCard
-            key={option.role}
-            role={option.role}
-            title={option.title}
-            description={option.description}
-            badge={option.badge}
-            illustration={option.illustration}
-            accentColor={option.accentColor}
-            idleBackground={option.idleBackground}
-            idleBorder={option.idleBorder}
-            selected={selectedRole === option.role}
-            onPress={() => setLocalRole(option.role)}
-          />
-        ))}
-
-        <View style={styles.infoCard}>
-          <Info size={20} color={colors.partnerRed} strokeWidth={2.2} />
-          <Text style={styles.infoText}>
-            Your account will be verified by the Admin after registration and document
-            submission before you can start using the Partner App.
-          </Text>
-        </View>
-
-        <Pressable
-          disabled={!selectedRole}
-          onPress={handleContinue}
-          style={({ pressed }) => [
-            styles.continueButton,
-            !selectedRole && styles.continueButtonDisabled,
-            pressed && selectedRole && styles.pressed,
-          ]}>
-          <Text
-            style={[
-              styles.continueLabel,
-              !selectedRole && styles.continueLabelDisabled,
-            ]}>
-            Continue
-          </Text>
-        </Pressable>
-
+    <PartnerScreenLayout
+      title="Choose Your Role"
+      subtitle="Select how you want to partner with RACE Service."
+      onBack={() => navigation.goBack()}
+      keyboardAvoiding={false}
+      headerExtra={<PartnerProgressBar total={4} activeIndex={1} />}
+      footer={
         <Pressable
           onPress={() => goToLogin()}
           style={({ pressed }) => [styles.footerLink, pressed && styles.pressed]}>
           <Text style={styles.footerText}>
-            Already have an account?{' '}
-            <Text style={styles.footerLinkText}>Login</Text>
+            Already have an account? <Text style={styles.footerLinkText}>Login</Text>
           </Text>
         </Pressable>
-      </ScrollView>
-    </View>
+      }>
+      {ROLE_OPTIONS.map((option) => (
+        <PartnerRoleCard
+          key={option.role}
+          role={option.role}
+          title={option.title}
+          description={option.description}
+          badge={option.badge}
+          illustration={option.illustration}
+          accentColor={option.accentColor}
+          idleBackground={option.idleBackground}
+          idleBorder={option.idleBorder}
+          selected={selectedRole === option.role}
+          onPress={() => setLocalRole(option.role)}
+        />
+      ))}
+
+      <View style={styles.infoCard}>
+        <Info size={20} color={colors.primary} strokeWidth={2.2} />
+        <Text style={styles.infoText}>
+          Your account will be verified by the Admin after registration and document submission
+          before you can start using the Partner App.
+        </Text>
+      </View>
+
+      <Pressable
+        disabled={!selectedRole}
+        onPress={handleContinue}
+        style={({ pressed }) => [
+          styles.continueButton,
+          !selectedRole && styles.continueButtonDisabled,
+          pressed && selectedRole && styles.pressed,
+        ]}>
+        <Text style={[styles.continueLabel, !selectedRole && styles.continueLabelDisabled]}>
+          Continue
+        </Text>
+      </Pressable>
+    </PartnerScreenLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  headerBar: {
-    paddingHorizontal: layout.screenPadding,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  content: {
-    paddingTop: spacing.sm,
-  },
-  title: {
-    marginTop: spacing.lg,
-    color: colors.dark,
-    fontSize: typography.sizes.xxl,
-    fontWeight: typography.weights.extrabold,
-    textAlign: 'center',
-  },
-  subtitle: {
-    marginTop: spacing.sm,
-    color: colors.grey,
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.medium,
-    textAlign: 'center',
-    lineHeight: typography.lineHeights.relaxed,
-  },
-  progressWrap: {
-    marginTop: spacing.lg,
-    marginBottom: spacing.lg,
-  },
   infoCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -218,6 +140,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.lightGrey,
     borderRadius: radius.md,
     padding: spacing.lg,
+    marginTop: spacing.md,
     marginBottom: spacing.xl,
   },
   infoText: {
@@ -229,7 +152,7 @@ const styles = StyleSheet.create({
   continueButton: {
     minHeight: 52,
     borderRadius: radius.button,
-    backgroundColor: colors.partnerRed,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -237,7 +160,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.border,
   },
   continueLabel: {
-    color: colors.background,
+    color: colors.dark,
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
   },
@@ -246,8 +169,7 @@ const styles = StyleSheet.create({
   },
   footerLink: {
     alignItems: 'center',
-    marginTop: spacing.lg,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   footerText: {
     color: colors.dark,
@@ -255,7 +177,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   footerLinkText: {
-    color: colors.partnerRed,
+    color: colors.primary,
     fontWeight: typography.weights.bold,
   },
   pressed: {

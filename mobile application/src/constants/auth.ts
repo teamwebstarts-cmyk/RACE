@@ -7,6 +7,9 @@ export const AUTH_USER = {
 /** Demo: registered returning user (10-digit mobile without country code) */
 export const REGISTERED_PHONE_DIGITS = '8249472910';
 
+/** Partner app demo mobile (matches OTP screen mockup) */
+export const PARTNER_DEMO_PHONE = '9876543210';
+
 export const DEMO_OTP = '247392';
 
 export const DEMO_PIN = '1234';

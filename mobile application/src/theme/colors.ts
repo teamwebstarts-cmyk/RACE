@@ -51,9 +51,9 @@ export const colors = {
   secondary: '#00BAC6',
   accentOrange: '#F4A115',
   accentRed: sharedColors.error,
-  partnerRed: '#D32F2F',
-  partnerRedLight: '#FDECEC',
-  partnerOrangeLight: '#FFF4E5',
+  partnerRed: sharedColors.primary,
+  partnerRedLight: sharedColors.goldLight,
+  partnerOrangeLight: '#FFF8E7',
   overlay: 'rgba(26, 26, 26, 0.92)',
   shadow: 'rgba(0, 0, 0, 0.12)',
 

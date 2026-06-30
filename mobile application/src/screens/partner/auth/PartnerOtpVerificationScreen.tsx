@@ -1,23 +1,20 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  KeyboardAvoidingView,
-  Platform,
+  ActivityIndicator,
   Pressable,
-  ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-import { ArrowLeft } from 'lucide-react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Info, Pencil, ShieldCheck } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-import AuthToast, { AuthLoadingOverlay } from '../../../components/auth/AuthToast';
-import OtpInput from '../../../components/auth/OtpInput';
-import PartnerBrandLogo from '../../../components/partner/PartnerBrandLogo';
+import PartnerOtpInput from '../../../components/partner/PartnerOtpInput';
+import PartnerScreenLayout from '../../../components/partner/PartnerScreenLayout';
+import { DEMO_OTP } from '../../../constants/auth';
 import { useAppDispatch, useAppSelector } from '../../../redux/hooks';
-import { clearSignupPath } from '../../../redux/onboarding/onboardingSlice';
+import { completeOnboarding } from '../../../redux/auth/authSlice';
+import { usePartnerOnboardingStore } from '../../../store/partnerOnboardingStore';
 import {
   getApiErrorMessage,
   useSendOtpMutation,
@@ -26,24 +23,41 @@ import {
 import type {
   PartnerAuthStackParamList,
   PartnerRootStackParamList,
+  PartnerRole,
 } from '../../../types/partnerNavigation';
-import { colors, layout, radius, spacing, typography } from '../../../theme';
+import { colors, radius, spacing, typography } from '../../../theme';
 
 type Props = NativeStackScreenProps<PartnerAuthStackParamList, 'PartnerOtpVerification'>;
 
 const RESEND_SECONDS = 60;
 
+function formatPartnerPhone(mobileNumber: string): string {
+  const digits = mobileNumber.replace(/\D/g, '');
+  if (digits.length === 10) {
+    return `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`;
+  }
+  return `+91 ${digits}`;
+}
+
+function formatTimer(seconds: number): string {
+  const minutes = Math.floor(seconds / 60);
+  const remainder = seconds % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(remainder).padStart(2, '0')}`;
+}
+
 export default function PartnerOtpVerificationScreen({ navigation, route }: Props) {
-  const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
-  const { mobileNumber, devOtp, isExistingUser = false } = route.params;
+  const { mobileNumber, devOtp } = route.params;
   const loading = useAppSelector((state) => state.auth.loading);
+  const signupAccountType = useAppSelector((state) => state.onboarding.signupAccountType);
+  const selectedRole = usePartnerOnboardingStore((state) => state.selectedRole);
+  const demoOtp = devOtp ?? DEMO_OTP;
 
   const [otp, setOtp] = useState('');
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [secondsLeft, setSecondsLeft] = useState(RESEND_SECONDS);
   const [verified, setVerified] = useState(false);
+  const verifyLockRef = useRef(false);
 
   const verifyOtpMutation = useVerifyOtpMutation();
   const sendOtpMutation = useSendOtpMutation();
@@ -56,49 +70,86 @@ export default function PartnerOtpVerificationScreen({ navigation, route }: Prop
     return () => clearInterval(timer);
   }, [secondsLeft]);
 
-  const goToPartnerMain = () => {
-    const rootNavigation = navigation.getParent<NativeStackScreenProps<PartnerRootStackParamList>['navigation']>();
+  const goToPartnerMain = useCallback(() => {
+    const rootNavigation =
+      navigation.getParent<NativeStackScreenProps<PartnerRootStackParamList>['navigation']>();
     rootNavigation?.reset({
       index: 0,
       routes: [{ name: 'PartnerMain' }],
     });
-  };
+  }, [navigation]);
 
-  const handleVerify = async () => {
-    if (verified || loading) {
-      return;
+  const goToRegistration = useCallback(
+    (role: PartnerRole) => {
+      const rootNavigation =
+        navigation.getParent<NativeStackScreenProps<PartnerRootStackParamList>['navigation']>();
+      rootNavigation?.reset({
+        index: 0,
+        routes: [{ name: 'PartnerRegistration', params: { role, mobileNumber } }],
+      });
+    },
+    [mobileNumber, navigation],
+  );
+
+  const resolvePartnerRole = useCallback((): PartnerRole | null => {
+    if (signupAccountType === 'vendor' || signupAccountType === 'driver') {
+      return signupAccountType;
     }
-
-    setError('');
-    setSuccess('');
-
-    if (otp.length !== 6) {
-      setError('Enter the 6-digit OTP');
-      return;
+    if (selectedRole === 'vendor' || selectedRole === 'driver') {
+      return selectedRole;
     }
+    return null;
+  }, [selectedRole, signupAccountType]);
 
-    try {
-      await verifyOtpMutation.mutateAsync({ mobileNumber, otp });
-      setVerified(true);
-      setSuccess(isExistingUser ? 'Login successful' : 'OTP verified');
-      dispatch(clearSignupPath());
-      goToPartnerMain();
-    } catch (err) {
-      setError(getApiErrorMessage(err, 'Invalid OTP'));
-    }
-  };
+  const handleVerify = useCallback(
+    async (code: string) => {
+      if (verified || loading || verifyLockRef.current || code.length !== 6) {
+        return;
+      }
+
+      verifyLockRef.current = true;
+      setError('');
+
+      try {
+        const result = await verifyOtpMutation.mutateAsync({ mobileNumber, otp: code });
+        setVerified(true);
+        const role = resolvePartnerRole();
+
+        if (role && (result.onboardingRequired || !result.user.isProfileCompleted)) {
+          goToRegistration(role);
+          return;
+        }
+
+        dispatch(completeOnboarding(result.user));
+        goToPartnerMain();
+      } catch (err) {
+        setError(getApiErrorMessage(err, 'Invalid OTP'));
+        setOtp('');
+        verifyLockRef.current = false;
+      }
+    },
+    [
+      dispatch,
+      goToPartnerMain,
+      goToRegistration,
+      loading,
+      mobileNumber,
+      resolvePartnerRole,
+      verified,
+      verifyOtpMutation,
+    ],
+  );
 
   const handleResend = async () => {
-    if (secondsLeft > 0) {
+    if (secondsLeft > 0 || loading) {
       return;
     }
 
     setError('');
-    setSuccess('');
+    verifyLockRef.current = false;
 
     try {
       const result = await sendOtpMutation.mutateAsync({ mobileNumber });
-      setSuccess('OTP resent successfully');
       setSecondsLeft(RESEND_SECONDS);
       setOtp('');
       navigation.setParams({
@@ -110,131 +161,137 @@ export default function PartnerOtpVerificationScreen({ navigation, route }: Prop
     }
   };
 
+  const isVerifying = loading && otp.length === 6;
+
   return (
-    <View style={styles.root}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
-
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <View style={[styles.headerBar, { paddingTop: insets.top + spacing.sm }]}>
-          <Pressable
-            onPress={() => navigation.goBack()}
-            hitSlop={10}
-            style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
-            accessibilityRole="button"
-            accessibilityLabel="Go back">
-            <ArrowLeft size={22} color={colors.dark} strokeWidth={2.5} />
-          </Pressable>
-        </View>
-
-        <ScrollView
-          bounces={false}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={[
-            styles.content,
-            {
-              paddingBottom: insets.bottom + spacing.xl,
-              paddingHorizontal: layout.screenPadding,
-            },
-          ]}>
-          <PartnerBrandLogo maxWidth={200} />
-
-          <Text style={styles.title}>Verify OTP</Text>
-          <Text style={styles.subtitle}>
-            Enter the OTP sent to{' '}
-            <Text style={styles.mobile}>+91 {mobileNumber}</Text>
+    <PartnerScreenLayout
+      title="Verify OTP"
+      subtitle="Enter the 6-digit code sent to your mobile"
+      onBack={() => navigation.goBack()}
+      bottomBar={
+        <>
+          <ShieldCheck size={18} color={colors.primary} strokeWidth={2.2} />
+          <Text style={styles.securityText}>
+            Your data is secure and encrypted{'\n'}We never share your information
           </Text>
+        </>
+      }>
+      <View style={styles.phoneRow}>
+        <Text style={styles.phoneText}>{formatPartnerPhone(mobileNumber)}</Text>
+        <Pressable
+          onPress={() => navigation.goBack()}
+          hitSlop={8}
+          style={({ pressed }) => [styles.editButton, pressed && styles.pressed]}
+          accessibilityRole="button"
+          accessibilityLabel="Edit mobile number">
+          <Pencil size={16} color={colors.primary} strokeWidth={2.2} />
+        </Pressable>
+      </View>
 
-          {__DEV__ && devOtp ? (
-            <View style={styles.devOtpBox}>
-              <Text style={styles.devOtpLabel}>Dev OTP</Text>
-              <Text style={styles.devOtpCode}>{devOtp}</Text>
-            </View>
-          ) : null}
+      {__DEV__ ? (
+        <Pressable
+          onPress={() => {
+            setOtp(demoOtp);
+            if (error) {
+              setError('');
+            }
+          }}
+          style={({ pressed }) => [styles.devOtpBox, pressed && styles.pressed]}>
+          <Text style={styles.devOtpLabel}>Demo OTP (tap to fill)</Text>
+          <Text style={styles.devOtpCode}>{demoOtp}</Text>
+        </Pressable>
+      ) : null}
 
-          <OtpInput value={otp} onChange={setOtp} disabled={loading} />
+      <PartnerOtpInput
+        value={otp}
+        onChange={(value) => {
+          setOtp(value);
+          if (error) {
+            setError('');
+          }
+          if (value.length < 6) {
+            verifyLockRef.current = false;
+          }
+        }}
+        disabled={loading || verified}
+        onComplete={(code) => void handleVerify(code)}
+      />
 
-          <View style={styles.timerRow}>
-            {secondsLeft > 0 ? (
-              <Text style={styles.timerText}>Resend OTP in {secondsLeft}s</Text>
-            ) : (
-              <Pressable onPress={() => void handleResend()}>
-                <Text style={styles.resendText}>Resend OTP</Text>
-              </Pressable>
-            )}
-          </View>
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-          <AuthToast message={error} type="error" />
-          <AuthToast message={success} type="success" />
+      <Text style={styles.timerText}>
+        Resend OTP in <Text style={styles.timerValue}>{formatTimer(secondsLeft)}</Text>
+      </Text>
 
-          <Pressable
-            disabled={otp.length !== 6 || loading || verified}
-            onPress={() => void handleVerify()}
-            style={({ pressed }) => [
-              styles.primaryButton,
-              (otp.length !== 6 || loading || verified) && styles.primaryButtonDisabled,
-              pressed && otp.length === 6 && !loading && !verified && styles.pressed,
+      <Pressable
+        disabled={secondsLeft > 0 || loading}
+        onPress={() => void handleResend()}
+        style={styles.resendRow}>
+        <Text style={styles.resendPrompt}>
+          Didn't receive the code?{' '}
+          <Text
+            style={[
+              styles.resendAction,
+              (secondsLeft > 0 || loading) && styles.resendActionDisabled,
             ]}>
-            <Text style={styles.primaryButtonLabel}>
-              {verified ? 'Success!' : loading ? 'Verifying...' : 'Verify & Continue'}
-            </Text>
-          </Pressable>
-        </ScrollView>
+            Resend OTP
+          </Text>
+        </Text>
+      </Pressable>
 
-        <AuthLoadingOverlay visible={loading} label="Verifying OTP..." />
-      </KeyboardAvoidingView>
-    </View>
+      <View style={styles.infoCard}>
+        <Info size={18} color={colors.primary} strokeWidth={2.2} />
+        <Text style={styles.infoText}>
+          <Text style={styles.infoTitle}>Didn't get the code?</Text> Please check your SMS inbox
+          or spam folder.
+        </Text>
+      </View>
+
+      <Pressable
+        disabled={otp.length !== 6 || loading || verified}
+        onPress={() => void handleVerify(otp)}
+        style={({ pressed }) => [
+          styles.primaryButton,
+          (otp.length !== 6 || verified) && !loading && styles.primaryButtonDisabled,
+          pressed && otp.length === 6 && !loading && !verified && styles.pressed,
+        ]}>
+        {isVerifying ? (
+          <View style={styles.buttonContent}>
+            <ActivityIndicator size="small" color={colors.dark} />
+            <Text style={styles.primaryButtonLabel}>Verifying OTP...</Text>
+          </View>
+        ) : (
+          <Text style={styles.primaryButtonLabel}>
+            {verified ? 'Verified' : 'Verify & Continue'}
+          </Text>
+        )}
+      </Pressable>
+    </PartnerScreenLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  flex: {
-    flex: 1,
-  },
-  headerBar: {
-    paddingHorizontal: layout.screenPadding,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
+  phoneRow: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
   },
-  content: {
-    paddingTop: spacing.sm,
-    flexGrow: 1,
-  },
-  title: {
-    marginTop: spacing.lg,
+  phoneText: {
     color: colors.dark,
-    fontSize: typography.sizes.xxl,
-    fontWeight: typography.weights.extrabold,
-    textAlign: 'center',
-  },
-  subtitle: {
-    marginTop: spacing.sm,
-    marginBottom: spacing.xl,
-    color: colors.grey,
     fontSize: typography.sizes.md,
-    textAlign: 'center',
-    lineHeight: typography.lineHeights.relaxed,
-  },
-  mobile: {
-    color: colors.partnerRed,
     fontWeight: typography.weights.bold,
+  },
+  editButton: {
+    padding: spacing.xs,
   },
   devOtpBox: {
     backgroundColor: colors.partnerRedLight,
     borderRadius: radius.md,
     padding: spacing.md,
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: '#F5D98A',
     alignItems: 'center',
     marginBottom: spacing.lg,
   },
@@ -245,38 +302,87 @@ const styles = StyleSheet.create({
   },
   devOtpCode: {
     marginTop: spacing.xs,
-    color: colors.partnerRed,
+    color: colors.primary,
     fontSize: typography.sizes.hero,
     fontWeight: typography.weights.extrabold,
     letterSpacing: 6,
   },
-  timerRow: {
-    alignItems: 'center',
-    marginVertical: spacing.lg,
+  errorText: {
+    marginTop: spacing.md,
+    color: colors.error,
+    fontSize: typography.sizes.sm,
+    textAlign: 'center',
   },
   timerText: {
+    marginTop: spacing.xl,
     color: colors.grey,
     fontSize: typography.sizes.sm,
+    textAlign: 'center',
   },
-  resendText: {
-    color: colors.partnerRed,
-    fontSize: typography.sizes.md,
+  timerValue: {
+    color: colors.primary,
+    fontWeight: typography.weights.bold,
+  },
+  resendRow: {
+    marginTop: spacing.sm,
+    alignItems: 'center',
+  },
+  resendPrompt: {
+    color: colors.grey,
+    fontSize: typography.sizes.sm,
+    textAlign: 'center',
+  },
+  resendAction: {
+    color: colors.primary,
+    fontWeight: typography.weights.bold,
+  },
+  resendActionDisabled: {
+    opacity: 0.45,
+  },
+  infoCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+    marginTop: spacing.xl,
+    marginBottom: spacing.xl,
+    padding: spacing.lg,
+    borderRadius: radius.md,
+    backgroundColor: colors.partnerRedLight,
+  },
+  infoText: {
+    flex: 1,
+    color: colors.dark,
+    fontSize: typography.sizes.sm,
+    lineHeight: typography.lineHeights.relaxed,
+  },
+  infoTitle: {
     fontWeight: typography.weights.bold,
   },
   primaryButton: {
     minHeight: 52,
     borderRadius: radius.button,
-    backgroundColor: colors.partnerRed,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   primaryButtonDisabled: {
     opacity: 0.55,
   },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
   primaryButtonLabel: {
-    color: colors.background,
+    color: colors.dark,
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
+  },
+  securityText: {
+    color: colors.grey,
+    fontSize: typography.sizes.xs,
+    textAlign: 'center',
+    lineHeight: typography.lineHeights.normal,
   },
   pressed: {
     opacity: 0.9,

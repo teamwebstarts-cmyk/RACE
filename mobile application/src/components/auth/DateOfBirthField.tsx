@@ -15,6 +15,7 @@ interface DateOfBirthFieldProps {
   error?: string;
   scale?: number;
   required?: boolean;
+  variant?: 'filled' | 'outlined';
 }
 
 export default function DateOfBirthField({
@@ -23,6 +24,7 @@ export default function DateOfBirthField({
   error,
   scale = 1,
   required = true,
+  variant = 'outlined',
 }: DateOfBirthFieldProps) {
   const px = (n: number) => Math.round(n * scale);
   const [showPicker, setShowPicker] = useState(false);
@@ -46,12 +48,13 @@ export default function DateOfBirthField({
   return (
     <View>
       <FormField
-        variant="outlined"
-        compact
+        variant={variant}
+        compact={variant === 'outlined'}
         scale={scale}
         label="Date of Birth"
         required={required}
         Icon={Calendar}
+        iconColor={colors.primary}
         value={value}
         placeholder="Tap to select date"
         editable={false}
@@ -63,6 +66,7 @@ export default function DateOfBirthField({
         <View
           style={[
             styles.iosPickerCard,
+            variant === 'filled' && styles.iosPickerCardFilled,
             {
               borderRadius: px(14),
               padding: px(12),
@@ -114,6 +118,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     borderWidth: 1,
     borderColor: colors.border,
+  },
+  iosPickerCardFilled: {
+    backgroundColor: colors.goldLight,
+    borderColor: '#F5D98A',
   },
   iosPickerHeader: {
     flexDirection: 'row',

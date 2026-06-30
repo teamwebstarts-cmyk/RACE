@@ -35,6 +35,7 @@ export interface SendOtpResponse {
   expiresIn: number;
   isExistingUser: boolean;
   isProfileCompleted: boolean;
+  devOtp?: string;
 }
 
 export interface VerifyOtpRequest {

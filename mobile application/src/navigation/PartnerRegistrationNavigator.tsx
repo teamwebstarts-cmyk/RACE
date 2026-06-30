@@ -1,0 +1,91 @@
+import React, { useEffect } from 'react';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+
+import DriverDocumentsScreen from '../screens/partner/registration/driver/DriverDocumentsScreen';
+import DriverPersonalInfoScreen from '../screens/partner/registration/driver/DriverPersonalInfoScreen';
+import DriverReviewScreen from '../screens/partner/registration/driver/DriverReviewScreen';
+import DriverVehicleInfoScreen from '../screens/partner/registration/driver/DriverVehicleInfoScreen';
+import VendorBusinessAddressScreen from '../screens/partner/registration/vendor/VendorBusinessAddressScreen';
+import VendorBusinessInfoScreen from '../screens/partner/registration/vendor/VendorBusinessInfoScreen';
+import VendorDocumentsScreen from '../screens/partner/registration/vendor/VendorDocumentsScreen';
+import VendorReviewScreen from '../screens/partner/registration/vendor/VendorReviewScreen';
+import { usePartnerRegistrationStore } from '../store/partnerRegistrationStore';
+import type {
+  PartnerRegistrationStackParamList,
+  PartnerRootStackParamList,
+} from '../types/partnerNavigation';
+import { colors } from '../theme';
+
+const Stack = createNativeStackNavigator<PartnerRegistrationStackParamList>();
+
+type Props = NativeStackScreenProps<PartnerRootStackParamList, 'PartnerRegistration'>;
+
+export default function PartnerRegistrationNavigator({ route }: Props) {
+  const { role, mobileNumber } = route.params;
+  const setRole = usePartnerRegistrationStore((s) => s.setRole);
+  const setDriverPersonal = usePartnerRegistrationStore((s) => s.setDriverPersonal);
+  const setVendorBusiness = usePartnerRegistrationStore((s) => s.setVendorBusiness);
+
+  useEffect(() => {
+    setRole(role);
+    if (mobileNumber) {
+      setDriverPersonal({ mobileNumber });
+      setVendorBusiness({ mobileNumber });
+    }
+  }, [mobileNumber, role, setDriverPersonal, setRole, setVendorBusiness]);
+
+  const screenParams = { role, mobileNumber };
+  const initialRoute = role === 'driver' ? 'DriverPersonalInfo' : 'VendorBusinessInfo';
+
+  return (
+    <Stack.Navigator
+      initialRouteName={initialRoute}
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+        animation: 'slide_from_right',
+      }}>
+      <Stack.Screen
+        name="DriverPersonalInfo"
+        component={DriverPersonalInfoScreen}
+        initialParams={screenParams}
+      />
+      <Stack.Screen
+        name="DriverVehicleInfo"
+        component={DriverVehicleInfoScreen}
+        initialParams={screenParams}
+      />
+      <Stack.Screen
+        name="DriverDocuments"
+        component={DriverDocumentsScreen}
+        initialParams={screenParams}
+      />
+      <Stack.Screen
+        name="DriverReview"
+        component={DriverReviewScreen}
+        initialParams={screenParams}
+      />
+      <Stack.Screen
+        name="VendorBusinessInfo"
+        component={VendorBusinessInfoScreen}
+        initialParams={screenParams}
+      />
+      <Stack.Screen
+        name="VendorBusinessAddress"
+        component={VendorBusinessAddressScreen}
+        initialParams={screenParams}
+      />
+      <Stack.Screen
+        name="VendorDocuments"
+        component={VendorDocumentsScreen}
+        initialParams={screenParams}
+      />
+      <Stack.Screen
+        name="VendorReview"
+        component={VendorReviewScreen}
+        initialParams={screenParams}
+      />
+    </Stack.Navigator>
+  );
+}

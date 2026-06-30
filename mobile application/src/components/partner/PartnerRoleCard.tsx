@@ -49,7 +49,7 @@ export default function PartnerRoleCard({
       ]}>
       {selected ? (
         <View style={styles.checkWrap}>
-          <Check size={14} color={colors.background} strokeWidth={3} />
+          <Check size={14} color={colors.dark} strokeWidth={3} />
         </View>
       ) : null}
 
@@ -66,7 +66,7 @@ export default function PartnerRoleCard({
         <ChevronRight size={22} color={accentColor} strokeWidth={2.5} />
       </View>
 
-      <View style={[styles.badge, { backgroundColor: selected ? '#FEE2E2' : `${accentColor}18` }]}>
+      <View style={[styles.badge, { backgroundColor: selected ? '#FFF0C2' : `${accentColor}18` }]}>
         <Text style={[styles.badgeText, { color: accentColor }]}>{badge}</Text>
       </View>
     </Pressable>

@@ -1,23 +1,19 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
-  ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
-import { ArrowLeft, ChevronDown, Shield } from 'lucide-react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ChevronDown, Shield } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import AuthToast, { AuthLoadingOverlay } from '../../../components/auth/AuthToast';
 import GoogleIcon from '../../../components/auth/GoogleIcon';
-import PartnerBrandLogo from '../../../components/partner/PartnerBrandLogo';
+import PartnerScreenLayout from '../../../components/partner/PartnerScreenLayout';
+import { DEMO_OTP, PARTNER_DEMO_PHONE } from '../../../constants/auth';
 import { useAppSelector } from '../../../redux/hooks';
 import {
   getApiErrorMessage,
@@ -25,19 +21,18 @@ import {
 } from '../../../services/auth/useAuthMutations';
 import { usePartnerOnboardingStore } from '../../../store/partnerOnboardingStore';
 import type { PartnerAuthStackParamList } from '../../../types/partnerNavigation';
-import { colors, layout, radius, spacing, typography } from '../../../theme';
+import { colors, radius, spacing, typography } from '../../../theme';
 
 type Props = NativeStackScreenProps<PartnerAuthStackParamList, 'PartnerLogin'>;
 
 const MOBILE_REGEX = /^[6-9]\d{9}$/;
 
 export default function PartnerLoginScreen({ navigation, route }: Props) {
-  const insets = useSafeAreaInsets();
   const loading = useAppSelector((state) => state.auth.loading);
   const signupAccountType = useAppSelector((state) => state.onboarding.signupAccountType);
   const setSelectedRole = usePartnerOnboardingStore((state) => state.setSelectedRole);
 
-  const [mobileNumber, setMobileNumber] = useState('');
+  const [mobileNumber, setMobileNumber] = useState(__DEV__ ? PARTNER_DEMO_PHONE : '');
   const [error, setError] = useState('');
 
   const sendOtpMutation = useSendOtpMutation();
@@ -77,151 +72,128 @@ export default function PartnerLoginScreen({ navigation, route }: Props) {
   };
 
   return (
-    <View style={styles.root}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
-
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <View style={[styles.headerBar, { paddingTop: insets.top + spacing.sm }]}>
-          <Pressable
-            onPress={() => navigation.goBack()}
-            hitSlop={10}
-            style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
-            accessibilityRole="button"
-            accessibilityLabel="Go back">
-            <ArrowLeft size={22} color={colors.dark} strokeWidth={2.5} />
-          </Pressable>
-        </View>
-
-        <ScrollView
-          bounces={false}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={[
-            styles.content,
-            { paddingBottom: insets.bottom + spacing.md, paddingHorizontal: layout.screenPadding },
-          ]}>
-          <PartnerBrandLogo maxWidth={200} />
-
-          <Text style={styles.title}>Login</Text>
-          <Text style={styles.subtitle}>Enter your mobile number to continue</Text>
-          {roleLabel ? <Text style={styles.roleHint}>Continuing as {roleLabel}</Text> : null}
-
-          <View style={styles.phoneField}>
-            <View style={styles.countryPicker}>
-              <Text style={styles.flag}>🇮🇳</Text>
-              <Text style={styles.countryCode}>+91</Text>
-              <ChevronDown size={16} color={colors.grey} strokeWidth={2.5} />
-            </View>
-            <View style={styles.phoneDivider} />
-            <TextInput
-              value={mobileNumber}
-              onChangeText={(text) => {
-                setMobileNumber(text.replace(/\D/g, '').slice(0, 10));
-                if (error) setError('');
-              }}
-              keyboardType="number-pad"
-              placeholder="Enter mobile number"
-              placeholderTextColor={colors.grey}
-              maxLength={10}
-              style={styles.phoneInput}
-            />
-          </View>
-
-          <View style={styles.otpNotice}>
-            <Shield size={16} color={colors.partnerRed} strokeWidth={2.2} />
-            <Text style={styles.otpNoticeText}>
-              We'll send you a One Time Password (OTP) to verify your number
-            </Text>
-          </View>
-
-          <AuthToast message={error} type="error" />
-
-          <Pressable
-            disabled={!isValid || loading}
-            onPress={() => void handleSendOtp()}
-            style={({ pressed }) => [
-              styles.primaryButton,
-              (!isValid || loading) && styles.primaryButtonDisabled,
-              pressed && isValid && !loading && styles.pressed,
-            ]}>
-            <Text style={styles.primaryButtonLabel}>
-              {loading ? 'Sending OTP...' : 'Send OTP'}
-            </Text>
-          </Pressable>
-
-          <View style={styles.dividerRow}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>OR</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          <Pressable
-            style={({ pressed }) => [styles.googleButton, pressed && styles.pressed]}
-            onPress={() => Alert.alert('Google Sign-In', 'Google sign-in coming soon')}>
-            <GoogleIcon size={22} />
-            <Text style={styles.googleButtonLabel}>Continue with Google</Text>
-          </Pressable>
-
+    <>
+      <PartnerScreenLayout
+        title="Login"
+        subtitle="Enter your mobile number to continue"
+        onBack={() => navigation.goBack()}
+        headerExtra={
+          roleLabel ? <Text style={styles.roleHint}>Continuing as {roleLabel}</Text> : null
+        }
+        footer={
           <Text style={styles.legalText}>
             By continuing, you agree to our{' '}
             <Text style={styles.legalLink}>Terms & Conditions</Text> and{' '}
             <Text style={styles.legalLink}>Privacy Policy</Text>
           </Text>
-        </ScrollView>
+        }>
+        {__DEV__ ? (
+          <View style={styles.demoCard}>
+            <Text style={styles.demoTitle}>Demo login</Text>
+            <Text style={styles.demoText}>
+              Mobile: <Text style={styles.demoValue}>{PARTNER_DEMO_PHONE}</Text>
+            </Text>
+            <Text style={styles.demoText}>
+              OTP: <Text style={styles.demoValue}>{DEMO_OTP}</Text> (after Send OTP)
+            </Text>
+          </View>
+        ) : null}
 
-        <AuthLoadingOverlay visible={loading} label="Sending OTP..." />
-      </KeyboardAvoidingView>
-    </View>
+        <View style={styles.phoneField}>
+          <View style={styles.countryPicker}>
+            <Text style={styles.flag}>🇮🇳</Text>
+            <Text style={styles.countryCode}>+91</Text>
+            <ChevronDown size={16} color={colors.grey} strokeWidth={2.5} />
+          </View>
+          <View style={styles.phoneDivider} />
+          <TextInput
+            value={mobileNumber}
+            onChangeText={(text) => {
+              setMobileNumber(text.replace(/\D/g, '').slice(0, 10));
+              if (error) setError('');
+            }}
+            keyboardType="number-pad"
+            placeholder="Enter mobile number"
+            placeholderTextColor={colors.grey}
+            maxLength={10}
+            style={styles.phoneInput}
+          />
+        </View>
+
+        <View style={styles.otpNotice}>
+          <Shield size={16} color={colors.primary} strokeWidth={2.2} />
+          <Text style={styles.otpNoticeText}>
+            We'll send you a One Time Password (OTP) to verify your number
+          </Text>
+        </View>
+
+        <AuthToast message={error} type="error" />
+
+        <Pressable
+          disabled={!isValid || loading}
+          onPress={() => void handleSendOtp()}
+          style={({ pressed }) => [
+            styles.primaryButton,
+            (!isValid || loading) && styles.primaryButtonDisabled,
+            pressed && isValid && !loading && styles.pressed,
+          ]}>
+          <Text style={styles.primaryButtonLabel}>
+            {loading ? 'Sending OTP...' : 'Send OTP'}
+          </Text>
+        </Pressable>
+
+        <View style={styles.dividerRow}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>OR</Text>
+          <View style={styles.dividerLine} />
+        </View>
+
+        <Pressable
+          style={({ pressed }) => [styles.googleButton, pressed && styles.pressed]}
+          onPress={() => Alert.alert('Google Sign-In', 'Google sign-in coming soon')}>
+          <GoogleIcon size={22} />
+          <Text style={styles.googleButtonLabel}>Continue with Google</Text>
+        </Pressable>
+      </PartnerScreenLayout>
+
+      <AuthLoadingOverlay visible={loading} label="Sending OTP..." />
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  flex: {
-    flex: 1,
-  },
-  headerBar: {
-    paddingHorizontal: layout.screenPadding,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  content: {
-    paddingTop: spacing.sm,
-    flexGrow: 1,
-  },
-  title: {
-    marginTop: spacing.lg,
-    color: colors.dark,
-    fontSize: typography.sizes.xxl,
-    fontWeight: typography.weights.extrabold,
-    textAlign: 'center',
-  },
-  subtitle: {
-    marginTop: spacing.sm,
-    color: colors.grey,
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.medium,
-    textAlign: 'center',
-    lineHeight: typography.lineHeights.relaxed,
-  },
   roleHint: {
-    marginTop: spacing.sm,
-    color: colors.partnerRed,
+    color: colors.primary,
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.semibold,
     textAlign: 'center',
   },
+  demoCard: {
+    marginBottom: spacing.lg,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.partnerRedLight,
+    borderWidth: 1,
+    borderColor: '#F5D98A',
+  },
+  demoTitle: {
+    color: colors.primary,
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.bold,
+    marginBottom: spacing.xs,
+    textAlign: 'center',
+  },
+  demoText: {
+    color: colors.dark,
+    fontSize: typography.sizes.sm,
+    textAlign: 'center',
+    lineHeight: typography.lineHeights.normal,
+  },
+  demoValue: {
+    fontWeight: typography.weights.bold,
+    color: colors.primary,
+  },
   phoneField: {
-    marginTop: spacing.xl,
     flexDirection: 'row',
     alignItems: 'center',
     minHeight: 54,
@@ -273,7 +245,7 @@ const styles = StyleSheet.create({
   primaryButton: {
     minHeight: 52,
     borderRadius: radius.button,
-    backgroundColor: colors.partnerRed,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -281,7 +253,7 @@ const styles = StyleSheet.create({
     opacity: 0.55,
   },
   primaryButtonLabel: {
-    color: colors.background,
+    color: colors.dark,
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
   },
@@ -318,14 +290,13 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.semibold,
   },
   legalText: {
-    marginTop: spacing.xl,
     color: colors.grey,
     fontSize: typography.sizes.sm,
     textAlign: 'center',
     lineHeight: typography.lineHeights.relaxed,
   },
   legalLink: {
-    color: colors.partnerRed,
+    color: colors.primary,
     fontWeight: typography.weights.semibold,
   },
   pressed: {
