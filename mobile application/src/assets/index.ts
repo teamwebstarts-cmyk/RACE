@@ -10,6 +10,7 @@ export const images = {
   splashArt:     require('./images/splash-art.png'),
   splashHeader:  require('./images/splash-header.png'),
   splashTruck:   require('./images/splash-truck.png'),
+  partnerWelcomeIllustration: require('./images/partner-welcome-illustration.png'),
   onboarding1:   require('./images/onboarding-1.png'),
   onboarding2:   require('./images/onboarding-2.png'),
   onboarding3:   require('./images/onboarding-3.png'),

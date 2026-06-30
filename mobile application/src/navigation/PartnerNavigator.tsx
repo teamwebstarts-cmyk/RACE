@@ -12,7 +12,7 @@ import BrandLogo from '../components/ui/BrandLogo';
 import type {
   PartnerAccountStackParamList,
   PartnerTabParamList,
-} from '../types/navigation';
+} from '../types/partnerNavigation';
 import { colors, typography } from '../theme';
 
 const Tab = createBottomTabNavigator<PartnerTabParamList>();

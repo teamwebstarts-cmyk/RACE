@@ -51,8 +51,20 @@ export const colors = {
   secondary: '#00BAC6',
   accentOrange: '#F4A115',
   accentRed: sharedColors.error,
+  partnerRed: '#D32F2F',
+  partnerRedLight: '#FDECEC',
+  partnerOrangeLight: '#FFF4E5',
   overlay: 'rgba(26, 26, 26, 0.92)',
   shadow: 'rgba(0, 0, 0, 0.12)',
+
+  // Partner / dark-surface UI tokens
+  subtext: '#9CA3AF',
+  card: '#1A1A1A',
+  glass: {
+    background: 'rgba(255, 255, 255, 0.06)',
+    border: 'rgba(255, 255, 255, 0.12)',
+  },
+
   categories: categoryThemes,
 };
 

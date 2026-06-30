@@ -8,6 +8,7 @@ import authReducer, {
   updateTokens,
   type AuthState,
 } from './auth/authSlice';
+import onboardingReducer from './onboarding/onboardingSlice';
 import {
   clearPersistedAuthState,
   loadPersistedAuthState,
@@ -51,6 +52,7 @@ const persistAuthMiddleware: Middleware = (storeApi) => (next) => (action) => {
 export const store = configureStore({
   reducer: {
     auth: authReducer,
+    onboarding: onboardingReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(persistAuthMiddleware),
