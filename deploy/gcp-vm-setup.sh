@@ -2,8 +2,8 @@
 #
 # RACE — Google Cloud VM bootstrap
 #
-# Provisions a fresh Ubuntu VM with the `race` user, Node.js 20, Redis,
-# PM2, and nginx so you can deploy the backend API.
+# Provisions a fresh Debian/Ubuntu VM with the `race` user, Node.js 20, MongoDB,
+# Redis, PM2, and nginx so you can deploy the backend API.
 #
 # Usage (on the VM, as root):
 #   sudo bash gcp-vm-setup.sh [race_user] [ssh_deploy_user]
@@ -128,6 +128,33 @@ configure_redis() {
   echo "Redis running on 127.0.0.1:6379"
 }
 
+install_mongodb() {
+  if command -v mongod &>/dev/null; then
+    echo "MongoDB already installed: $(mongod --version | head -1)"
+    systemctl enable mongod
+    systemctl restart mongod
+    return
+  fi
+
+  curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc \
+    | gpg -o /usr/share/keyrings/mongodb-server-7.0.gpg --dearmor
+
+  # Debian 12/13: use MongoDB's bookworm repo
+  echo "deb [ signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/debian bookworm/mongodb-org/7.0 main" \
+    > /etc/apt/sources.list.d/mongodb-org-7.0.list
+
+  apt-get update
+  apt-get install -y mongodb-org
+
+  systemctl enable mongod
+  systemctl restart mongod
+
+  echo "MongoDB running on 127.0.0.1:27017"
+  if command -v mongosh &>/dev/null; then
+    echo "mongosh installed: $(mongosh --version)"
+  fi
+}
+
 install_pm2() {
   npm install -g pm2 typescript
   echo "PM2 installed: $(pm2 -v)"
@@ -181,7 +208,8 @@ RACE VM setup complete
    - Allow TCP 443 (HTTPS, after you add TLS)
    - Optional: TCP 22 for SSH
 
-2. MongoDB Atlas: add this VM's external IP to the Atlas IP allowlist.
+2. MongoDB runs locally — use in .env:
+   MONGODB_URI=mongodb://127.0.0.1:27017/race-service
 
 3. Deploy the backend as user '${RACE_USER}':
 
@@ -206,6 +234,7 @@ RACE VM setup complete
 
 App directory : ${APP_DIR}
 Backend       : ${BACKEND_DIR}
+MongoDB       : mongodb://127.0.0.1:27017/race-service
 Redis         : redis://localhost:6379
 API (internal): http://127.0.0.1:3000
 API (public)  : http://<VM_EXTERNAL_IP>/
@@ -223,6 +252,7 @@ allow_deploy_user_home_access
 install_system_packages
 install_nodejs
 configure_redis
+install_mongodb
 install_pm2
 configure_nginx
 configure_pm2_startup
