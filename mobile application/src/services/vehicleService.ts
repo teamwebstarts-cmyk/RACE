@@ -1,5 +1,5 @@
 import { unwrapApi, api } from './api';
-import type { Vehicle, VehicleInput } from '../types/vehicle';
+import type { Vehicle, VehicleInput, VehicleVerifyResponse } from '../types/vehicle';
 
 export async function getVehicles(): Promise<Vehicle[]> {
   return unwrapApi(api.get('/api/v1/vehicles'));
@@ -21,6 +21,6 @@ export async function deleteVehicle(id: string): Promise<void> {
   await unwrapApi(api.delete(`/api/v1/vehicles/${id}`));
 }
 
-export async function verifyVehicle(id: string): Promise<Vehicle> {
+export async function verifyVehicle(id: string): Promise<VehicleVerifyResponse> {
   return unwrapApi(api.get(`/api/v1/vehicles/${id}/verify`));
 }

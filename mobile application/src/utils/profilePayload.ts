@@ -4,7 +4,7 @@ export type ProfileGender = 'male' | 'female' | 'other' | 'prefer_not_to_say';
 
 export interface UpdateProfileRequest {
   fullName: string;
-  email: string;
+  email?: string;
   gender: ProfileGender;
   dateOfBirth: string;
   emergencyContact: {
@@ -63,16 +63,17 @@ export function normalizeDateOfBirth(value: string): string | null {
 
 export interface ProfileFormInput {
   fullName: string;
-  email: string;
+  email?: string;
   gender: string;
   dateOfBirth: string;
   emergencyPhone: string;
-  emergencyName?: string;
-  emergencyRelationship?: string;
+  emergencyName: string;
+  emergencyRelationship: string;
   addressLine1: string;
-  city?: string;
-  state?: string;
-  pincode?: string;
+  addressLine2: string;
+  city: string;
+  state: string;
+  pincode: string;
   country?: string;
 }
 
@@ -82,21 +83,41 @@ export function validateProfileForm(input: ProfileFormInput): Record<string, str
   if (input.fullName.trim().length < 2) {
     errors.name = 'Please enter your full name';
   }
-  if (!EMAIL_REGEX.test(input.email.trim())) {
+  const email = input.email?.trim() ?? '';
+  if (email && !EMAIL_REGEX.test(email)) {
     errors.email = 'Enter a valid email address';
   }
   if (!normalizeDateOfBirth(input.dateOfBirth)) {
     errors.dob = 'Use date format YYYY-MM-DD (e.g. 1990-01-15)';
   }
-  const emergencyDigits = getPhoneDigits(input.emergencyPhone);
-  if (emergencyDigits.length < 10) {
-    errors.emergency = 'Enter a valid 10-digit emergency number';
-  }
-  if (input.addressLine1.trim().length < 3) {
-    errors.address = 'Please enter your address';
+
+  if (input.emergencyName.trim().length < 2) {
+    errors.emergencyName = 'Enter contact name (minimum 2 characters)';
   }
 
-  const pincode = (input.pincode ?? '751001').trim();
+  const emergencyDigits = getPhoneDigits(input.emergencyPhone);
+  if (emergencyDigits.length !== 10) {
+    errors.emergencyPhone = 'Enter a valid 10-digit mobile number';
+  }
+
+  if (!input.emergencyRelationship.trim()) {
+    errors.emergencyRelationship = 'Select a relationship';
+  }
+
+  if (!input.addressLine1.trim()) {
+    errors.addressLine1 = 'Enter house / flat number';
+  }
+  if (!input.addressLine2.trim()) {
+    errors.addressLine2 = 'Enter area or locality';
+  }
+  if (!input.city.trim()) {
+    errors.city = 'Enter city';
+  }
+  if (!input.state.trim()) {
+    errors.state = 'Enter state';
+  }
+
+  const pincode = input.pincode.trim();
   if (!PINCODE_REGEX.test(pincode)) {
     errors.pincode = 'Enter a valid 6-digit pincode';
   }
@@ -111,26 +132,32 @@ export function buildUpdateProfilePayload(input: ProfileFormInput): UpdateProfil
   }
 
   const emergencyDigits = getPhoneDigits(input.emergencyPhone);
-  const emergencyName = input.emergencyName?.trim() || 'Emergency Contact';
 
-  return sanitizeUpdateProfileRequest({
+  const payload: UpdateProfileRequest = {
     fullName: input.fullName.trim(),
-    email: input.email.trim(),
     gender: mapGender(input.gender),
     dateOfBirth,
     emergencyContact: {
-      name: emergencyName,
+      name: input.emergencyName.trim(),
       mobileNumber: emergencyDigits,
-      relationship: input.emergencyRelationship?.trim() || 'other',
+      relationship: input.emergencyRelationship.trim().toLowerCase(),
     },
     address: {
       line1: input.addressLine1.trim(),
-      city: (input.city ?? 'Bhubaneswar').trim(),
-      state: (input.state ?? 'Odisha').trim(),
-      pincode: (input.pincode ?? '751001').trim(),
-      country: (input.country ?? 'India').trim(),
+      line2: input.addressLine2.trim(),
+      city: input.city.trim(),
+      state: input.state.trim(),
+      pincode: input.pincode.trim(),
+      country: input.country?.trim() || 'India',
     },
-  });
+  };
+
+  const email = input.email?.trim();
+  if (email) {
+    payload.email = email;
+  }
+
+  return sanitizeUpdateProfileRequest(payload);
 }
 
 /** Final gate — ensures PUT body matches backend Zod schema exactly. */
@@ -140,8 +167,8 @@ export function sanitizeUpdateProfileRequest(data: UpdateProfileRequest): Update
     throw new Error('dateOfBirth must be YYYY-MM-DD (e.g. 1990-01-15)');
   }
 
-  const email = data.email.trim();
-  if (!EMAIL_REGEX.test(email)) {
+  const email = data.email?.trim();
+  if (email && !EMAIL_REGEX.test(email)) {
     throw new Error('Enter a valid email address');
   }
 
@@ -162,7 +189,7 @@ export function sanitizeUpdateProfileRequest(data: UpdateProfileRequest): Update
 
   return {
     fullName: data.fullName.trim(),
-    email,
+    ...(email ? { email } : {}),
     gender: mapGender(data.gender),
     dateOfBirth,
     emergencyContact: {

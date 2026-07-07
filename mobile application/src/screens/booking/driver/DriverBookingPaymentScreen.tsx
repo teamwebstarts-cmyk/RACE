@@ -1,0 +1,360 @@
+import React, { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Animated, Pressable, Text, View } from 'react-native';
+import { Check, ChevronDown, ChevronUp, CreditCard, Smartphone, Wallet } from 'lucide-react-native';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+
+import TowingBookingLayout, { useBookingTheme } from '../../../components/booking/TowingBookingLayout';
+import { DriverFareBreakdownCard } from '../../../components/booking/FareBreakdownCard';
+import {
+  DRIVER_ACCENT,
+  DRIVER_LIGHT_BG,
+  getDateReviewLabel,
+  getDriverTypeLabel,
+  getShortLocation,
+} from '../../../constants/driverBooking';
+import { useDriverBooking } from '../../../context/DriverBookingContext';
+import { useServiceBookingPayment } from '../../../hooks/useServiceBookingPayment';
+import { useVehicleStore } from '../../../store/vehicleStore';
+import type { HomeStackParamList } from '../../../types/navigation';
+import { formatRupee } from '../../../utils/driverPricing';
+import { parseStoredDate } from '../../../utils/driverCalendar';
+import { buildDriverBookingRequest } from '../../../utils/serviceBookingPayload';
+import type { DriverFareBreakdown } from '../../../types/fare';
+import { colors, shadows, typography } from '../../../theme';
+
+type Props = NativeStackScreenProps<HomeStackParamList, 'DriverBookingPayment'>;
+
+type PaymentMethodId = 'upi' | 'card' | 'cash';
+
+const PAYMENT_METHODS: Array<{
+  id: PaymentMethodId;
+  label: string;
+  description: string;
+  Icon: typeof Smartphone;
+}> = [
+  {
+    id: 'upi',
+    label: 'UPI',
+    description: 'PhonePe / GPay / Paytm',
+    Icon: Smartphone,
+  },
+  {
+    id: 'card',
+    label: 'Credit / Debit Card',
+    description: 'Visa, Mastercard, RuPay',
+    Icon: CreditCard,
+  },
+  {
+    id: 'cash',
+    label: 'Cash on Service',
+    description: 'Pay when the driver arrives',
+    Icon: Wallet,
+  },
+];
+
+function formatBookingNumber(bookingNumber: string): string {
+  return bookingNumber.startsWith('#') ? bookingNumber : `#${bookingNumber}`;
+}
+
+export default function DriverBookingPaymentScreen({ navigation }: Props) {
+  const { t } = useBookingTheme();
+  const { booking, resetBooking } = useDriverBooking();
+  const { vehicles, fetchVehicles } = useVehicleStore();
+  const { confirmDriver, isConfirming } = useServiceBookingPayment();
+  const [summaryExpanded, setSummaryExpanded] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodId>('upi');
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [confirmedFare, setConfirmedFare] = useState<DriverFareBreakdown | null>(
+    booking.fareBreakdown ?? null,
+  );
+  const successScale = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    void fetchVehicles().catch((error) => {
+      if (__DEV__) {
+        console.warn('[DriverBookingPayment] fetchVehicles failed', error);
+      }
+    });
+  }, [fetchVehicles]);
+
+  useEffect(() => {
+    if (!booking.vehicleCategory) {
+      navigation.goBack();
+    }
+  }, [booking.vehicleCategory, navigation]);
+
+  const advance = booking.advancePayment;
+  const readyToPay = Boolean(booking.vehicleCategory) && advance > 0;
+
+  const summaryRows = [
+    { label: 'Service', value: getDriverTypeLabel(booking.driverType) },
+    { label: 'Pickup', value: getShortLocation(booking.pickup) },
+    { label: 'Date', value: getDateReviewLabel(parseStoredDate(booking.dateId)) },
+    { label: 'Duration', value: `${booking.packageHours} hours` },
+    { label: 'Total', value: formatRupee(booking.totalPrice) },
+  ];
+
+  const handleConfirm = async (_method: PaymentMethodId) => {
+    if (isConfirming || showSuccess || !readyToPay) return;
+    setPaymentMethod(_method);
+
+    try {
+      const payload = buildDriverBookingRequest(booking, vehicles);
+      const { booking: created } = await confirmDriver(payload);
+      const breakdown =
+        (created.fareBreakdown as DriverFareBreakdown | undefined) ?? booking.fareBreakdown ?? null;
+      setConfirmedFare(breakdown);
+
+      setShowSuccess(true);
+      Animated.spring(successScale, {
+        toValue: 1,
+        friction: 5,
+        tension: 80,
+        useNativeDriver: true,
+      }).start();
+
+      const bookingId = formatBookingNumber(created.bookingNumber);
+
+      setTimeout(() => {
+        navigation.replace('DriverBookingConfirmed', {
+          bookingId,
+          apiBookingId: created.id,
+          service: getDriverTypeLabel(booking.driverType),
+          eta: 'Driver will arrive in 30-60 min',
+          fareBreakdown: breakdown ?? undefined,
+        });
+        resetBooking();
+      }, 900);
+    } catch (error) {
+      if (__DEV__) {
+        console.warn('[DriverBookingPayment] confirm booking failed', error);
+      }
+    }
+  };
+
+  if (showSuccess) {
+    return (
+      <TowingBookingLayout title="Pay Advance" step={5} showStep={false} hideFooter accentColor={DRIVER_ACCENT}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16, paddingHorizontal: 16 }}>
+          <Animated.View
+            style={{
+              width: t.px(88),
+              height: t.px(88),
+              borderRadius: t.px(44),
+              backgroundColor: colors.success,
+              alignItems: 'center',
+              justifyContent: 'center',
+              transform: [{ scale: successScale }],
+            }}>
+            <Check size={t.px(42)} color={colors.background} strokeWidth={3} />
+          </Animated.View>
+          <Text
+            style={{
+              fontSize: t.px(20),
+              fontWeight: typography.weights.bold,
+              color: colors.success,
+            }}>
+            Payment successful!
+          </Text>
+          {confirmedFare ? (
+            <View style={{ width: '100%', marginTop: t.px(8) }}>
+              <DriverFareBreakdownCard breakdown={confirmedFare} accentColor={DRIVER_ACCENT} compact />
+            </View>
+          ) : null}
+        </View>
+      </TowingBookingLayout>
+    );
+  }
+
+  return (
+    <TowingBookingLayout
+      title="Pay Advance"
+      step={5}
+      accentColor={DRIVER_ACCENT}
+      scrollable
+      showStep={false}
+      onBack={() => navigation.goBack()}
+      hideFooter>
+      <Pressable
+        onPress={() => setSummaryExpanded(prev => !prev)}
+        style={[
+          {
+            borderRadius: t.cardRadius,
+            borderWidth: 1,
+            borderColor: colors.border,
+            backgroundColor: colors.background,
+            paddingHorizontal: t.px(16),
+            paddingVertical: t.px(14),
+            marginBottom: t.px(16),
+          },
+          shadows.card,
+        ]}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Text
+            style={{
+              fontSize: t.labelBold,
+              fontWeight: typography.weights.bold,
+              color: colors.dark,
+            }}>
+            Booking Summary
+          </Text>
+          {summaryExpanded ? (
+            <ChevronUp size={t.iconSm} color={colors.dark} />
+          ) : (
+            <ChevronDown size={t.iconSm} color={colors.dark} />
+          )}
+        </View>
+        {summaryExpanded ? (
+          <View style={{ marginTop: t.px(12), gap: t.px(8) }}>
+            {summaryRows.map(row => (
+              <View
+                key={row.label}
+                style={{ flexDirection: 'row', justifyContent: 'space-between', gap: t.px(12) }}>
+                <Text style={{ fontSize: t.body, color: colors.grey }}>{row.label}</Text>
+                <Text
+                  style={{
+                    fontSize: t.body,
+                    fontWeight: typography.weights.semibold,
+                    color: colors.dark,
+                    textAlign: 'right',
+                    flex: 1,
+                  }}>
+                  {row.value}
+                </Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+      </Pressable>
+
+      <View
+        style={{
+          borderRadius: t.cardRadius,
+          backgroundColor: DRIVER_LIGHT_BG,
+          borderWidth: 1,
+          borderColor: DRIVER_ACCENT,
+          padding: t.px(16),
+          marginBottom: t.px(20),
+          alignItems: 'center',
+        }}>
+        <Text style={{ fontSize: t.body, color: colors.grey, marginBottom: t.px(4) }}>
+          Pay now (30% of total)
+        </Text>
+        <Text
+          style={{
+            fontSize: t.px(28),
+            fontWeight: typography.weights.extrabold,
+            color: DRIVER_ACCENT,
+          }}>
+          {formatRupee(advance)} Advance (30%)
+        </Text>
+      </View>
+
+      {booking.fareBreakdown ? (
+        <View style={{ marginBottom: t.px(20) }}>
+          <DriverFareBreakdownCard breakdown={booking.fareBreakdown} accentColor={DRIVER_ACCENT} compact />
+        </View>
+      ) : null}
+
+      <Text
+        style={{
+          fontSize: t.sectionTitle,
+          fontWeight: typography.weights.bold,
+          color: colors.dark,
+          marginBottom: t.px(10),
+        }}>
+        Payment Method
+      </Text>
+
+      <View style={{ gap: t.px(10), marginBottom: t.px(24) }}>
+        {PAYMENT_METHODS.map(method => {
+          const selected = paymentMethod === method.id;
+          const Icon = method.Icon;
+          return (
+            <Pressable
+              key={method.id}
+              onPress={() => setPaymentMethod(method.id)}
+              style={[
+                {
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: t.px(12),
+                  borderRadius: t.inputRadius,
+                  borderWidth: selected ? 2 : 1,
+                  borderColor: selected ? DRIVER_ACCENT : colors.border,
+                  backgroundColor: selected ? DRIVER_LIGHT_BG : colors.background,
+                  paddingHorizontal: t.px(16),
+                  paddingVertical: t.px(14),
+                },
+                shadows.card,
+              ]}>
+              <Icon size={t.iconSm} color={selected ? DRIVER_ACCENT : colors.dark} strokeWidth={2} />
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={{
+                    fontSize: t.labelBold,
+                    fontWeight: typography.weights.bold,
+                    color: colors.dark,
+                  }}>
+                  {method.label}
+                </Text>
+                <Text style={{ fontSize: t.caption, color: colors.grey }}>{method.description}</Text>
+              </View>
+              <View
+                style={{
+                  width: t.px(20),
+                  height: t.px(20),
+                  borderRadius: t.px(10),
+                  borderWidth: selected ? 0 : 1.5,
+                  borderColor: colors.border,
+                  backgroundColor: selected ? DRIVER_ACCENT : colors.background,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                {selected ? <Check size={t.px(12)} color={colors.background} strokeWidth={3} /> : null}
+              </View>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      <Pressable
+        onPress={() => void handleConfirm(paymentMethod)}
+        disabled={isConfirming || !readyToPay}
+        style={{
+          minHeight: t.buttonHeight,
+          borderRadius: t.cardRadius,
+          backgroundColor: isConfirming || !readyToPay ? colors.grey : DRIVER_ACCENT,
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: t.px(12),
+          flexDirection: 'row',
+          gap: t.px(8),
+        }}>
+        {isConfirming ? <ActivityIndicator color={colors.dark} /> : null}
+        <Text
+          style={{
+            fontSize: t.buttonLabel,
+            fontWeight: typography.weights.bold,
+            color: colors.dark,
+          }}>
+          {isConfirming ? 'Processing...' : `Pay ${formatRupee(advance)} & Confirm Booking`}
+        </Text>
+      </Pressable>
+
+      <Pressable
+        onPress={() => void handleConfirm('cash')}
+        disabled={isConfirming || !readyToPay}
+        style={{ alignItems: 'center', padding: t.px(8), opacity: isConfirming || !readyToPay ? 0.5 : 1 }}>
+        <Text
+          style={{
+            fontSize: t.body,
+            fontWeight: typography.weights.semibold,
+            color: colors.grey,
+          }}>
+          Pay Cash on Service
+        </Text>
+      </Pressable>
+    </TowingBookingLayout>
+  );
+}

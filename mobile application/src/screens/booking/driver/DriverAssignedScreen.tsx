@@ -197,7 +197,7 @@ export default function DriverAssignedScreen({ navigation }: Props) {
         </View>
 
         <Pressable
-          onPress={() => navigation.popToTop()}
+          onPress={() => navigation.navigate('DriverTrack')}
           style={{
             height: t.buttonHeight,
             borderRadius: t.cardRadius,

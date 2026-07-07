@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Image, Pressable, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import TowingBookingLayout, { useBookingTheme } from '../../../components/booking/TowingBookingLayout';
 import { ROADSIDE_ACCENT, ROADSIDE_ACCENT_LIGHT, ROADSIDE_SERVICES } from '../../../constants/roadsideBooking';
 import { useRoadsideBooking } from '../../../context/RoadsideBookingContext';
+import { useRoadsideAvailabilityQuery } from '../../../services/bookings/useServiceBookingMutations';
+import { roadsideServiceIdToSlug } from '../../../utils/roadsideServiceMap';
 import type { HomeStackParamList } from '../../../types/navigation';
 import type { RoadsideServiceId } from '../../../types/roadsideBooking';
 import { colors, typography } from '../../../theme';
@@ -17,6 +19,7 @@ function ServiceCard({
   image,
   isSelected,
   onPress,
+  comingSoon,
   t,
 }: {
   label: string;
@@ -24,6 +27,7 @@ function ServiceCard({
   image: number;
   isSelected: boolean;
   onPress: () => void;
+  comingSoon?: boolean;
   t: ReturnType<typeof useBookingTheme>['t'];
 }) {
   return (
@@ -60,9 +64,9 @@ function ServiceCard({
         style={{
           fontSize: t.caption,
           fontWeight: typography.weights.bold,
-          color: ROADSIDE_ACCENT,
+          color: comingSoon ? colors.grey : ROADSIDE_ACCENT,
         }}>
-        From ₹{price}
+        {comingSoon ? 'Coming soon' : `From ₹${price}`}
       </Text>
     </Pressable>
   );
@@ -71,7 +75,16 @@ function ServiceCard({
 export default function RoadsideSelectServiceScreen({ navigation }: Props) {
   const { t } = useBookingTheme();
   const { booking, updateBooking } = useRoadsideBooking();
+  const { data: availability } = useRoadsideAvailabilityQuery();
   const [selected, setSelected] = useState<RoadsideServiceId>(booking.serviceId);
+
+  const availabilityBySlug = useMemo(() => {
+    const map = new Map<string, boolean>();
+    availability?.items.forEach(item => {
+      map.set(item.serviceType, item.available);
+    });
+    return map;
+  }, [availability]);
 
   const rows = [ROADSIDE_SERVICES.slice(0, 2), ROADSIDE_SERVICES.slice(2, 4)];
 
@@ -95,6 +108,7 @@ export default function RoadsideSelectServiceScreen({ navigation }: Props) {
                 price={service.price}
                 image={service.image}
                 isSelected={selected === service.id}
+                comingSoon={availabilityBySlug.get(roadsideServiceIdToSlug(service.id)) === false}
                 onPress={() => setSelected(service.id)}
                 t={t}
               />

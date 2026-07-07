@@ -1,11 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { getBookingById } from '@race/api';
+import { getBookingByIdWithType } from '@race/api';
 
-export function useBookingDetail(id: string) {
+export function useBookingDetail(id: string, type?: 'towing' | 'driver' | 'legacy') {
   return useQuery({
-    queryKey: ['booking', id],
-    queryFn: () => getBookingById(id),
+    queryKey: ['booking', id, type],
+    queryFn: () => getBookingByIdWithType(id, type),
     enabled: Boolean(id),
   });
 }

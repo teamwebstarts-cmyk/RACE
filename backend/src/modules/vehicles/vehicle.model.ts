@@ -6,6 +6,7 @@ export type FuelType = 'petrol' | 'diesel' | 'cng' | 'electric' | 'hybrid' | 'ot
 export interface IVehicle extends Document {
   customerId: Types.ObjectId;
   vehicleType: VehicleType;
+  vehicleSubtype?: string;
   vehicleNumber: string;
   brand: string;
   vehicleModel: string;
@@ -25,6 +26,7 @@ const VehicleSchema = new Schema<IVehicle>(
       enum: ['car', 'bike', 'ev', 'truck', 'auto', 'bus', 'other'],
       required: true,
     },
+    vehicleSubtype: { type: String, trim: true },
     vehicleNumber: { type: String, required: true, trim: true, uppercase: true },
     brand: { type: String, required: true, trim: true },
     vehicleModel: { type: String, required: true, trim: true },

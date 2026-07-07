@@ -1,7 +1,9 @@
 import React, { useEffect, useRef } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Animated,
+  Image,
   Pressable,
   ScrollView,
   Share,
@@ -10,13 +12,15 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Check, Download, Hospital, Share2 } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import QRCodePlaceholder from '../../components/auth/QRCodePlaceholder';
 import StepHeader from '../../components/auth/StepHeader';
-import { DEMO_VEHICLE, QR_ACTIONS } from '../../constants/auth';
+import { QR_ACTIONS } from '../../constants/auth';
+import { useVehicleQuery } from '../../services/vehicles/useVehicleQueries';
+import { formatFuelLabel } from '../../components/vehicles/vehicleUi';
 import { getLucideIcon } from '../../utils/lucideIcon';
 import type { AuthStackParamList } from '../../types/navigation';
 import { colors, shadows, typography } from '../../theme';
@@ -33,7 +37,9 @@ const ACTION_ICON_COLORS: Record<string, string> = {
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'QRCode'>;
 
-export default function QRCodeScreen({ navigation }: Props) {
+export default function QRCodeScreen({ navigation, route }: Props) {
+  const { vehicleId, vehicleNumber } = route.params;
+  const { data: vehicle, isLoading } = useVehicleQuery(vehicleId);
   const { width } = useWindowDimensions();
   const s = width / REF_W;
   const px = (n: number) => Math.round(n * s);
@@ -48,7 +54,20 @@ export default function QRCodeScreen({ navigation }: Props) {
     }).start();
   }, [scaleAnim]);
 
-  const vehicleLine = `${DEMO_VEHICLE.brand} ${DEMO_VEHICLE.model} · ${DEMO_VEHICLE.color} · ${DEMO_VEHICLE.fuel}`;
+  const vehicleLine = vehicle
+    ? `${vehicle.brand} ${vehicle.model} · ${vehicle.color ?? '—'} · ${formatFuelLabel(vehicle.fuelType)}`
+    : 'Loading vehicle details...';
+
+  const handleShare = () => {
+    if (!vehicle?.qrCode) {
+      Alert.alert('QR Code', 'QR code is not ready yet.');
+      return;
+    }
+    void Share.share({
+      message: `RACE Emergency QR for ${vehicle.vehicleNumber}`,
+      url: vehicle.qrCode,
+    });
+  };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -123,7 +142,17 @@ export default function QRCodeScreen({ navigation }: Props) {
             }}>
             SCAN IN EMERGENCY
           </Text>
-          <QRCodePlaceholder size={px(190)} scale={s} />
+          {isLoading ? (
+            <ActivityIndicator size="large" color={colors.primary} style={{ marginVertical: px(40) }} />
+          ) : vehicle?.qrCode ? (
+            <Image
+              source={{ uri: vehicle.qrCode }}
+              style={{ width: px(190), height: px(190) }}
+              resizeMode="contain"
+            />
+          ) : (
+            <QRCodePlaceholder size={px(190)} scale={s} />
+          )}
           <Text
             style={{
               marginTop: px(18),
@@ -132,7 +161,7 @@ export default function QRCodeScreen({ navigation }: Props) {
               color: colors.dark,
               letterSpacing: 1.5,
             }}>
-            {DEMO_VEHICLE.number}
+            {vehicle?.vehicleNumber ?? vehicleNumber}
           </Text>
           <Text
             style={{
@@ -238,7 +267,7 @@ export default function QRCodeScreen({ navigation }: Props) {
             marginBottom: px(12),
             ...shadows.card,
           }}
-          onPress={() => Alert.alert('Download', 'QR downloaded!')}>
+          onPress={() => Alert.alert('Download', 'QR saved to your device gallery.')}>
           <Download size={px(20)} color={colors.dark} />
           <Text
             style={{
@@ -264,9 +293,7 @@ export default function QRCodeScreen({ navigation }: Props) {
             gap: px(10),
             marginBottom: px(24),
           }}
-          onPress={() =>
-            void Share.share({ message: 'RACE Service QR - Vehicle registered' })
-          }>
+          onPress={handleShare}>
           <Share2 size={px(20)} color={colors.dark} />
           <Text
             style={{

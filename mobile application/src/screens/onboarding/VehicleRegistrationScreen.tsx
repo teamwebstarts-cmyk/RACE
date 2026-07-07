@@ -30,11 +30,13 @@ import FormField from '../../components/auth/FormField';
 import GoldButton from '../../components/auth/GoldButton';
 import StepHeader from '../../components/auth/StepHeader';
 import {
-  DEMO_VEHICLE,
   FUEL_TYPES,
   VEHICLE_COLORS,
   VEHICLE_TYPES,
 } from '../../constants/auth';
+import { useCreateVehicleMutation } from '../../services/vehicles/useVehicleQueries';
+import { getApiErrorMessage } from '../../services/api';
+import { buildCreateVehiclePayload } from '../../utils/vehicleFormPayload';
 import type { AuthStackParamList } from '../../types/navigation';
 import { colors, shadows, typography } from '../../theme';
 
@@ -54,13 +56,14 @@ export default function VehicleRegistrationScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const s = width / REF_W;
   const px = (n: number) => Math.round(n * s);
+  const createVehicleMutation = useCreateVehicleMutation();
 
   const [selectedType, setSelectedType] = useState('car');
-  const [number, setNumber] = useState(DEMO_VEHICLE.number);
-  const [brand, setBrand] = useState(DEMO_VEHICLE.brand);
-  const [model, setModel] = useState(DEMO_VEHICLE.model);
+  const [number, setNumber] = useState('');
+  const [brand, setBrand] = useState('');
+  const [model, setModel] = useState('');
   const [selectedColor, setSelectedColor] = useState('#000000');
-  const [selectedFuel, setSelectedFuel] = useState(DEMO_VEHICLE.fuel);
+  const [selectedFuel, setSelectedFuel] = useState('Petrol');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const typeCardW = px(62);
@@ -75,15 +78,38 @@ export default function VehicleRegistrationScreen({ navigation }: Props) {
     }
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     const nextErrors: Record<string, string> = {};
     if (!number.trim()) nextErrors.number = 'Please enter vehicle number';
     if (!brand.trim()) nextErrors.brand = 'Please enter brand';
     if (!model.trim()) nextErrors.model = 'Please enter model';
     setErrors(nextErrors);
-    if (Object.keys(nextErrors).length === 0) {
-      navigation.navigate('QRCode');
+    if (Object.keys(nextErrors).length > 0) {
+      return;
     }
+
+    try {
+      const vehicle = await createVehicleMutation.mutateAsync(
+        buildCreateVehiclePayload({
+          vehicleType: selectedType,
+          vehicleNumber: number,
+          brand,
+          model,
+          colorHex: selectedColor,
+          fuelLabel: selectedFuel,
+        }),
+      );
+      navigation.navigate('QRCode', {
+        vehicleId: vehicle.id,
+        vehicleNumber: vehicle.vehicleNumber,
+      });
+    } catch (error) {
+      Alert.alert('Vehicle', getApiErrorMessage(error, 'Unable to save vehicle'));
+    }
+  };
+
+  const handleSkip = () => {
+    navigation.navigate('CreatePin');
   };
 
   const sectionLabel = (text: string) => (
@@ -116,7 +142,7 @@ export default function VehicleRegistrationScreen({ navigation }: Props) {
             step={2}
             scale={s}
             onBack={() => navigation.goBack()}
-            onSkip={() => navigation.navigate('QRCode')}
+            onSkip={handleSkip}
           />
 
           <Text
@@ -195,6 +221,7 @@ export default function VehicleRegistrationScreen({ navigation }: Props) {
             }}
             autoCapitalize="characters"
             style={{ letterSpacing: 1 }}
+            placeholder="OD 05 AB 1234"
             error={errors.number}
           />
 
@@ -210,6 +237,7 @@ export default function VehicleRegistrationScreen({ navigation }: Props) {
               setBrand(text);
               clearError('brand');
             }}
+            placeholder="e.g. Honda"
             error={errors.brand}
           />
 
@@ -225,6 +253,7 @@ export default function VehicleRegistrationScreen({ navigation }: Props) {
               setModel(text);
               clearError('model');
             }}
+            placeholder="e.g. City ZX"
             error={errors.model}
           />
 
@@ -366,12 +395,13 @@ export default function VehicleRegistrationScreen({ navigation }: Props) {
             borderTopColor: colors.border,
           }}>
           <GoldButton
-            label="Save & Continue"
-            onPress={handleContinue}
+            label={createVehicleMutation.isPending ? 'Saving...' : 'Save & Continue'}
+            onPress={() => void handleContinue()}
             style={[styles.fullBtn, shadows.card]}
             height={px(54)}
             labelSize={px(17)}
             borderRadius={px(14)}
+            disabled={createVehicleMutation.isPending}
           />
         </View>
       </KeyboardAvoidingView>

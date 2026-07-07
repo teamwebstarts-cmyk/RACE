@@ -1,6 +1,7 @@
 import { configureStore, type Middleware } from '@reduxjs/toolkit';
 
 import authReducer, {
+  completeOnboarding,
   completeProfileSuccess,
   logout,
   rehydrateAuth,
@@ -8,6 +9,11 @@ import authReducer, {
   updateTokens,
   type AuthState,
 } from './auth/authSlice';
+import bookingsReducer from './bookings/bookingsSlice';
+import onboardingReducer from './onboarding/onboardingSlice';
+import profileReducer from './profile/profileSlice';
+import subscriptionsReducer from './subscriptions/subscriptionsSlice';
+import vendorOnboardingReducer from './vendor/vendorOnboardingSlice';
 import {
   clearPersistedAuthState,
   loadPersistedAuthState,
@@ -31,6 +37,7 @@ const persistAuthMiddleware: Middleware = (storeApi) => (next) => (action) => {
   if (
     setCredentials.match(action) ||
     completeProfileSuccess.match(action) ||
+    completeOnboarding.match(action) ||
     updateTokens.match(action)
   ) {
     const auth = storeApi.getState().auth as AuthState;
@@ -51,6 +58,11 @@ const persistAuthMiddleware: Middleware = (storeApi) => (next) => (action) => {
 export const store = configureStore({
   reducer: {
     auth: authReducer,
+    bookings: bookingsReducer,
+    onboarding: onboardingReducer,
+    profile: profileReducer,
+    subscriptions: subscriptionsReducer,
+    vendorOnboarding: vendorOnboardingReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(persistAuthMiddleware),

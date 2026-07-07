@@ -10,8 +10,6 @@ import { DriverBookingProvider } from '../context/DriverBookingContext';
 import { RoadsideBookingProvider } from '../context/RoadsideBookingContext';
 import { TowingBookingProvider } from '../context/TowingBookingContext';
 import { useAuth } from '../hooks/useAuth';
-import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
-import ResetPasswordScreen from '../screens/auth/ResetPasswordScreen';
 import CreateAccountScreen from '../screens/auth/CreateAccountScreen';
 import CreatePinAuthScreen from '../screens/auth/CreatePinScreen';
 import LoginScreen from '../screens/auth/LoginScreen';
@@ -28,11 +26,22 @@ import TowingPickupDropScreen from '../screens/booking/towing/TowingPickupDropSc
 import TowingRateScreen from '../screens/booking/towing/TowingRateScreen';
 import TowingReviewScreen from '../screens/booking/towing/TowingReviewScreen';
 import TowingSelectTypeScreen from '../screens/booking/towing/TowingSelectTypeScreen';
+import TowingAdvancePaymentScreen from '../screens/booking/towing/TowingAdvancePaymentScreen';
 import TowingTrackScreen from '../screens/booking/towing/TowingTrackScreen';
 import DriverServiceScreen from '../screens/DriverServiceScreen';
+import DriverBookingVehicleScreen from '../screens/booking/driver/DriverBookingVehicleScreen';
+import DriverBookingLocationScreen from '../screens/booking/driver/DriverBookingLocationScreen';
+import DriverBookingDateTimeScreen from '../screens/booking/driver/DriverBookingDateTimeScreen';
+import DriverBookingReviewScreen from '../screens/booking/driver/DriverBookingReviewScreen';
+import DriverBookingPaymentScreen from '../screens/booking/driver/DriverBookingPaymentScreen';
+import DriverBookingConfirmedScreen from '../screens/booking/driver/DriverBookingConfirmedScreen';
+import DriverEnquiryScreen from '../screens/booking/driver/DriverEnquiryScreen';
 import DriverAssignedScreen from '../screens/booking/driver/DriverAssignedScreen';
+import DriverOnWayScreen from '../screens/booking/driver/DriverOnWayScreen';
+import DriverTrackScreen from '../screens/booking/driver/DriverTrackScreen';
 import DriverDateTimeScreen from '../screens/booking/driver/DriverDateTimeScreen';
 import DriverPickupScreen from '../screens/booking/driver/DriverPickupScreen';
+import DriverChooseVehicleTypeScreen from '../screens/booking/driver/DriverChooseVehicleTypeScreen';
 import DriverReviewScreen from '../screens/booking/driver/DriverReviewScreen';
 import DriverSelectTypeScreen from '../screens/booking/driver/DriverSelectTypeScreen';
 import RoadsideAssistanceScreen from '../screens/RoadsideAssistanceScreen';
@@ -44,6 +53,7 @@ import ProfileSetupScreen from '../screens/onboarding/ProfileSetupScreen';
 import QRCodeScreen from '../screens/onboarding/QRCodeScreen';
 import VehicleRegistrationScreen from '../screens/onboarding/VehicleRegistrationScreen';
 import HomeScreen from '../screens/HomeScreen';
+import SelectLocationScreen from '../screens/home/SelectLocationScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import PersonalInformationScreen from '../screens/profile/PersonalInformationScreen';
 import MyVehiclesScreen from '../screens/vehicles/VehicleListScreen';
@@ -154,6 +164,11 @@ const towingBookingScreens = (
       options={towingBookingScreenOptions}
     />
     <Stack.Screen
+      name="TowingAdvancePayment"
+      component={TowingAdvancePaymentScreen}
+      options={towingBookingScreenOptions}
+    />
+    <Stack.Screen
       name="TowingConfirmed"
       component={TowingConfirmedScreen}
       options={towingBookingScreenOptions}
@@ -193,6 +208,41 @@ const driverBookingScreens = (
       options={{ headerTitle: 'Driver Service' }}
     />
     <Stack.Screen
+      name="DriverBookingVehicle"
+      component={DriverBookingVehicleScreen}
+      options={towingBookingScreenOptions}
+    />
+    <Stack.Screen
+      name="DriverBookingLocation"
+      component={DriverBookingLocationScreen}
+      options={towingBookingScreenOptions}
+    />
+    <Stack.Screen
+      name="DriverBookingDateTime"
+      component={DriverBookingDateTimeScreen}
+      options={towingBookingScreenOptions}
+    />
+    <Stack.Screen
+      name="DriverBookingReview"
+      component={DriverBookingReviewScreen}
+      options={towingBookingScreenOptions}
+    />
+    <Stack.Screen
+      name="DriverBookingPayment"
+      component={DriverBookingPaymentScreen}
+      options={towingBookingScreenOptions}
+    />
+    <Stack.Screen
+      name="DriverBookingConfirmed"
+      component={DriverBookingConfirmedScreen}
+      options={towingBookingScreenOptions}
+    />
+    <Stack.Screen
+      name="DriverEnquiry"
+      component={DriverEnquiryScreen}
+      options={towingBookingScreenOptions}
+    />
+    <Stack.Screen
       name="DriverSelectType"
       component={DriverSelectTypeScreen}
       options={towingBookingScreenOptions}
@@ -208,6 +258,11 @@ const driverBookingScreens = (
       options={towingBookingScreenOptions}
     />
     <Stack.Screen
+      name="DriverChooseVehicleType"
+      component={DriverChooseVehicleTypeScreen}
+      options={towingBookingScreenOptions}
+    />
+    <Stack.Screen
       name="DriverReview"
       component={DriverReviewScreen}
       options={towingBookingScreenOptions}
@@ -215,6 +270,16 @@ const driverBookingScreens = (
     <Stack.Screen
       name="DriverAssigned"
       component={DriverAssignedScreen}
+      options={towingBookingScreenOptions}
+    />
+    <Stack.Screen
+      name="DriverTrack"
+      component={DriverTrackScreen}
+      options={towingBookingScreenOptions}
+    />
+    <Stack.Screen
+      name="DriverOnWay"
+      component={DriverOnWayScreen}
       options={towingBookingScreenOptions}
     />
   </>
@@ -261,6 +326,11 @@ function HomeStackNavigator() {
         name="HomeMain"
         component={HomeScreen}
         options={{ headerShown: false, title: 'Home' }}
+      />
+      <HomeStack.Screen
+        name="SelectLocation"
+        component={SelectLocationScreen}
+        options={{ headerShown: false, presentation: 'fullScreenModal' }}
       />
       <HomeStack.Screen
         name="ServiceList"
@@ -364,6 +434,7 @@ function BookingsStackNavigator() {
       <BookingsStack.Screen name="BookingsMain" component={BookingsScreen} />
       <BookingsStack.Screen name="BookingDetail" component={BookingDetailScreen} />
       <BookingsStack.Screen name="TowingTrack" component={TowingTrackScreen} />
+      <BookingsStack.Screen name="DriverTrack" component={DriverTrackScreen} />
       <BookingsStack.Screen name="TowingRate" component={TowingRateScreen} />
     </BookingsStack.Navigator>
   );
@@ -426,22 +497,6 @@ function MainTabNavigator() {
   );
 }
 
-function OnboardingStackNavigator() {
-  return (
-    <AuthStack.Navigator
-      initialRouteName="ProfileSetup"
-      screenOptions={{ headerShown: false }}>
-      <AuthStack.Screen name="ProfileSetup" component={ProfileSetupScreen} />
-      <AuthStack.Screen
-        name="VehicleRegistration"
-        component={VehicleRegistrationScreen}
-      />
-      <AuthStack.Screen name="QRCode" component={QRCodeScreen} />
-      <AuthStack.Screen name="CreatePin" component={CreatePinAuthScreen} />
-    </AuthStack.Navigator>
-  );
-}
-
 function AuthStackNavigator() {
   return (
     <AuthStack.Navigator
@@ -452,8 +507,6 @@ function AuthStackNavigator() {
       <AuthStack.Screen name="Login" component={LoginScreen} />
       <AuthStack.Screen name="CreateAccount" component={CreateAccountScreen} />
       <AuthStack.Screen name="OTP" component={OTPScreen} />
-      <AuthStack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
-      <AuthStack.Screen name="ResetPassword" component={ResetPasswordScreen} />
       <AuthStack.Screen name="ProfileSetup" component={ProfileSetupScreen} />
       <AuthStack.Screen
         name="VehicleRegistration"
@@ -481,16 +534,16 @@ const navigationTheme = {
 
 export default function AppNavigator() {
   const { isAuthenticated, onboardingRequired } = useAuth();
+  // Authenticated users enter the app; onboarding screens live in Auth stack until profile is done.
+  const showMainApp = isAuthenticated && !onboardingRequired;
 
   return (
     <NavigationContainer theme={navigationTheme}>
       <RootStack.Navigator screenOptions={{ headerShown: false }}>
-        {!isAuthenticated ? (
-          <RootStack.Screen name="Auth" component={AuthStackNavigator} />
-        ) : onboardingRequired ? (
-          <RootStack.Screen name="Onboarding" component={OnboardingStackNavigator} />
-        ) : (
+        {showMainApp ? (
           <RootStack.Screen name="Main" component={MainTabNavigator} />
+        ) : (
+          <RootStack.Screen name="Auth" component={AuthStackNavigator} />
         )}
       </RootStack.Navigator>
     </NavigationContainer>

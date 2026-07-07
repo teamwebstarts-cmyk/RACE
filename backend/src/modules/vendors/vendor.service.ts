@@ -27,9 +27,9 @@ async function mapVendor(vendor: IVendor): Promise<VendorResponseDto> {
     mobileNumber: vendor.mobileNumber,
     email: vendor.email,
     address: vendor.address,
-    towVehicle: vendor.towVehicle,
-    bankDetails: vendor.bankDetails,
-    driverProfile: vendor.driverProfile,
+    towVehicle: vendor.towVehicle as VendorResponseDto['towVehicle'],
+    bankDetails: vendor.bankDetails as VendorResponseDto['bankDetails'],
+    driverProfile: vendor.driverProfile as VendorResponseDto['driverProfile'],
     reviewNotes: vendor.reviewNotes,
     statusHistory: vendor.statusHistory.map((item) => ({
       status: item.status,
@@ -186,10 +186,13 @@ export class VendorService {
     let vendor = existing;
     if (!vendor) {
       vendor = await vendorRepository.create({
-        userId: userId as unknown as IVendor['userId'],
+        userId,
         vendorType: dto.vendorType,
         status: 'draft',
         verificationStage: 'submitted',
+        ownerName: user.fullName ?? '',
+        mobileNumber: user.mobileNumber,
+        email: user.email,
         statusHistory: [],
       });
     }
@@ -287,47 +290,74 @@ export class VendorService {
   }
 
   async review(vendorId: string, dto: ReviewVendorDto): Promise<VendorResponseDto> {
-    const vendor = await vendorRepository.findById(vendorId);
+    let vendor = await vendorRepository.findById(vendorId);
     if (!vendor) throw new NotFoundError('Vendor not found');
 
     if (dto.status === 'approved') {
-      vendor.status = 'approved';
-      vendor.approvedAt = new Date();
-      vendor.verificationStage = 'approved';
+      const approvedAt = new Date();
       await userRepository.updateById(vendor.userId.toString(), { role: 'vendor' });
       await notificationService.notifyVendorApproved(
         vendor.userId.toString(),
         vendor.mobileNumber,
         vendor.id,
       );
+      vendor = (await vendorRepository.updateById(vendor.id, {
+        status: 'approved',
+        approvedAt,
+        verificationStage: 'approved',
+        reviewNotes: dto.reviewNotes,
+        statusHistory: [
+          ...vendor.statusHistory,
+          {
+            status: dto.verificationStage ?? dto.status,
+            note: dto.reviewNotes,
+            changedAt: new Date(),
+          },
+        ],
+      }))!;
     } else if (dto.status === 'rejected') {
-      vendor.status = 'rejected';
-      vendor.verificationStage = 'rejected';
       await notificationService.notifyVendorRejected(
         vendor.userId.toString(),
         vendor.mobileNumber,
         vendor.id,
         dto.reviewNotes,
       );
+      vendor = (await vendorRepository.updateById(vendor.id, {
+        status: 'rejected',
+        verificationStage: 'rejected',
+        reviewNotes: dto.reviewNotes,
+        statusHistory: [
+          ...vendor.statusHistory,
+          {
+            status: dto.verificationStage ?? dto.status,
+            note: dto.reviewNotes,
+            changedAt: new Date(),
+          },
+        ],
+      }))!;
     } else {
-      vendor.status = 'changes_requested';
-      vendor.verificationStage = dto.verificationStage ?? 'document_review';
       await notificationService.notifyResubmissionRequired(
         vendor.userId.toString(),
         vendor.mobileNumber,
         vendor.id,
         dto.reviewNotes,
       );
+      vendor = (await vendorRepository.updateById(vendor.id, {
+        status: 'changes_requested',
+        verificationStage: dto.verificationStage ?? 'document_review',
+        reviewNotes: dto.reviewNotes,
+        statusHistory: [
+          ...vendor.statusHistory,
+          {
+            status: dto.verificationStage ?? dto.status,
+            note: dto.reviewNotes,
+            changedAt: new Date(),
+          },
+        ],
+      }))!;
     }
 
-    vendor.reviewNotes = dto.reviewNotes;
-    vendor.statusHistory.push({
-      status: dto.verificationStage ?? dto.status,
-      note: dto.reviewNotes,
-      changedAt: new Date(),
-    });
-    await vendor.save();
-
+    if (!vendor) throw new NotFoundError('Vendor not found');
     return mapVendor(vendor);
   }
 

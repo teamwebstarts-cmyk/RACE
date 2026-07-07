@@ -22,6 +22,11 @@ export function ProtectedRoute() {
 
 export function PublicOnlyRoute() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const hasHydrated = useAuthStore((s) => s.hasHydrated);
+
+  if (!hasHydrated) {
+    return <LoadingState message="Loading session..." />;
+  }
 
   if (isAuthenticated) {
     return <Navigate to="/dashboard" replace />;

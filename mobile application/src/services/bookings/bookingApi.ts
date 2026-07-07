@@ -1,121 +1,136 @@
 import { API_ENDPOINTS } from '../../config/api';
 import type { ApiSuccessResponse } from '../../types/auth';
-import type { Booking, CreateBookingRequest, SubmitRatingRequest } from '../../types/booking';
+import type { Booking, BookingStatus, SubmitRatingRequest } from '../../types/booking';
+import type { CombinedBookingListItem, ServiceBooking } from '../../types/serviceBooking';
 import { apiClient } from '../api/apiClient';
+import {
+  getDriverBooking,
+  getDriverBookingTracking,
+  getTowingBooking,
+  getTowingBookingTracking,
+} from './serviceBookingApi';
 
-function generateBookingNumber(): string {
-  return `RACE${Math.floor(10000 + Math.random() * 90000)}`;
+function mapUnifiedStatus(status: string): BookingStatus {
+  switch (status) {
+    case 'PENDING':
+    case 'CONFIRMED':
+    case 'DRIVER_ASSIGNED':
+      return 'ASSIGNED';
+    case 'DRIVER_EN_ROUTE':
+      return 'EN_ROUTE';
+    case 'DRIVER_ARRIVED':
+      return 'ARRIVED';
+    case 'IN_PROGRESS':
+      return 'SERVICE_STARTED';
+    case 'COMPLETED':
+      return 'SERVICE_COMPLETED';
+    case 'RATED':
+      return 'PAID';
+    default:
+      return 'ASSIGNED';
+  }
 }
 
-function buildTimeline(status: Booking['status']): Booking['timeline'] {
-  const steps: Array<{ status: Booking['status']; label: string }> = [
-    { status: 'CREATED', label: 'Booking created' },
-    { status: 'ASSIGNED', label: 'Driver assigned' },
-    { status: 'ACCEPTED', label: 'Driver accepted' },
-    { status: 'EN_ROUTE', label: 'Driver en route' },
-    { status: 'ARRIVED', label: 'Driver arrived' },
-    { status: 'SERVICE_STARTED', label: 'Service started' },
-    { status: 'SERVICE_COMPLETED', label: 'Service completed' },
-    { status: 'PAYMENT_PENDING', label: 'Payment pending' },
-    { status: 'PAID', label: 'Payment received' },
-  ];
-  const statusIndex = steps.findIndex((s) => s.status === status);
-  const now = Date.now();
-  return steps.map((step, index) => ({
-    status: step.status,
-    label: step.label,
-    timestamp: new Date(now - (steps.length - index) * 600_000).toISOString(),
-    completed: index <= statusIndex,
-  }));
-}
-
-export function createLocalBooking(
-  payload: CreateBookingRequest,
-  vehicleNumber: string,
-  vehicleLabel?: string,
-): Booking {
-  const id = `booking_${Date.now()}`;
-  const estimatedTotal = payload.estimatedTotal ?? 899;
+function toBookingLocation(point: { address: string; latitude: number; longitude: number }) {
+  const label = point.address.split(',')[0]?.trim() || point.address;
   return {
-    id,
-    bookingNumber: generateBookingNumber(),
-    categoryId: payload.categoryId,
-    serviceId: payload.serviceId,
-    serviceLabel: payload.serviceLabel,
-    serviceDescription: payload.serviceDescription,
-    status: 'ASSIGNED',
-    vehicleId: payload.vehicleId,
-    vehicleNumber,
-    vehicleLabel,
-    pickup: payload.pickup,
-    dropoff: payload.dropoff,
-    scheduledAt: payload.scheduledAt,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    driver: {
-      id: 'driver_1',
-      name: 'Ramesh S.',
-      rating: 4.9,
-      phone: '+919876543210',
-      experience: '3 years exp',
-      verified: true,
-    },
-    etaMinutes: 25,
-    distanceKm: 8,
-    durationMinutes: 30,
-    invoice: {
-      baseFare: estimatedTotal - 200,
-      distanceCharge: 150,
-      platformFee: 50,
-      total: estimatedTotal,
-      currency: 'INR',
-      paymentMethod: 'UPI',
-    },
-    timeline: buildTimeline('ASSIGNED'),
+    label,
+    address: point.address,
+    latitude: point.latitude,
+    longitude: point.longitude,
   };
 }
 
+function mapServiceBookingToBooking(
+  item: ServiceBooking,
+  bookingType: 'towing' | 'driver',
+  serviceLabel: string,
+): Booking {
+  const status = mapUnifiedStatus(item.status);
+  return {
+    id: item.id,
+    bookingNumber: item.bookingNumber,
+    bookingType,
+    unifiedStatus: item.status,
+    categoryId: bookingType,
+    serviceId: bookingType,
+    serviceLabel,
+    status,
+    vehicleId: item.vehicleId,
+    vehicleNumber: '',
+    pickup: toBookingLocation(item.pickup),
+    dropoff: item.dropoff ? toBookingLocation(item.dropoff) : undefined,
+    scheduledAt: item.scheduledAt,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+    distanceKm: item.distanceKm,
+    durationMinutes: item.estimatedDurationHours
+      ? Math.round(item.estimatedDurationHours * 60)
+      : undefined,
+    invoice: {
+      baseFare: item.estimatedFare,
+      total: item.estimatedFare,
+      currency: 'INR',
+      paymentMethod: item.advancePaid ? 'UPI' : undefined,
+    },
+    timeline: item.statusHistory.map(entry => ({
+      status: mapUnifiedStatus(entry.status),
+      label: entry.status.replace(/_/g, ' '),
+      timestamp: entry.timestamp,
+      completed: true,
+    })),
+    rating: item.rating?.score,
+    review: item.rating?.review,
+    advanceAmount: item.advanceAmount,
+    remainingAmount: item.remainingAmount,
+    advancePaid: item.advancePaid,
+    remainingPaid: item.remainingPaid,
+    paymentStatus: item.paymentStatus,
+  };
+}
+
+function mapCombinedItem(item: CombinedBookingListItem): Booking {
+  return mapServiceBookingToBooking(item, item.bookingType, item.serviceLabel);
+}
+
 export async function listBookings(): Promise<Booking[]> {
-  try {
-    const { data } = await apiClient.get<ApiSuccessResponse<Booking[]>>(API_ENDPOINTS.bookings);
-    return data.data;
-  } catch {
-    return [];
-  }
+  const { data } = await apiClient.get<ApiSuccessResponse<CombinedBookingListItem[]>>(
+    API_ENDPOINTS.bookings,
+  );
+  return data.data.map(mapCombinedItem);
 }
 
 export async function getBooking(id: string): Promise<Booking | null> {
   try {
-    const { data } = await apiClient.get<ApiSuccessResponse<Booking>>(
-      `${API_ENDPOINTS.bookings}/${id}`,
-    );
-    return data.data;
+    const towing = await getTowingBooking(id);
+    return mapServiceBookingToBooking(towing, 'towing', 'Towing');
   } catch {
-    return null;
+    try {
+      const driver = await getDriverBooking(id);
+      return mapServiceBookingToBooking(driver, 'driver', 'Driver Hire');
+    } catch {
+      throw new Error('Unable to fetch booking details');
+    }
   }
 }
 
-export async function createBookingApi(payload: CreateBookingRequest): Promise<Booking | null> {
-  try {
-    const { data } = await apiClient.post<ApiSuccessResponse<Booking>>(
-      API_ENDPOINTS.bookings,
-      payload,
-    );
-    return data.data;
-  } catch {
-    return null;
-  }
+/** @deprecated Use towing/driver booking APIs via Home flow. */
+export async function createBookingApi(_payload: unknown): Promise<Booking | null> {
+  return null;
 }
 
 export async function submitBookingRating(
   bookingId: string,
+  bookingType: 'towing' | 'driver',
   payload: SubmitRatingRequest,
 ): Promise<Booking> {
-  const { data } = await apiClient.post<ApiSuccessResponse<Booking>>(
-    API_ENDPOINTS.bookingRating(bookingId),
-    payload,
+  const { submitServiceBookingRating } = await import('./serviceBookingApi');
+  const result = await submitServiceBookingRating(bookingId, bookingType, payload);
+  return mapServiceBookingToBooking(
+    result,
+    bookingType,
+    bookingType === 'towing' ? 'Towing' : 'Driver Hire',
   );
-  return data.data;
 }
 
 export interface BookingTracking {
@@ -130,11 +145,28 @@ export interface BookingTracking {
 
 export async function getBookingTracking(bookingId: string): Promise<BookingTracking | null> {
   try {
-    const { data } = await apiClient.get<ApiSuccessResponse<BookingTracking>>(
-      API_ENDPOINTS.tracking(bookingId),
-    );
-    return data.data;
+    const towing = await getTowingBookingTracking(bookingId);
+    return {
+      bookingId: towing.bookingId,
+      status: towing.status,
+      etaMinutes: 15,
+      driverLocation: towing.driverLocation,
+      pickup: toBookingLocation(towing.pickup),
+      dropoff: towing.dropoff ? toBookingLocation(towing.dropoff) : undefined,
+    };
   } catch {
-    return null;
+    try {
+      const driver = await getDriverBookingTracking(bookingId);
+      return {
+        bookingId: driver.bookingId,
+        status: driver.status,
+        etaMinutes: 15,
+        driverLocation: driver.driverLocation,
+        pickup: toBookingLocation(driver.pickup),
+        dropoff: driver.dropoff ? toBookingLocation(driver.dropoff) : undefined,
+      };
+    } catch {
+      throw new Error('Unable to fetch booking tracking');
+    }
   }
 }

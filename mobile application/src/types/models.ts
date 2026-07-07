@@ -45,7 +45,7 @@ export interface Profile {
   profilePhoto?: string;
   isVerified: boolean;
   isProfileCompleted: boolean;
-  role: string;
+  role: 'customer' | 'vendor' | 'driver';
 }
 
 export interface Service {
@@ -107,21 +107,25 @@ export interface BookingDriver {
 
 export interface ActiveBooking {
   id: string;
+  displayId: string;
   service: string;
   status: string;
   pickup: string;
   drop: string;
   eta: string;
   driver: BookingDriver;
+  bookingType: 'towing' | 'driver';
 }
 
 export interface BookingHistoryItem {
   id: string;
+  displayId: string;
   service: string;
   date: string;
   location: string;
   amount: number;
   status: string;
+  bookingType: 'towing' | 'driver';
 }
 
 export interface PricedService {

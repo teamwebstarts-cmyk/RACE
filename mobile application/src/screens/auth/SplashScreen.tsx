@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '../../types/navigation';
+import { useAuthStore } from '../../store/authStore';
 import { images } from '../../assets';
 
 const REF_W = 484;
@@ -32,6 +33,9 @@ type SplashScreenProps = {
 
 function SplashScreen({ onGetStarted, onLogin }: SplashScreenProps) {
   const navigation = useNavigation<SplashNav>();
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const onboardingRequired = useAuthStore(state => state.onboardingRequired);
+  const resumeOnboarding = isAuthenticated && onboardingRequired;
   const insets = useSafeAreaInsets();
   const { width: winW, height: winH } = useWindowDimensions();
   const [layout, setLayout] = useState({ w: winW, h: winH });
@@ -68,12 +72,20 @@ function SplashScreen({ onGetStarted, onLogin }: SplashScreenProps) {
       onGetStarted();
       return;
     }
+    if (resumeOnboarding) {
+      navigation.navigate('ProfileSetup');
+      return;
+    }
     navigation.navigate('Onboarding');
   };
 
   const handleLogin = () => {
     if (onLogin) {
       onLogin();
+      return;
+    }
+    if (resumeOnboarding) {
+      navigation.navigate('ProfileSetup');
       return;
     }
     navigation.navigate('Login');

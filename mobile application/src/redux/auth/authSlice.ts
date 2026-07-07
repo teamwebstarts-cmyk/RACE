@@ -1,5 +1,6 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
+import { useAuthStore } from '../../store/authStore';
 import type { AuthUser } from '../../types/auth';
 
 export interface AuthState {
@@ -30,6 +31,14 @@ const initialState: AuthState = {
   useCustomerExperience: false,
 };
 
+function syncZustandAuth(user: AuthUser, onboardingRequired: boolean): void {
+  useAuthStore.getState().setAuth({ user, onboardingRequired });
+}
+
+function syncZustandPatch(user: AuthUser, onboardingRequired: boolean): void {
+  useAuthStore.getState().patchAuth({ user, onboardingRequired });
+}
+
 const authSlice = createSlice({
   name: 'auth',
   initialState,
@@ -49,21 +58,23 @@ const authSlice = createSlice({
         onboardingRequired: boolean;
       }>,
     ) {
-      const profileDone = action.payload.user.isProfileCompleted;
-      const needsOnboarding = action.payload.onboardingRequired && !profileDone;
-
       state.user = action.payload.user;
       state.accessToken = action.payload.accessToken;
       state.refreshToken = action.payload.refreshToken;
-      state.onboardingRequired = needsOnboarding;
-      state.isAuthenticated = !needsOnboarding;
+      state.onboardingRequired = action.payload.onboardingRequired;
+      state.isAuthenticated = true;
       state.loading = false;
       state.pendingMobileNumber = null;
+
+      syncZustandAuth(action.payload.user, action.payload.onboardingRequired);
     },
     completeProfileSuccess(state, action: PayloadAction<AuthUser>) {
       state.user = action.payload;
       state.onboardingRequired = false;
+      state.isAuthenticated = true;
       state.loading = false;
+
+      syncZustandPatch(action.payload, false);
     },
     completeOnboarding(state, action: PayloadAction<AuthUser | undefined>) {
       if (action.payload) {
@@ -72,6 +83,11 @@ const authSlice = createSlice({
       state.isAuthenticated = true;
       state.onboardingRequired = false;
       state.loading = false;
+
+      const user = action.payload ?? state.user;
+      if (user) {
+        syncZustandPatch(user, false);
+      }
     },
     updateTokens(
       state,
@@ -82,6 +98,10 @@ const authSlice = createSlice({
     },
     updateUser(state, action: PayloadAction<AuthUser>) {
       state.user = action.payload;
+      const onboardingRequired = !action.payload.isProfileCompleted;
+      state.onboardingRequired = onboardingRequired;
+
+      syncZustandPatch(action.payload, onboardingRequired);
     },
     setUseCustomerExperience(state, action: PayloadAction<boolean>) {
       state.useCustomerExperience = action.payload;
@@ -95,14 +115,25 @@ const authSlice = createSlice({
       state.onboardingRequired = false;
       state.pendingMobileNumber = null;
       state.useCustomerExperience = false;
+
+      useAuthStore.getState().clearAuth();
     },
     rehydrateAuth(state, action: PayloadAction<PersistedAuthPayload>) {
-      state.user = action.payload.user;
-      state.accessToken = action.payload.accessToken;
-      state.refreshToken = action.payload.refreshToken;
-      state.isAuthenticated = action.payload.isAuthenticated;
-      state.onboardingRequired = action.payload.onboardingRequired;
+      const { user, accessToken, refreshToken, onboardingRequired } = action.payload;
+      const authenticated = Boolean(accessToken);
+
+      state.user = user;
+      state.accessToken = accessToken;
+      state.refreshToken = refreshToken;
+      state.isAuthenticated = authenticated;
+      state.onboardingRequired = onboardingRequired;
       state.loading = false;
+
+      if (authenticated && user) {
+        syncZustandAuth(user, onboardingRequired);
+      } else {
+        useAuthStore.getState().clearAuth();
+      }
     },
   },
 });

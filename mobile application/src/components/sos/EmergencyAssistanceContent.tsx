@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Linking,
   Pressable,
@@ -9,6 +10,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import * as Location from 'expo-location';
 import {
   Ambulance,
   ChevronLeft,
@@ -25,6 +27,13 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 
 import SosPulseButton from './SosPulseButton';
 import { useSosDetails } from '../../context/SosDetailsContext';
+import { useAuthStore } from '../../store/authStore';
+import { getApiErrorMessage } from '../../services/api';
+import {
+  useSosAlertMutation,
+  useSosConfigQuery,
+  useSosContextQuery,
+} from '../../services/sos/useSosQueries';
 import {
   SOS_COLORS,
   SOS_GRID_ACTIONS,
@@ -47,30 +56,94 @@ export default function EmergencyAssistanceContent({
 }: Props) {
   const tabNav = useNavigation<BottomTabNavigationProp<RootTabParamList>>();
   const { details } = useSosDetails();
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const { data: config } = useSosConfigQuery();
+  const { data: context, isLoading: contextLoading } = useSosContextQuery(undefined, isAuthenticated);
+  const sosAlert = useSosAlertMutation();
   const { width } = useWindowDimensions();
   const px = (n: number) => Math.round(n * (width / REF_W));
 
-  const vehicleLabel = `${details.vehicleBrand} ${details.vehicleModel}`.trim();
-  const ownerPhoneRaw = details.ownerPhone.replace(/\s/g, '');
+  const emergencyPhone = config?.emergencyPhone ?? '108';
+  const supportPhone = config?.supportPhone ?? config?.emergencyPhone ?? '';
+
+  const vehicleLabel = context?.vehicle
+    ? context.vehicle.label
+    : `${details.vehicleBrand} ${details.vehicleModel}`.trim();
+  const vehicleNumber = context?.vehicle?.number ?? details.vehicleNumber;
+  const ownerName = context?.owner?.name ?? details.ownerName;
+  const ownerPhoneRaw = (context?.owner?.phone ?? details.ownerPhone).replace(/\s/g, '');
+  const contactName = context?.emergencyContact?.name ?? details.contactName;
+  const contactPhone = context?.emergencyContact?.mobileNumber ?? details.contactPhone;
+  const contactRelation = context?.emergencyContact?.relationship ?? details.contactRelation;
+  const vehicleId = context?.vehicle?.id;
+
+  const resolveLocation = useCallback(async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        return { address: details.location };
+      }
+      const position = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      const address = details.location;
+      return {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        address,
+      };
+    } catch {
+      return { address: details.location };
+    }
+  }, [details.location]);
+
+  const triggerAlert = useCallback(
+    async (
+      action: 'sos' | 'towing' | 'ambulance' | 'share_location' | 'notify_contacts',
+      successTitle: string,
+    ) => {
+      if (!isAuthenticated) {
+        Alert.alert('Sign in required', 'Please log in to use emergency alerts.');
+        return;
+      }
+
+      const location = await resolveLocation();
+      sosAlert.mutate(
+        { action, vehicleId, ...location },
+        {
+          onSuccess: result => Alert.alert(successTitle, result.message),
+          onError: error => Alert.alert('Request failed', getApiErrorMessage(error)),
+        },
+      );
+    },
+    [isAuthenticated, resolveLocation, sosAlert, vehicleId],
+  );
 
   const handleGridAction = (id: string) => {
     switch (id) {
       case 'towing':
-        tabNav.navigate('Services', { screen: 'TowingService' });
+        if (isAuthenticated) {
+          void triggerAlert('towing', 'Towing Requested');
+        } else {
+          tabNav.navigate('Services', { screen: 'TowingService' });
+        }
         break;
       case 'ambulance':
-        void Linking.openURL('tel:108');
+        void Linking.openURL(`tel:${emergencyPhone.replace(/\s/g, '')}`);
         break;
       case 'location':
-        void Share.share({
-          message: `Vehicle ${details.vehicleNumber} — ${details.location}`,
-        });
+        if (isAuthenticated) {
+          void triggerAlert('share_location', 'Location Shared');
+        } else {
+          void Share.share({ message: `Vehicle ${vehicleNumber} — ${details.location}` });
+        }
         break;
       case 'contacts':
-        Alert.alert(
-          'Emergency Contacts',
-          `${details.contactName} (${details.contactRelation})\n${details.contactPhone}`,
-        );
+        if (isAuthenticated) {
+          void triggerAlert('notify_contacts', 'Contact Notified');
+        } else {
+          Alert.alert('Emergency Contacts', `${contactName} (${contactRelation})\n${contactPhone}`);
+        }
         break;
       default:
         break;
@@ -78,10 +151,7 @@ export default function EmergencyAssistanceContent({
   };
 
   const sendAlert = () => {
-    Alert.alert(
-      'Alert Sent',
-      `Emergency alert sent to ${details.contactName} (${details.contactPhone}).`,
-    );
+    void triggerAlert('sos', 'Emergency Alert Sent');
   };
 
   const closeSos = () => {
@@ -120,7 +190,17 @@ export default function EmergencyAssistanceContent({
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingHorizontal: px(20), paddingBottom: px(32) }}
         showsVerticalScrollIndicator={false}>
-      <SosPulseButton px={px} />
+      <SosPulseButton px={px} onPress={sendAlert} />
+
+      {contextLoading && isAuthenticated ? (
+        <ActivityIndicator color={SOS_COLORS.gold} style={{ marginBottom: px(10) }} />
+      ) : null}
+
+      {supportPhone ? (
+        <Text style={{ fontSize: px(12), color: SOS_COLORS.grey, textAlign: 'center', marginBottom: px(8) }}>
+          Support: {supportPhone} · Emergency: {emergencyPhone}
+        </Text>
+      ) : null}
 
       <Text
         style={{
@@ -146,7 +226,7 @@ export default function EmergencyAssistanceContent({
           marginBottom: px(22),
           letterSpacing: 0.5,
         }}>
-        {details.vehicleNumber}
+        {vehicleNumber}
       </Text>
 
       <View
@@ -177,10 +257,10 @@ export default function EmergencyAssistanceContent({
             Vehicle Owner
           </Text>
           <Text style={{ fontSize: px(15), fontWeight: typography.weights.bold, color: SOS_COLORS.white }}>
-            {details.ownerName}
+            {ownerName}
           </Text>
           <Text style={{ fontSize: px(13), color: SOS_COLORS.gold, marginTop: px(2) }}>
-            {details.ownerPhone}
+            {context?.owner?.phone ?? details.ownerPhone}
           </Text>
         </View>
         <Pressable
@@ -311,10 +391,10 @@ export default function EmergencyAssistanceContent({
         </View>
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={{ fontSize: px(14), fontWeight: typography.weights.bold, color: SOS_COLORS.white }}>
-            {details.contactName} ({details.contactRelation})
+            {contactName} ({contactRelation})
           </Text>
           <Text style={{ fontSize: px(13), color: SOS_COLORS.gold, marginTop: px(3) }}>
-            {details.contactPhone}
+            {contactPhone}
           </Text>
         </View>
         <Pressable

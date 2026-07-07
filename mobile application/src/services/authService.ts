@@ -1,24 +1,35 @@
 import { clearTokens, saveTokens, unwrapApi, api } from './api';
 import type { User, VerifyOtpResponse } from '../types/auth';
 
-interface SendOtpResult {
-  message: string;
-  expiresIn: number;
-  devOtp?: string;
+export interface SendOtpPayload {
+  mobileNumber: string;
 }
 
-export async function sendOtp(mobileNumber: string): Promise<SendOtpResult> {
+export interface VerifyOtpPayload {
+  mobileNumber: string;
+  otp: string;
+}
+
+export interface SendOtpResult {
+  message: string;
+  expiresIn: number;
+  isExistingUser: boolean;
+  isProfileCompleted: boolean;
+  onboardingRequired?: boolean;
+}
+
+export async function sendOtp(payload: SendOtpPayload): Promise<SendOtpResult> {
   return unwrapApi(
-    api.post('/api/v1/auth/send-otp', { mobileNumber }),
+    api.post('/api/v1/auth/send-otp', { mobileNumber: payload.mobileNumber }),
   );
 }
 
-export async function verifyOtp(
-  mobileNumber: string,
-  otp: string,
-): Promise<VerifyOtpResponse> {
+export async function verifyOtp(payload: VerifyOtpPayload): Promise<VerifyOtpResponse> {
   const result = await unwrapApi<VerifyOtpResponse>(
-    api.post('/api/v1/auth/verify-otp', { mobileNumber, otp }),
+    api.post('/api/v1/auth/verify-otp', {
+      mobileNumber: payload.mobileNumber,
+      otp: payload.otp,
+    }),
   );
   await saveTokens(result.accessToken, result.refreshToken);
   return result;

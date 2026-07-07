@@ -1,5 +1,5 @@
-import React from 'react';
-import { Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Text, View } from 'react-native';
 import { AlertTriangle, Clock, MapPin, Tag, Wrench } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { LucideIcon } from 'lucide-react-native';
@@ -13,6 +13,11 @@ import {
   getRoadsideServicePrice,
 } from '../../../constants/roadsideBooking';
 import { useRoadsideBooking } from '../../../context/RoadsideBookingContext';
+import { useServiceBookingPayment } from '../../../hooks/useServiceBookingPayment';
+import { createRoadsideBooking } from '../../../services/bookings/serviceBookingApi';
+import { useVehicleStore } from '../../../store/vehicleStore';
+import { buildRoadsideBookingRequest } from '../../../utils/serviceBookingPayload';
+import { roadsideServiceIdToSlug } from '../../../utils/roadsideServiceMap';
 import type { HomeStackParamList } from '../../../types/navigation';
 import { colors, shadows, typography } from '../../../theme';
 
@@ -76,7 +81,57 @@ function ReviewRow({
 
 export default function RoadsideReviewScreen({ navigation }: Props) {
   const { t } = useBookingTheme();
-  const { booking } = useRoadsideBooking();
+  const { booking, resetBooking } = useRoadsideBooking();
+  const { vehicles, fetchVehicles } = useVehicleStore();
+  const { confirmExistingBooking, isConfirming } = useServiceBookingPayment();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    void fetchVehicles().catch((error) => {
+      if (__DEV__) {
+        console.warn('[RoadsideReview] fetchVehicles failed', error);
+      }
+    });
+  }, [fetchVehicles]);
+
+  const handleConfirm = async () => {
+    if (isSubmitting || isConfirming) return;
+    setIsSubmitting(true);
+
+    try {
+      const serviceType = roadsideServiceIdToSlug(booking.serviceId);
+      const payload = buildRoadsideBookingRequest(booking, vehicles, serviceType);
+      const response = await createRoadsideBooking(payload);
+
+      if (!response.available) {
+        Alert.alert('Coming soon', response.message ?? 'This service is not available yet.');
+        return;
+      }
+
+      if (response.booking) {
+        await confirmExistingBooking(response.booking.id, 'towing');
+        resetBooking();
+        navigation.navigate('RoadsideHelpOnWay');
+        return;
+      }
+
+      Alert.alert('Booking failed', 'Unable to create roadside booking. Please try again.');
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('Add a vehicle')) {
+        Alert.alert('Vehicle required', 'Add a vehicle in Profile before booking roadside help.');
+        return;
+      }
+      if (error instanceof Error && error.message.includes('map')) {
+        Alert.alert('Location required', error.message);
+        return;
+      }
+      Alert.alert('Booking failed', 'Something went wrong, please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const isBusy = isSubmitting || isConfirming;
 
   const rows = [
     { Icon: Wrench, label: 'Service', value: getRoadsideServiceLabel(booking.serviceId) },
@@ -96,13 +151,9 @@ export default function RoadsideReviewScreen({ navigation }: Props) {
       step={3}
       accentColor={ROADSIDE_ACCENT}
       onBack={() => navigation.goBack()}
-      buttonLabel="Confirm & Get Help"
-      onContinue={() =>
-        navigation.navigate('BookingPayment', {
-          amount: getRoadsideServicePrice(booking.serviceId),
-          flow: 'roadside',
-        })
-      }
+      buttonLabel={isBusy ? 'Confirming...' : 'Confirm & Get Help'}
+      continueDisabled={isBusy}
+      onContinue={() => void handleConfirm()}
       footerNote={
         <View
           style={{
@@ -136,6 +187,11 @@ export default function RoadsideReviewScreen({ navigation }: Props) {
           No charge if we can't help
         </Text>
       }>
+      {isBusy ? (
+        <View style={{ alignItems: 'center', paddingVertical: t.px(12) }}>
+          <ActivityIndicator color={ROADSIDE_ACCENT} />
+        </View>
+      ) : null}
       <View
         style={[
           {

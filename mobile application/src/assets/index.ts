@@ -54,4 +54,11 @@ export const images = {
   },
 } as const;
 
+export const categoryIcons = {
+  towing: images.icons.towing,
+  roadside: images.icons.roadside,
+  driver: images.icons.truck,
+  future: images.icons.future,
+} as const;
+
 export type ImageKeys = keyof typeof images;

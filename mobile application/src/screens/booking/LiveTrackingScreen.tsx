@@ -118,7 +118,10 @@ export default function LiveTrackingScreen({ navigation, route }: Props) {
             {booking.status === 'SERVICE_COMPLETED' || booking.status === 'PAID' ? (
               <PrimaryButton
                 label="Rate Experience"
-                onPress={() => navigation.navigate('RatingReview', { bookingId: booking.id })}
+                onPress={() => navigation.navigate('RatingReview', {
+                  bookingId: booking.id,
+                  bookingType: booking.bookingType,
+                })}
               />
             ) : null}
           </ScreenContent>

@@ -14,8 +14,10 @@ import {
   Camera,
   Car,
   Check,
+  CircleEllipsis,
   CreditCard,
   Fuel,
+  Leaf,
   Palette,
   Shield,
   Truck,
@@ -42,6 +44,8 @@ const FUEL_ICONS: Record<string, LucideIcon> = {
   Diesel: Fuel,
   CNG: Fuel,
   Electric: Zap,
+  Hybrid: Leaf,
+  Other: CircleEllipsis,
 };
 
 export default function AddVehicleScreen({ navigation }: Props) {

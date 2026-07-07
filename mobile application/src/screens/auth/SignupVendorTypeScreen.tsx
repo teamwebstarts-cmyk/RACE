@@ -19,7 +19,7 @@ const VENDOR_ONLY: VendorType[] = ['towing_company'];
 const DRIVER_ONLY: VendorType[] = ['tow_truck_driver', 'full_time_driver', 'part_time_driver'];
 
 export default function SignupVendorTypeScreen({ navigation, route }: Props) {
-  const { accountType } = route.params;
+  const accountType = route.params?.accountType ?? 'vendor';
   const dispatch = useAppDispatch();
 
   const options = VENDOR_TYPE_CONFIGS.filter((item) =>

@@ -1,28 +1,63 @@
 import React, { useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, Text, TextInput, View } from 'react-native';
 import { Camera, Star } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import DriverAvatar from '../../../components/bookings/DriverAvatar';
 import TowingBookingLayout, { useBookingTheme } from '../../../components/booking/TowingBookingLayout';
-import { TOWING_DRIVER } from '../../../constants/towingBooking';
-import type { HomeStackParamList } from '../../../types/navigation';
+import { useBookingQuery, useSubmitRatingMutation } from '../../../services/bookings/useBookingQueries';
+import type { BookingsStackParamList, HomeStackParamList } from '../../../types/navigation';
 import { colors, shadows, typography } from '../../../theme';
 
-type Props = NativeStackScreenProps<HomeStackParamList, 'TowingRate'>;
+type Props = NativeStackScreenProps<HomeStackParamList & BookingsStackParamList, 'TowingRate'>;
 
-export default function TowingRateScreen({ navigation }: Props) {
+export default function TowingRateScreen({ navigation, route }: Props) {
   const { t } = useBookingTheme();
+  const bookingId = route.params?.bookingId;
+  const bookingType = route.params?.bookingType ?? 'towing';
+  const booking = useBookingQuery(bookingId ?? '');
+  const submitRating = useSubmitRatingMutation();
   const [rating, setRating] = useState(0);
   const [feedback, setFeedback] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const canSubmit = rating > 0 && bookingId && !isSubmitting;
+
+  const handleSubmit = async () => {
+    if (!bookingId || rating === 0) return;
+    setIsSubmitting(true);
+    try {
+      await submitRating.mutateAsync({
+        bookingId,
+        bookingType,
+        payload: { rating, review: feedback.trim() || undefined },
+      });
+      navigation.popToTop();
+    } catch {
+      Alert.alert('Unable to submit rating', 'Please try again in a moment.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (bookingId && !booking) {
+    return (
+      <TowingBookingLayout title="Rate Your Experience" step={10} hideFooter>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator color={colors.primary} />
+        </View>
+      </TowingBookingLayout>
+    );
+  }
 
   return (
     <TowingBookingLayout
       title="Rate Your Experience"
       step={10}
       onBack={() => navigation.goBack()}
-      buttonLabel="Submit Review"
-      onContinue={() => navigation.popToTop()}
+      buttonLabel={isSubmitting ? 'Submitting...' : 'Submit Review'}
+      continueDisabled={!canSubmit}
+      onContinue={() => void handleSubmit()}
       scrollable>
       <View style={{ flex: 1 }}>
         <View
@@ -48,10 +83,10 @@ export default function TowingRateScreen({ navigation }: Props) {
                 fontWeight: typography.weights.bold,
                 color: colors.dark,
               }}>
-              {TOWING_DRIVER.name}
+              {booking?.driver?.name ?? 'Your service partner'}
             </Text>
             <Text style={{ fontSize: t.caption, color: colors.grey, marginTop: t.px(2) }}>
-              Your towing driver · {TOWING_DRIVER.rating} ★
+              {booking?.serviceLabel ?? 'RACE Service'}
             </Text>
           </View>
         </View>
@@ -64,7 +99,7 @@ export default function TowingRateScreen({ navigation }: Props) {
             marginBottom: t.px(6),
             textAlign: 'center',
           }}>
-          How was your towing experience?
+          How was your experience?
         </Text>
         <Text
           style={{

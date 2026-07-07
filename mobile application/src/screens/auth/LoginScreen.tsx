@@ -40,8 +40,7 @@ export default function LoginScreen({ navigation }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handlePhoneChange = (value: string) => {
-    const digits = getPhoneDigits(value).slice(0, 10);
-    setPhoneDigits(digits);
+    setPhoneDigits(getPhoneDigits(value).slice(0, 10));
     if (phoneError) setPhoneError('');
   };
 
@@ -54,11 +53,12 @@ export default function LoginScreen({ navigation }: Props) {
     setIsSubmitting(true);
     setPhoneError('');
     try {
-      const result = await sendOtp(getPhoneDigits(phoneDigits));
+      const result = await sendOtp({
+        mobileNumber: getPhoneDigits(phoneDigits),
+      });
       navigation.navigate('OTP', {
         phone: formatPhoneE164(phoneDigits),
-        flow: 'login',
-        devOtp: result.devOtp,
+        isExistingUser: result.isExistingUser,
       });
     } catch (error) {
       setPhoneError(getApiErrorMessage(error, 'Unable to send OTP'));
@@ -230,19 +230,6 @@ export default function LoginScreen({ navigation }: Props) {
                 Continue with Google
               </Text>
             </Pressable>
-
-            {__DEV__ ? (
-              <Text
-                style={{
-                  marginTop: px(14),
-                  textAlign: 'center',
-                  fontSize: px(11),
-                  color: colors.grey,
-                  lineHeight: px(16),
-                }}>
-                Dev: OTP backend terminal mein dikhega (npm run dev).
-              </Text>
-            ) : null}
           </View>
 
           <View style={[styles.footer, { paddingTop: px(8) }]}>

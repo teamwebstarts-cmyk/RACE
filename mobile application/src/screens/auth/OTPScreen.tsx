@@ -15,8 +15,10 @@ import GoldButton from '../../components/auth/GoldButton';
 import { useAuthActions } from '../../hooks/useAuth';
 import { sendOtp } from '../../services/authService';
 import { getApiErrorMessage } from '../../services/api';
+import { useAuthStore } from '../../store/authStore';
 import type { AuthStackParamList } from '../../types/navigation';
 import { getPhoneDigits } from '../../utils/phone';
+import { maskMobile } from '../../utils/mask';
 import { colors, shadows, typography } from '../../theme';
 
 const REF_W = 390;
@@ -24,8 +26,8 @@ const REF_W = 390;
 type Props = NativeStackScreenProps<AuthStackParamList, 'OTP'>;
 
 export default function OTPScreen({ navigation, route }: Props) {
-  const { phone, flow, devOtp: initialDevOtp } = route.params;
-  const { login, error: authError, isLoading, clearError } = useAuthActions();
+  const { phone, isExistingUser } = route.params;
+  const { verifyOtp: verifyOtpAction, error: authError, isLoading, clearError } = useAuthActions();
   const { width } = useWindowDimensions();
   const px = (n: number) => Math.round(n * (width / REF_W));
 
@@ -34,13 +36,12 @@ export default function OTPScreen({ navigation, route }: Props) {
   const [timer, setTimer] = useState(30);
   const [error, setError] = useState('');
   const [isResending, setIsResending] = useState(false);
-  const [devOtp, setDevOtp] = useState(initialDevOtp ?? '');
   const inputRefs = useRef<Array<TextInput | null>>([]);
   const isVerifyingRef = useRef(false);
 
   const otpValue = digits.join('');
-  const isLoginFlow = flow === 'login';
   const mobileNumber = getPhoneDigits(phone);
+  const destinationLabel = maskMobile(phone);
 
   const verifyOtp = useCallback(
     async (value: string) => {
@@ -57,8 +58,11 @@ export default function OTPScreen({ navigation, route }: Props) {
       clearError();
       setError('');
       try {
-        await login(mobileNumber, code);
-        if (!isLoginFlow) {
+        await verifyOtpAction({
+          mobileNumber,
+          otp: code,
+        });
+        if (useAuthStore.getState().onboardingRequired) {
           navigation.navigate('ProfileSetup');
         }
       } catch (err) {
@@ -67,7 +71,7 @@ export default function OTPScreen({ navigation, route }: Props) {
         isVerifyingRef.current = false;
       }
     },
-    [clearError, isLoginFlow, login, mobileNumber, navigation],
+    [clearError, mobileNumber, navigation, verifyOtpAction],
   );
 
   const applyOtpValue = useCallback(
@@ -151,15 +155,12 @@ export default function OTPScreen({ navigation, route }: Props) {
     setError('');
     clearError();
     try {
-      const result = await sendOtp(mobileNumber);
-      if (result.devOtp) {
-        setDevOtp(result.devOtp);
-      }
+      await sendOtp({ mobileNumber });
       setTimer(30);
       setDigits(['', '', '', '', '', '']);
       setActiveIndex(0);
       inputRefs.current[0]?.focus();
-      Alert.alert('OTP Sent', `A new OTP has been sent to ${phone}`);
+      Alert.alert('OTP Sent', `A new OTP has been sent to ${destinationLabel}`);
     } catch (err) {
       setError(getApiErrorMessage(err, 'Unable to resend OTP'));
     } finally {
@@ -204,43 +205,8 @@ export default function OTPScreen({ navigation, route }: Props) {
           textAlign: 'center',
           lineHeight: px(20),
         }}>
-        {isLoginFlow
-          ? 'We have sent a 6-digit code to your mobile number'
-          : 'Verify your number to complete sign up'}
+        We have sent a 6-digit code to your mobile number
       </Text>
-
-      {__DEV__ && devOtp ? (
-        <View
-          style={{
-            marginTop: px(12),
-            paddingHorizontal: px(14),
-            paddingVertical: px(10),
-            borderRadius: px(10),
-            backgroundColor: colors.goldLight,
-            borderWidth: 1,
-            borderColor: colors.primary,
-          }}>
-          <Text
-            style={{
-              fontSize: px(12),
-              color: colors.grey,
-              textAlign: 'center',
-            }}>
-            Dev OTP (backend terminal mein bhi dikhega)
-          </Text>
-          <Text
-            style={{
-              marginTop: px(4),
-              fontSize: px(22),
-              fontWeight: typography.weights.extrabold,
-              color: colors.dark,
-              textAlign: 'center',
-              letterSpacing: 4,
-            }}>
-            {devOtp}
-          </Text>
-        </View>
-      ) : null}
 
       <View
         style={{
@@ -257,7 +223,7 @@ export default function OTPScreen({ navigation, route }: Props) {
             fontWeight: typography.weights.bold,
             color: colors.primary,
           }}>
-          {phone}
+          {destinationLabel}
         </Text>
         <Pressable onPress={() => navigation.goBack()}>
           <Text
@@ -369,7 +335,7 @@ export default function OTPScreen({ navigation, route }: Props) {
       </Pressable>
 
       <GoldButton
-        label={isLoading ? 'Verifying...' : isLoginFlow ? 'Verify & Login' : 'Verify & Continue'}
+        label={isLoading ? 'Verifying...' : isExistingUser ? 'Verify & Login' : 'Verify & Continue'}
         onPress={() => void verifyOtp(otpValue)}
         style={[shadows.card, { width: '100%' }]}
         height={px(54)}

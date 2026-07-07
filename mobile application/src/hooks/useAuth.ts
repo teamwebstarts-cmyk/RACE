@@ -1,54 +1,61 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as SecureStore from 'expo-secure-store';
 
 import { TOKEN_KEYS } from '../config/env';
+import { hydrateAuthStore } from '../redux/store';
+import { setUnauthorizedHandler } from '../services/authSession';
 import { useAuthStore } from '../store/authStore';
 import { useProfileStore } from '../store/profileStore';
 
 export function useAuth() {
-  const {
-    isAuthenticated,
-    onboardingRequired,
-    setAuthenticated,
-    setLoading,
-    logout,
-  } = useAuthStore();
-  const fetchProfile = useProfileStore(state => state.fetchProfile);
-  const clearProfile = useProfileStore(state => state.clearProfile);
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const onboardingRequired = useAuthStore(state => state.onboardingRequired);
   const [isLoading, setIsLoading] = useState(true);
+  const bootstrapStarted = useRef(false);
 
   useEffect(() => {
+    setUnauthorizedHandler(() => {
+      void useAuthStore.getState().logout();
+    });
+  }, []);
+
+  useEffect(() => {
+    if (bootstrapStarted.current) {
+      return;
+    }
+    bootstrapStarted.current = true;
+
     let mounted = true;
 
     async function bootstrap() {
-      setLoading(true);
+      useAuthStore.getState().setLoading(true);
       try {
+        await hydrateAuthStore();
+
         const accessToken = await SecureStore.getItemAsync(TOKEN_KEYS.ACCESS);
         if (!accessToken) {
-          if (mounted) {
-            setAuthenticated(false);
-          }
+          useAuthStore.getState().clearAuth();
           return;
         }
 
-        if (mounted) {
-          setAuthenticated(true);
+        const zustand = useAuthStore.getState();
+        if (!zustand.isAuthenticated) {
+          zustand.setAuthenticated(true);
         }
 
         try {
-          await fetchProfile();
+          await useProfileStore.getState().fetchProfile();
           const profile = useProfileStore.getState().profile;
           if (profile && mounted) {
             useAuthStore.getState().setOnboardingRequired(!profile.isProfileCompleted);
           }
         } catch {
-          await logout();
-          clearProfile();
+          // Keep session on transient network errors; 401 handler will clear auth.
         }
       } finally {
         if (mounted) {
           setIsLoading(false);
-          setLoading(false);
+          useAuthStore.getState().setLoading(false);
         }
       }
     }
@@ -58,7 +65,7 @@ export function useAuth() {
     return () => {
       mounted = false;
     };
-  }, [clearProfile, fetchProfile, logout, setAuthenticated, setLoading]);
+  }, []);
 
   return {
     isLoading,
@@ -68,7 +75,8 @@ export function useAuth() {
 }
 
 export function useAuthActions() {
-  const login = useAuthStore(state => state.login);
+  const sendOtp = useAuthStore(state => state.sendOtp);
+  const verifyOtp = useAuthStore(state => state.verifyOtp);
   const logout = useAuthStore(state => state.logout);
   const clearError = useAuthStore(state => state.clearError);
   const error = useAuthStore(state => state.error);
@@ -77,7 +85,8 @@ export function useAuthActions() {
   const onboardingRequired = useAuthStore(state => state.onboardingRequired);
 
   return {
-    login,
+    sendOtp,
+    verifyOtp,
     logout,
     clearError,
     error,

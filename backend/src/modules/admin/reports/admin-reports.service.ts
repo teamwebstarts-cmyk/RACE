@@ -1,7 +1,5 @@
 import { BookingModel } from '../../bookings/booking.model';
 import { UserModel } from '../../users/user.model';
-import { VendorModel } from '../../vendors/vendor.model';
-import { DriverModel } from '../models/driver.model';
 import { TransactionModel } from '../models/transaction.model';
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -49,8 +47,8 @@ export const adminReportsService = {
         { $group: { _id: { $month: '$createdAt' }, bookings: { $sum: 1 } } },
         { $sort: { _id: 1 } },
       ]),
-      VendorModel.aggregate([
-        { $match: match },
+      UserModel.aggregate([
+        { $match: { ...match, role: 'vendor' } },
         { $group: { _id: { $month: '$createdAt' }, count: { $sum: 1 } } },
         { $sort: { _id: 1 } },
       ]),
@@ -65,7 +63,7 @@ export const adminReportsService = {
         { $sort: { count: -1 } },
         { $limit: 6 },
       ]),
-      VendorModel.find(match).sort({ createdAt: -1 }).limit(5).lean(),
+      UserModel.find({ ...match, role: 'vendor' }).sort({ createdAt: -1 }).limit(5).lean(),
       BookingModel.aggregate([
         { $match: match },
         {
@@ -84,9 +82,9 @@ export const adminReportsService = {
         { $match: { ...match, type: 'PAYMENT', status: 'COMPLETED' } },
         { $group: { _id: null, total: { $sum: '$amount' } } },
       ]),
-      DriverModel.find().sort({ totalTrips: -1 }).limit(5).lean(),
-      DriverModel.countDocuments({ status: 'APPROVED' }),
-      VendorModel.countDocuments(match),
+      UserModel.find({ role: 'driver' }).sort({ 'driverProfile.totalTrips': -1 }).limit(5).lean(),
+      UserModel.countDocuments({ role: 'driver', 'driverProfile.status': 'APPROVED' }),
+      UserModel.countDocuments({ ...match, role: 'vendor' }),
       UserModel.countDocuments({ ...match, role: 'customer' }),
     ]);
 
@@ -97,9 +95,9 @@ export const adminReportsService = {
     const newCustomers = customerGrowth.reduce((sum, row) => sum + row.count, 0);
     const avgDriverRating =
       topDrivers.length > 0
-        ? topDrivers.reduce((sum, driver) => sum + driver.rating, 0) / topDrivers.length
+        ? topDrivers.reduce((sum, driver) => sum + (driver.driverProfile?.rating ?? 0), 0) / topDrivers.length
         : 0;
-    const totalDriverTrips = topDrivers.reduce((sum, driver) => sum + driver.totalTrips, 0);
+    const totalDriverTrips = topDrivers.reduce((sum, driver) => sum + (driver.driverProfile?.totalTrips ?? 0), 0);
 
     return {
       revenueTrend: revenueTrend.map((row) => ({
@@ -124,15 +122,15 @@ export const adminReportsService = {
       })),
       topVendors: topVendors.map((vendor) => ({
         id: vendor._id.toString(),
-        name: vendor.businessName ?? vendor.ownerName ?? 'Vendor',
+        name: vendor.vendorProfile?.businessName ?? vendor.vendorProfile?.ownerName ?? vendor.fullName ?? 'Vendor',
         bookings: 0,
         revenue: 0,
       })),
       topDrivers: topDrivers.map((driver) => ({
         id: driver._id.toString(),
-        name: driver.name,
-        trips: driver.totalTrips,
-        rating: driver.rating,
+        name: driver.fullName ?? 'Driver',
+        trips: driver.driverProfile?.totalTrips ?? 0,
+        rating: driver.driverProfile?.rating ?? 0,
       })),
       completionRate: totalBookings ? Math.round((rates.completed / totalBookings) * 100) : 0,
       cancellationRate: totalBookings ? Math.round((rates.cancelled / totalBookings) * 100) : 0,

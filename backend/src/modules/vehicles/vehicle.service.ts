@@ -15,6 +15,7 @@ function mapVehicle(vehicle: IVehicle): VehicleResponseDto {
     id: vehicle.id,
     customerId: vehicle.customerId.toString(),
     vehicleType: vehicle.vehicleType,
+    vehicleSubtype: vehicle.vehicleSubtype,
     vehicleNumber: vehicle.vehicleNumber,
     brand: vehicle.brand,
     model: vehicle.vehicleModel,
@@ -32,6 +33,7 @@ export class VehicleService {
     const vehicle = await vehicleRepository.create({
       customerId: customerId as unknown as IVehicle['customerId'],
       vehicleType: dto.vehicleType,
+      vehicleSubtype: dto.vehicleSubtype,
       vehicleNumber: dto.vehicleNumber.toUpperCase(),
       brand: dto.brand,
       vehicleModel: dto.model,
@@ -75,6 +77,7 @@ export class VehicleService {
   ): Promise<VehicleResponseDto> {
     const vehicle = await vehicleRepository.updateByIdForCustomer(vehicleId, customerId, {
       vehicleType: dto.vehicleType,
+      vehicleSubtype: dto.vehicleSubtype,
       vehicleNumber: dto.vehicleNumber?.toUpperCase(),
       brand: dto.brand,
       vehicleModel: dto.model,

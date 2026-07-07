@@ -1,4 +1,11 @@
-import React, { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
 
 import { DEFAULT_TOWING_BOOKING, type TowingBookingState } from '../types/towingBooking';
 
@@ -13,15 +20,21 @@ const TowingBookingContext = createContext<TowingBookingContextValue | null>(nul
 export function TowingBookingProvider({ children }: { children: ReactNode }) {
   const [booking, setBooking] = useState<TowingBookingState>(DEFAULT_TOWING_BOOKING);
 
+  const updateBooking = useCallback((patch: Partial<TowingBookingState>) => {
+    setBooking(prev => ({ ...prev, ...patch }));
+  }, []);
+
+  const resetBooking = useCallback(() => {
+    setBooking(DEFAULT_TOWING_BOOKING);
+  }, []);
+
   const value = useMemo(
     () => ({
       booking,
-      updateBooking: (patch: Partial<TowingBookingState>) => {
-        setBooking(prev => ({ ...prev, ...patch }));
-      },
-      resetBooking: () => setBooking(DEFAULT_TOWING_BOOKING),
+      updateBooking,
+      resetBooking,
     }),
-    [booking],
+    [booking, updateBooking, resetBooking],
   );
 
   return (

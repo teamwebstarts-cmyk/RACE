@@ -29,6 +29,20 @@ export class UserRepository {
     return UserModel.findById(id).exec();
   }
 
+  async findByEmail(email: string): Promise<IUser | null> {
+    return UserModel.findOne({ email: email.trim().toLowerCase() }).exec();
+  }
+
+  async findByMobileOrEmail(mobileNumber: string, email: string): Promise<IUser | null> {
+    const normalized = normalizeMobileNumber(mobileNumber);
+    const formats = legacyMobileFormats(normalized);
+    const normalizedEmail = email.trim().toLowerCase();
+
+    return UserModel.findOne({
+      $or: [{ mobileNumber: { $in: formats } }, { email: normalizedEmail }],
+    }).exec();
+  }
+
   async create(data: Partial<IUser>): Promise<IUser> {
     return UserModel.create(data);
   }

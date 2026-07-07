@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 export const createVehicleSchema = z.object({
   vehicleType: z.enum(['car', 'bike', 'ev', 'truck', 'auto', 'bus', 'other']),
+  vehicleSubtype: z.string().min(1).max(50).optional(),
   vehicleNumber: z.string().min(4).max(20),
   brand: z.string().min(1).max(50),
   model: z.string().min(1).max(50),
@@ -23,6 +24,7 @@ export interface VehicleResponseDto {
   id: string;
   customerId: string;
   vehicleType: string;
+  vehicleSubtype?: string;
   vehicleNumber: string;
   brand: string;
   model: string;

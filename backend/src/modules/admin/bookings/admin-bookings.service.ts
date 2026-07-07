@@ -1,12 +1,15 @@
 import { Types } from 'mongoose';
 
 import { BookingModel } from '../../bookings/booking.model';
+import { DriverBookingModel } from '../../bookings/driver/driver-booking.model';
+import { TowingBookingModel } from '../../bookings/towing/towing-booking.model';
 import { UserModel } from '../../users/user.model';
 import { VehicleModel } from '../../vehicles/vehicle.model';
-import { VendorModel } from '../../vendors/vendor.model';
-import { DriverModel } from '../models/driver.model';
+import { PaymentTransactionModel } from '../../payments/payment-transaction.model';
+import { releaseDriver } from '../../bookings/shared/driver-assignment.service';
+import { emitBookingStatusUpdate } from '../../../shared/socket.service';
 import { TransactionModel } from '../models/transaction.model';
-import { escapeRegex, paginate } from '../shared/pagination';
+import { escapeRegex } from '../shared/pagination';
 import { logActivity } from '../shared/activity-logger';
 import { createNotification } from '../shared/notification-service';
 import { mapLocationPoint } from '../shared/response-mappers';
@@ -14,13 +17,62 @@ import { generateBookingFinancials, generateRefund } from '../shared/transaction
 import { NotFoundError } from '../../../shared/utils/errors';
 
 const COMPLETED_STATUSES = ['SERVICE_COMPLETED', 'PAID'];
-const ACTIVE_STATUSES = ['CREATED', 'ASSIGNED', 'ACCEPTED', 'EN_ROUTE', 'ARRIVED', 'SERVICE_STARTED', 'PAYMENT_PENDING'];
 
 function mapAdminBookingStatus(status: string) {
   if (COMPLETED_STATUSES.includes(status)) return 'COMPLETED';
   if (status === 'CANCELLED') return 'CANCELLED';
   if (status === 'REFUNDED') return 'REFUNDED';
   return status;
+}
+
+type AdminBookingType = 'legacy' | 'towing' | 'driver';
+
+type ServiceBookingRecord = {
+  _id: Types.ObjectId;
+  bookingNumber: string;
+  customerId: Types.ObjectId;
+  driverId?: Types.ObjectId;
+  vehicleId?: Types.ObjectId;
+  status: string;
+  estimatedFare: number;
+  fareBreakdown?: Record<string, unknown>;
+  vehicleCategory?: string;
+  packageHours?: number;
+  statusHistory: Array<{ status: string; timestamp: Date; note?: string }>;
+  pickup: { address: string; latitude: number; longitude: number };
+  dropoff?: { address: string; latitude: number; longitude: number };
+  cancellationReason?: string;
+  cancelledAt?: Date;
+  cancelledBy?: string;
+  refundAmount?: number;
+  refundStatus?: string;
+  createdAt: Date;
+};
+
+function statusMatches(status: string, filter?: string): boolean {
+  if (!filter || filter === 'ALL') return true;
+  if (filter === 'COMPLETED') {
+    return ['COMPLETED', 'RATED', 'SERVICE_COMPLETED', 'PAID'].includes(status);
+  }
+  if (filter === 'ACTIVE') {
+    return ['CREATED', 'ASSIGNED', 'ACCEPTED', 'EN_ROUTE', 'ARRIVED', 'SERVICE_STARTED', 'PAYMENT_PENDING', 'CONFIRMED', 'DRIVER_ASSIGNED', 'DRIVER_EN_ROUTE', 'DRIVER_ARRIVED', 'IN_PROGRESS'].includes(status);
+  }
+  return status === filter;
+}
+
+function inDateRange(date: Date, from?: string, to?: string): boolean {
+  if (from && date < new Date(from)) return false;
+  if (to) {
+    const end = new Date(to);
+    end.setHours(23, 59, 59, 999);
+    if (date > end) return false;
+  }
+  return true;
+}
+
+function toRegex(search?: string): RegExp | null {
+  if (!search?.trim()) return null;
+  return new RegExp(escapeRegex(search.trim()), 'i');
 }
 
 async function mapBookingListItem(booking: {
@@ -37,14 +89,14 @@ async function mapBookingListItem(booking: {
 }) {
   const [customer, vendor] = await Promise.all([
     UserModel.findById(booking.customerId).lean(),
-    booking.vendorId ? VendorModel.findById(booking.vendorId).lean() : null,
+    booking.vendorId ? UserModel.findOne({ _id: booking.vendorId, role: 'vendor' }).lean() : null,
   ]);
 
   return {
     id: booking._id.toString(),
     bookingNumber: booking.bookingNumber,
     customerName: customer?.fullName ?? 'Customer',
-    vendorName: vendor?.businessName ?? vendor?.ownerName ?? '—',
+    vendorName: vendor?.vendorProfile?.businessName ?? vendor?.vendorProfile?.ownerName ?? vendor?.fullName ?? '—',
     driverName: booking.driver?.name,
     service: booking.serviceLabel,
     serviceType: booking.categoryId,
@@ -68,43 +120,155 @@ export const adminBookingsService = {
     search?: string;
     status?: string;
     serviceType?: string;
+    type?: 'towing' | 'driver' | 'all';
     dateFrom?: string;
     dateTo?: string;
     page?: number;
     pageSize?: number;
   }) {
-    const query: Record<string, unknown> = {};
-    if (filters.status && filters.status !== 'ALL') {
-      if (filters.status === 'COMPLETED') query.status = { $in: COMPLETED_STATUSES };
-      else if (filters.status === 'ACTIVE') query.status = { $in: ACTIVE_STATUSES };
-      else query.status = filters.status;
-    }
-    if (filters.serviceType && filters.serviceType !== 'ALL') {
-      query.categoryId = filters.serviceType;
-    }
-    if (filters.dateFrom || filters.dateTo) {
-      query.createdAt = {};
-      if (filters.dateFrom) (query.createdAt as Record<string, Date>).$gte = new Date(filters.dateFrom);
-      if (filters.dateTo) {
-        const end = new Date(filters.dateTo);
-        end.setHours(23, 59, 59, 999);
-        (query.createdAt as Record<string, Date>).$lte = end;
-      }
-    }
-    if (filters.search?.trim()) {
-      const regex = new RegExp(escapeRegex(filters.search.trim()), 'i');
-      query.$or = [{ bookingNumber: regex }, { serviceLabel: regex }];
-    }
+    const page = Math.max(1, Number(filters.page ?? 1));
+    const pageSize = Math.min(100, Math.max(1, Number(filters.pageSize ?? 10)));
+    const regex = toRegex(filters.search);
+    const type = filters.type ?? 'all';
 
-    const result = await paginate(BookingModel, query, filters, (doc) => doc as never);
+    const [legacyBookings, towingBookings, driverBookings] = await Promise.all([
+      type === 'all'
+        ? BookingModel.find().lean()
+        : Promise.resolve([]),
+      type === 'driver'
+        ? Promise.resolve([])
+        : TowingBookingModel.find().lean(),
+      type === 'towing'
+        ? Promise.resolve([])
+        : DriverBookingModel.find().lean(),
+    ]);
+
+    const serviceItems = [
+      ...towingBookings.map((b) => ({ bookingType: 'towing' as const, booking: b as unknown as ServiceBookingRecord })),
+      ...driverBookings.map((b) => ({ bookingType: 'driver' as const, booking: b as unknown as ServiceBookingRecord })),
+    ].filter(({ bookingType, booking }) => {
+      if (filters.serviceType && filters.serviceType !== 'ALL' && filters.serviceType !== bookingType) return false;
+      if (!statusMatches(booking.status, filters.status)) return false;
+      if (!inDateRange(new Date(booking.createdAt), filters.dateFrom, filters.dateTo)) return false;
+      if (regex && !regex.test(booking.bookingNumber)) return false;
+      return true;
+    });
+
+    const legacyItems = legacyBookings
+      .filter((b) => {
+        if (filters.serviceType && filters.serviceType !== 'ALL' && filters.serviceType !== b.categoryId) return false;
+        if (!statusMatches(b.status, filters.status)) return false;
+        if (!inDateRange(new Date(b.createdAt), filters.dateFrom, filters.dateTo)) return false;
+        if (regex && !(regex.test(b.bookingNumber) || regex.test(b.serviceLabel))) return false;
+        return true;
+      })
+      .map((booking) => ({ bookingType: 'legacy' as const, booking }));
+
+    const merged = [...serviceItems, ...legacyItems].sort(
+      (a, b) => new Date(b.booking.createdAt).getTime() - new Date(a.booking.createdAt).getTime(),
+    );
+
+    const paged = merged.slice((page - 1) * pageSize, page * pageSize);
+    const customerIds = [
+      ...new Set(
+        paged
+          .map((row) => row.booking.customerId?.toString())
+          .filter((v): v is string => Boolean(v)),
+      ),
+    ];
+    const driverIds = [
+      ...new Set(
+        paged
+          .map((row) =>
+            row.bookingType === 'legacy'
+              ? (row.booking as unknown as { driver?: { id?: string } }).driver?.id
+              : (row.booking as ServiceBookingRecord).driverId?.toString(),
+          )
+          .filter((v): v is string => Boolean(v)),
+      ),
+    ];
+    const [customers, drivers] = await Promise.all([
+      UserModel.find({ _id: { $in: customerIds } }).lean(),
+      UserModel.find({ _id: { $in: driverIds } }).lean(),
+    ]);
+    const customerMap = new Map(customers.map((c) => [c._id.toString(), c]));
+    const driverMap = new Map(drivers.map((d) => [d._id.toString(), d]));
+
+    const items = paged.map((row) => {
+      if (row.bookingType === 'legacy') {
+        const booking = row.booking as unknown as {
+          _id: Types.ObjectId;
+          bookingNumber: string;
+          customerId: Types.ObjectId;
+          categoryId: string;
+          serviceLabel: string;
+          status: string;
+          invoice?: { total: number };
+          driver?: { id?: string; name?: string };
+          createdAt: Date;
+        };
+        const customer = customerMap.get(booking.customerId.toString());
+        return {
+          id: booking._id.toString(),
+          bookingType: 'legacy',
+          bookingNumber: booking.bookingNumber,
+          customerId: booking.customerId.toString(),
+          customerName: customer?.fullName ?? 'Customer',
+          vendorId: '',
+          vendorName: '—',
+          driverId: booking.driver?.id,
+          driverName: booking.driver?.name,
+          driverAssignment: booking.driver?.id ? 'Assigned' : 'Unassigned',
+          service: booking.serviceLabel,
+          serviceType: booking.categoryId,
+          amount: booking.invoice?.total ?? 0,
+          city: customer?.address?.city ?? '—',
+          status: mapAdminBookingStatus(booking.status),
+          date: new Date(booking.createdAt).toISOString(),
+          fareBreakdown: undefined,
+        };
+      }
+
+      const booking = row.booking as ServiceBookingRecord;
+      const customer = customerMap.get(booking.customerId.toString());
+      const driverId = booking.driverId?.toString();
+      const driver = driverId ? driverMap.get(driverId) : undefined;
+      return {
+        id: booking._id.toString(),
+        bookingType: row.bookingType,
+        bookingNumber: booking.bookingNumber,
+        customerId: booking.customerId.toString(),
+        customerName: customer?.fullName ?? 'Customer',
+        vendorId: '',
+        vendorName: '—',
+        driverId,
+        driverName: driver?.fullName,
+        driverAssignment: driver ? 'Assigned' : 'Unassigned',
+        service: row.bookingType === 'towing' ? 'Towing' : 'Driver Service',
+        serviceType: row.bookingType,
+        amount: booking.estimatedFare ?? 0,
+        city: customer?.address?.city ?? '—',
+        status: booking.status,
+        date: new Date(booking.createdAt).toISOString(),
+        fareBreakdown: booking.fareBreakdown,
+        vehicleCategory: booking.vehicleCategory,
+        packageHours: booking.packageHours,
+      };
+    });
+
     return {
-      ...result,
-      items: await Promise.all(result.items.map((b) => mapBookingListItem(b))),
+      items,
+      bookings: items,
+      total: merged.length,
+      page,
+      pageSize,
+      limit: pageSize,
+      totalPages: Math.max(1, Math.ceil(merged.length / pageSize)),
     };
   },
 
   async getCounts() {
-    const [all, created, assigned, enRoute, completed, cancelled, refunded] = await Promise.all([
+    const [all, created, assigned, enRoute, completed, cancelled, refunded, pending] = await Promise.all([
       BookingModel.countDocuments(),
       BookingModel.countDocuments({ status: 'CREATED' }),
       BookingModel.countDocuments({ status: { $in: ['ASSIGNED', 'ACCEPTED'] } }),
@@ -112,37 +276,148 @@ export const adminBookingsService = {
       BookingModel.countDocuments({ status: { $in: COMPLETED_STATUSES } }),
       BookingModel.countDocuments({ status: 'CANCELLED' }),
       BookingModel.countDocuments({ status: 'REFUNDED' }),
+      Promise.all([
+        TowingBookingModel.countDocuments({ status: 'PENDING' }),
+        DriverBookingModel.countDocuments({ status: 'PENDING' }),
+      ]).then(([a, b]) => a + b),
     ]);
-    return { all, created, assigned, enRoute, completed, cancelled, refunded };
+    return { all, created, assigned, enRoute, completed, cancelled, refunded, pending };
   },
 
-  async getById(id: string) {
-    const booking = await BookingModel.findById(id);
-    if (!booking) throw new NotFoundError('Booking not found');
+  async getById(id: string, type?: 'towing' | 'driver' | 'legacy') {
+    if (type === 'towing' || type === 'driver') {
+      const booking =
+        type === 'towing'
+          ? await TowingBookingModel.findById(id).lean()
+          : await DriverBookingModel.findById(id).lean();
+      if (!booking) throw new NotFoundError('Booking not found');
 
-    let vendorId = booking.vendorId;
-    if (!vendorId && booking.driver?.id) {
-      const driver = await DriverModel.findById(booking.driver.id).lean();
-      vendorId = driver?.vendorId;
+      const [customer, driver, vehicle, paymentTransactions] = await Promise.all([
+        UserModel.findById(booking.customerId).lean(),
+        booking.driverId ? UserModel.findById(booking.driverId).lean() : null,
+        booking.vehicleId ? VehicleModel.findById(booking.vehicleId).lean() : null,
+        PaymentTransactionModel.find({ bookingId: booking._id, bookingType: type }).sort({ createdAt: -1 }).lean(),
+      ]);
+
+      return {
+        id: booking._id.toString(),
+        bookingType: type,
+        bookingNumber: booking.bookingNumber,
+        customerId: booking.customerId.toString(),
+        customerName: customer?.fullName ?? 'Customer',
+        customerPhone: customer?.mobileNumber ?? '—',
+        customerEmail: customer?.email ?? '',
+        vendorId: '',
+        vendorName: '—',
+        vendorPhone: '—',
+        driverId: booking.driverId?.toString(),
+        driverName: driver?.fullName,
+        driverPhone: driver?.mobileNumber,
+        driver: driver
+          ? {
+              name: driver.fullName ?? 'Driver',
+              mobile: driver.mobileNumber,
+              currentLocation: driver.currentLocation ?? null,
+            }
+          : undefined,
+        customer: {
+          name: customer?.fullName ?? 'Customer',
+          mobile: customer?.mobileNumber ?? '—',
+          email: customer?.email ?? '',
+        },
+        vehicle: vehicle
+          ? {
+              brand: vehicle.brand,
+              model: vehicle.vehicleModel,
+              vehicleNumber: vehicle.vehicleNumber,
+            }
+          : undefined,
+        service: type === 'towing' ? 'Towing' : 'Driver Service',
+        serviceType: type,
+        amount: booking.estimatedFare ?? 0,
+        city: customer?.address?.city ?? '—',
+        status: booking.status,
+        date: booking.createdAt.toISOString(),
+        location: {
+          pickup: {
+            address: booking.pickup.address,
+            lat: booking.pickup.latitude,
+            lng: booking.pickup.longitude,
+          },
+          dropoff: booking.dropoff
+            ? {
+                address: booking.dropoff.address,
+                lat: booking.dropoff.latitude,
+                lng: booking.dropoff.longitude,
+              }
+            : undefined,
+        },
+        payment: {
+          amount: booking.estimatedFare ?? 0,
+          method: 'online',
+          status: booking.paymentStatus,
+          transactionId: paymentTransactions[0]?._id?.toString() ?? '—',
+        },
+        fareBreakdown: booking.fareBreakdown,
+        packageHours: (booking as unknown as { packageHours?: number }).packageHours,
+        vehicleCategory: (booking as unknown as { vehicleCategory?: string }).vehicleCategory,
+        paymentTransactions: paymentTransactions.map((tx) => ({
+          id: tx._id.toString(),
+          paymentType: tx.paymentType,
+          amount: tx.amount,
+          status: tx.status,
+          note: tx.note,
+          createdAt: tx.createdAt.toISOString(),
+        })),
+        statusHistory: booking.statusHistory.map((entry, index) => ({
+          id: `${booking._id.toString()}-${index}`,
+          status: entry.status,
+          timestamp: entry.timestamp.toISOString(),
+          note: entry.note,
+        })),
+        timeline: booking.statusHistory.map((entry, index) => ({
+          id: `${booking._id.toString()}-${index}`,
+          title: entry.status.replace(/_/g, ' '),
+          timestamp: entry.timestamp.toISOString(),
+          status: entry.status,
+          description: entry.note,
+        })),
+        cancellationInfo: booking.cancelledAt
+          ? {
+              cancelledAt: booking.cancelledAt.toISOString(),
+              cancelledBy: booking.cancelledBy,
+              cancellationReason: booking.cancellationReason,
+              refundAmount: booking.refundAmount ?? 0,
+              refundStatus: booking.refundStatus ?? 'NOT_APPLICABLE',
+            }
+          : undefined,
+        notes: booking.cancellationReason,
+      };
     }
 
+    const booking = await BookingModel.findById(id);
+    if (!booking) throw new NotFoundError('Booking not found');
+    let vendorId = booking.vendorId;
+    if (!vendorId && booking.driver?.id) {
+      const driver = await UserModel.findOne({ _id: booking.driver.id, role: 'driver' }).lean();
+      vendorId = driver?.driverProfile?.vendorUserId;
+    }
     const [customer, vendor, payments] = await Promise.all([
       UserModel.findById(booking.customerId).lean(),
-      vendorId ? VendorModel.findById(vendorId).lean() : null,
+      vendorId ? UserModel.findOne({ _id: vendorId, role: 'vendor' }).lean() : null,
       TransactionModel.find({ bookingId: booking._id }).sort({ createdAt: -1 }).lean(),
     ]);
-
     const paymentTx = payments.find((p) => p.type === 'PAYMENT') ?? payments[0];
-
     return {
       id: booking._id.toString(),
+      bookingType: 'legacy',
       bookingNumber: booking.bookingNumber,
       customerId: booking.customerId.toString(),
       customerName: customer?.fullName ?? 'Customer',
       customerPhone: customer?.mobileNumber ?? '—',
       customerEmail: customer?.email ?? '',
       vendorId: vendorId?.toString() ?? '',
-      vendorName: vendor?.businessName ?? vendor?.ownerName ?? '—',
+      vendorName: vendor?.vendorProfile?.businessName ?? vendor?.vendorProfile?.ownerName ?? vendor?.fullName ?? '—',
       vendorPhone: vendor?.mobileNumber ?? '—',
       driverId: booking.driver?.id,
       driverName: booking.driver?.name,
@@ -231,7 +506,7 @@ export const adminBookingsService = {
   async assignVendor(id: string, vendorId: string, actor: { id: string; name: string }) {
     const [booking, vendor] = await Promise.all([
       BookingModel.findById(id),
-      VendorModel.findById(vendorId),
+      UserModel.findOne({ _id: vendorId, role: 'vendor' }),
     ]);
     if (!booking) throw new NotFoundError('Booking not found');
     if (!vendor) throw new NotFoundError('Vendor not found');
@@ -251,7 +526,7 @@ export const adminBookingsService = {
 
     await createNotification({
       title: 'Booking assigned to vendor',
-      message: `${booking.bookingNumber} assigned to ${vendor.businessName ?? vendor.ownerName}`,
+      message: `${booking.bookingNumber} assigned to ${vendor.vendorProfile?.businessName ?? vendor.vendorProfile?.ownerName ?? vendor.fullName}`,
       category: 'booking',
       entityType: 'booking',
       entityId: id,
@@ -263,18 +538,18 @@ export const adminBookingsService = {
   async assignDriver(id: string, driverId: string, actor: { id: string; name: string }) {
     const [booking, driver] = await Promise.all([
       BookingModel.findById(id),
-      DriverModel.findById(driverId),
+      UserModel.findOne({ _id: driverId, role: 'driver' }),
     ]);
     if (!booking) throw new NotFoundError('Booking not found');
     if (!driver) throw new NotFoundError('Driver not found');
 
     booking.driver = {
       id: driver._id.toString(),
-      name: driver.name,
-      rating: driver.rating,
-      phone: driver.phone,
+      name: driver.fullName ?? 'Driver',
+      rating: driver.driverProfile?.rating ?? 0,
+      phone: driver.mobileNumber,
     };
-    if (driver.vendorId) booking.vendorId = driver.vendorId;
+    if (driver.driverProfile?.vendorUserId) booking.vendorId = driver.driverProfile.vendorUserId;
     await pushStatus(booking, 'ASSIGNED');
     await booking.save();
 
@@ -284,7 +559,7 @@ export const adminBookingsService = {
       action: 'BOOKING_DRIVER_ASSIGNED',
       entityType: 'booking',
       entityId: id,
-      title: `Driver ${driver.name} assigned to ${booking.bookingNumber}`,
+      title: `Driver ${driver.fullName ?? 'Driver'} assigned to ${booking.bookingNumber}`,
     });
 
     return mapBookingListItem(booking);
@@ -294,8 +569,53 @@ export const adminBookingsService = {
     id: string,
     status: string,
     actor: { id: string; name: string },
-    options?: { reason?: string; amount?: number },
+    options?: { reason?: string; amount?: number; bookingType?: AdminBookingType },
   ) {
+    if (options?.bookingType === 'towing' || options?.bookingType === 'driver') {
+      const booking =
+        options.bookingType === 'towing'
+          ? await TowingBookingModel.findById(id)
+          : await DriverBookingModel.findById(id);
+      if (!booking) throw new NotFoundError('Booking not found');
+
+      booking.status = status as never;
+      booking.statusHistory.push({
+        status: status as never,
+        timestamp: new Date(),
+        note: 'Status updated by admin',
+      });
+      await booking.save();
+
+      if (['COMPLETED', 'CANCELLED'].includes(status) && booking.driverId) {
+        await releaseDriver(booking.driverId.toString());
+      }
+
+      emitBookingStatusUpdate(booking._id.toString(), status, {
+        statusHistory: booking.statusHistory.map((entry) => ({
+          status: entry.status,
+          timestamp: entry.timestamp.toISOString(),
+          note: entry.note,
+        })),
+      });
+
+      await logActivity({
+        actorId: actor.id,
+        actorName: actor.name,
+        action: `SERVICE_BOOKING_${status}`,
+        entityType: 'booking',
+        entityId: id,
+        title: `Service booking ${booking.bookingNumber} status → ${status}`,
+      });
+
+      return {
+        id: booking._id.toString(),
+        bookingType: options.bookingType,
+        bookingNumber: booking.bookingNumber,
+        status: booking.status,
+        date: booking.createdAt.toISOString(),
+      };
+    }
+
     const booking = await BookingModel.findById(id);
     if (!booking) throw new NotFoundError('Booking not found');
 

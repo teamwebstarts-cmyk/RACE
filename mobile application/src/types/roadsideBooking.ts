@@ -3,13 +3,18 @@ export type RoadsideServiceId = 'flat_tyre' | 'battery' | 'fuel' | 'minor_repair
 export interface RoadsideBookingState {
   serviceId: RoadsideServiceId;
   location: string;
+  locationLat?: number;
+  locationLng?: number;
+  dropoff?: string;
+  dropoffLat?: number;
+  dropoffLng?: number;
   landmark: string;
   bookingId: string;
 }
 
 export const DEFAULT_ROADSIDE_BOOKING: RoadsideBookingState = {
   serviceId: 'flat_tyre',
-  location: 'Patia Square, Bhubaneswar',
+  location: '',
   landmark: '',
   bookingId: '#RACE77219',
 };

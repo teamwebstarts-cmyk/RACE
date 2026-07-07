@@ -1,5 +1,3 @@
-import { SUBSCRIPTION_PLANS } from './demo';
-
 export type BillingCycle = 'monthly' | 'yearly';
 
 export function getPlanPrice(monthlyPrice: number, cycle: BillingCycle): number {
@@ -12,6 +10,3 @@ export function getPlanPriceLabel(monthlyPrice: number, cycle: BillingCycle): st
   const yearly = getPlanPrice(monthlyPrice, 'yearly');
   return `₹${yearly.toLocaleString('en-IN')}/year`;
 }
-
-export const TOWING_PLANS = SUBSCRIPTION_PLANS.towing;
-export const DRIVER_PLANS = SUBSCRIPTION_PLANS.driver;

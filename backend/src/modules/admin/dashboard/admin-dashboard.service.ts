@@ -1,10 +1,10 @@
 import { Types } from 'mongoose';
 
 import { BookingModel } from '../../bookings/booking.model';
+import { DriverBookingModel } from '../../bookings/driver/driver-booking.model';
+import { TowingBookingModel } from '../../bookings/towing/towing-booking.model';
 import { UserModel } from '../../users/user.model';
-import { VendorModel } from '../../vendors/vendor.model';
 import { ActivityLogModel } from '../models/activity-log.model';
-import { DriverModel } from '../models/driver.model';
 import { TransactionModel } from '../models/transaction.model';
 import { PlatformSettingsModel } from '../models/platform-settings.model';
 
@@ -36,6 +36,10 @@ export const adminDashboardService = {
   async getDashboard() {
     const settings = await PlatformSettingsModel.findOne().lean();
     const commissionRate = settings?.commissionRate ?? 12.5;
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
 
     const currentMonth = monthRange(0);
     const previousMonth = monthRange(1);
@@ -44,8 +48,6 @@ export const adminDashboardService = {
       totalCustomers,
       totalVendors,
       totalDrivers,
-      totalBookings,
-      activeBookings,
       completedBookings,
       pendingVendors,
       pendingDrivers,
@@ -64,15 +66,11 @@ export const adminDashboardService = {
       recentVendors,
     ] = await Promise.all([
       UserModel.countDocuments({ role: 'customer' }),
-      VendorModel.countDocuments(),
-      DriverModel.countDocuments(),
-      BookingModel.countDocuments(),
-      BookingModel.countDocuments({
-        status: { $in: ['CREATED', 'ASSIGNED', 'ACCEPTED', 'EN_ROUTE', 'ARRIVED', 'SERVICE_STARTED'] },
-      }),
+      UserModel.countDocuments({ role: 'vendor', vendorProfile: { $exists: true } }),
+      UserModel.countDocuments({ role: 'driver', driverProfile: { $exists: true } }),
       BookingModel.countDocuments({ status: { $in: ['SERVICE_COMPLETED', 'PAID'] } }),
-      VendorModel.countDocuments({ status: { $in: ['pending', 'under_review'] } }),
-      DriverModel.countDocuments({ status: 'PENDING' }),
+      UserModel.countDocuments({ role: 'vendor', 'vendorProfile.status': { $in: ['pending', 'under_review'] } }),
+      UserModel.countDocuments({ role: 'driver', 'driverProfile.status': 'PENDING' }),
       TransactionModel.aggregate([
         { $match: { type: 'PAYMENT', status: 'COMPLETED' } },
         { $group: { _id: null, total: { $sum: '$amount' } } },
@@ -85,10 +83,12 @@ export const adminDashboardService = {
         role: 'customer',
         createdAt: { $gte: previousMonth.start, $lte: previousMonth.end },
       }),
-      VendorModel.countDocuments({
+      UserModel.countDocuments({
+        role: 'vendor',
         createdAt: { $gte: previousMonth.start, $lte: previousMonth.end },
       }),
-      DriverModel.countDocuments({
+      UserModel.countDocuments({
+        role: 'driver',
         createdAt: { $gte: previousMonth.start, $lte: previousMonth.end },
       }),
       BookingModel.countDocuments({
@@ -134,7 +134,39 @@ export const adminDashboardService = {
       ]),
       ActivityLogModel.find().sort({ createdAt: -1 }).limit(8).lean(),
       BookingModel.find().sort({ createdAt: -1 }).limit(6).populate('customerId', 'fullName').lean(),
-      VendorModel.find().sort({ createdAt: -1 }).limit(5).lean(),
+      UserModel.find({ role: 'vendor' }).sort({ createdAt: -1 }).limit(5).lean(),
+    ]);
+
+    const [
+      legacyBookings,
+      towingCount,
+      driverCount,
+      towingToday,
+      driverToday,
+      towingPending,
+      driverPending,
+      towingActive,
+      driverActive,
+      towingRevenueAgg,
+      driverRevenueAgg,
+    ] = await Promise.all([
+      BookingModel.countDocuments(),
+      TowingBookingModel.countDocuments(),
+      DriverBookingModel.countDocuments(),
+      TowingBookingModel.countDocuments({ createdAt: { $gte: todayStart, $lte: todayEnd } }),
+      DriverBookingModel.countDocuments({ createdAt: { $gte: todayStart, $lte: todayEnd } }),
+      TowingBookingModel.countDocuments({ status: 'PENDING' }),
+      DriverBookingModel.countDocuments({ status: 'PENDING' }),
+      TowingBookingModel.countDocuments({ status: 'IN_PROGRESS' }),
+      DriverBookingModel.countDocuments({ status: 'IN_PROGRESS' }),
+      TowingBookingModel.aggregate([
+        { $match: { paymentStatus: 'FULLY_PAID' } },
+        { $group: { _id: null, total: { $sum: '$estimatedFare' } } },
+      ]),
+      DriverBookingModel.aggregate([
+        { $match: { paymentStatus: 'FULLY_PAID' } },
+        { $group: { _id: null, total: { $sum: '$estimatedFare' } } },
+      ]),
     ]);
 
     const totalRevenue = revenueAgg[0]?.total ?? 0;
@@ -145,10 +177,12 @@ export const adminDashboardService = {
       role: 'customer',
       createdAt: { $gte: currentMonth.start, $lte: currentMonth.end },
     });
-    const currentMonthVendors = await VendorModel.countDocuments({
+    const currentMonthVendors = await UserModel.countDocuments({
+      role: 'vendor',
       createdAt: { $gte: currentMonth.start, $lte: currentMonth.end },
     });
-    const currentMonthDrivers = await DriverModel.countDocuments({
+    const currentMonthDrivers = await UserModel.countDocuments({
+      role: 'driver',
       createdAt: { $gte: currentMonth.start, $lte: currentMonth.end },
     });
     const currentMonthBookings = await BookingModel.countDocuments({
@@ -168,7 +202,19 @@ export const adminDashboardService = {
 
     const colors = ['#F5A623', '#2563EB', '#16A34A', '#DC2626', '#7C3AED'];
 
+    const totalServiceBookings = towingCount + driverCount;
+    const todayBookings = towingToday + driverToday;
+    const pendingBookings = towingPending + driverPending;
+    const activeServiceBookings = towingActive + driverActive;
+    const newRevenue = (towingRevenueAgg[0]?.total ?? 0) + (driverRevenueAgg[0]?.total ?? 0);
+
     return {
+      totalBookings: totalServiceBookings,
+      todayBookings,
+      pendingBookings,
+      activeBookings: activeServiceBookings,
+      totalRevenue: newRevenue,
+      legacyBookings,
       stats: [
         {
           id: 'customers',
@@ -194,14 +240,14 @@ export const adminDashboardService = {
         {
           id: 'active_bookings',
           label: 'Active Bookings',
-          value: activeBookings,
+          value: activeServiceBookings,
           trend: trend(currentMonthBookings, prevBookings),
           icon: 'ClipboardList',
         },
         {
           id: 'total_bookings',
           label: 'Total Bookings',
-          value: totalBookings,
+          value: totalServiceBookings,
           icon: 'List',
         },
         {
@@ -280,11 +326,11 @@ export const adminDashboardService = {
       ),
       recentVendors: recentVendors.map((vendor) => ({
         id: vendor._id.toString(),
-        name: vendor.businessName ?? vendor.ownerName ?? 'Vendor',
-        type: vendor.vendorType,
-        status: mapVendorStatus(vendor.status),
-        submittedAt: (vendor.submittedAt ?? vendor.createdAt).toISOString(),
-        city: vendor.address?.split(',')[0] ?? 'Odisha',
+        name: vendor.vendorProfile?.businessName ?? vendor.vendorProfile?.ownerName ?? vendor.fullName ?? 'Vendor',
+        type: vendor.vendorProfile?.vendorType ?? 'towing_company',
+        status: mapVendorStatus(vendor.vendorProfile?.status ?? 'pending'),
+        submittedAt: (vendor.vendorProfile?.submittedAt ?? vendor.createdAt).toISOString(),
+        city: vendor.vendorProfile?.address?.split(',')[0] ?? vendor.address?.city ?? 'Odisha',
       })),
     };
   },

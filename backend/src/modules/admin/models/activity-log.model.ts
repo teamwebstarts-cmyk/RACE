@@ -1,7 +1,7 @@
 import { Schema, model, type Document, Types } from 'mongoose';
 
 export interface IActivityLog extends Document {
-  actorId?: Types.ObjectId;
+  actorId?: Types.ObjectId | string;
   actorName: string;
   actorType: 'admin' | 'system';
   action: string;
@@ -16,7 +16,7 @@ export interface IActivityLog extends Document {
 
 const ActivityLogSchema = new Schema<IActivityLog>(
   {
-    actorId: { type: Schema.Types.ObjectId, ref: 'Admin', index: true },
+    actorId: { type: Schema.Types.Mixed, index: true },
     actorName: { type: String, required: true },
     actorType: { type: String, enum: ['admin', 'system'], default: 'admin' },
     action: { type: String, required: true, index: true },

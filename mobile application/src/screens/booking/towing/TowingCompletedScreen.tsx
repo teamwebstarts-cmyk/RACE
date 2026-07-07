@@ -1,19 +1,38 @@
-import React, { useEffect, useRef } from 'react';
-import { Animated, Pressable, Text, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Alert, Animated, Pressable, Text, View } from 'react-native';
 import { Check, Star } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import TowingBookingLayout, { useBookingTheme } from '../../../components/booking/TowingBookingLayout';
+import { useFinalPayment } from '../../../hooks/useFinalPayment';
+import { useBookingQuery } from '../../../services/bookings/useBookingQueries';
 import { useTowingBooking } from '../../../context/TowingBookingContext';
 import type { HomeStackParamList } from '../../../types/navigation';
 import { colors, typography } from '../../../theme';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'TowingCompleted'>;
 
-export default function TowingCompletedScreen({ navigation }: Props) {
+export default function TowingCompletedScreen({ navigation, route }: Props) {
   const { t } = useBookingTheme();
   const { resetBooking } = useTowingBooking();
+  const bookingId = route.params?.bookingId;
+  const booking = useBookingQuery(bookingId ?? '');
+  const { payRemaining, isPaying } = useFinalPayment();
+  const [finalPaid, setFinalPaid] = useState(false);
   const scaleAnim = useRef(new Animated.Value(0)).current;
+
+  const needsFinalPayment =
+    Boolean(bookingId) &&
+    !finalPaid &&
+    booking?.advancePaid &&
+    !booking?.remainingPaid &&
+    (booking?.remainingAmount ?? 0) > 0;
+
+  const handlePayRemaining = async () => {
+    if (!bookingId) return;
+    const ok = await payRemaining(bookingId, 'towing');
+    if (ok) setFinalPaid(true);
+  };
 
   useEffect(() => {
     Animated.spring(scaleAnim, {
@@ -70,7 +89,39 @@ export default function TowingCompletedScreen({ navigation }: Props) {
           Thanks for choosing RACE Service.
         </Text>
 
-        <Pressable onPress={() => navigation.navigate('TowingRate')} style={{ alignItems: 'center' }}>
+        {needsFinalPayment ? (
+          <Pressable
+            onPress={() => void handlePayRemaining()}
+            disabled={isPaying}
+            style={{
+              width: '100%',
+              backgroundColor: colors.primary,
+              borderRadius: t.cardRadius,
+              paddingVertical: t.px(14),
+              alignItems: 'center',
+              marginBottom: t.px(16),
+              opacity: isPaying ? 0.7 : 1,
+            }}>
+            <Text style={{ fontSize: t.labelBold, fontWeight: typography.weights.bold, color: colors.dark }}>
+              {isPaying
+                ? 'Processing...'
+                : `Pay remaining ₹${booking?.remainingAmount?.toLocaleString('en-IN') ?? ''} (70%)`}
+            </Text>
+          </Pressable>
+        ) : null}
+
+        <Pressable
+          onPress={() => {
+            if (route.params?.bookingId) {
+              navigation.navigate('TowingRate', {
+                bookingId: route.params.bookingId,
+                bookingType: 'towing',
+              });
+              return;
+            }
+            navigation.navigate('TowingRate');
+          }}
+          style={{ alignItems: 'center' }}>
           <View style={{ flexDirection: 'row', gap: t.px(8), marginBottom: t.px(12) }}>
             {[1, 2, 3, 4, 5].map(star => (
               <Star key={star} size={t.px(28)} color={colors.primary} fill={colors.primary} />

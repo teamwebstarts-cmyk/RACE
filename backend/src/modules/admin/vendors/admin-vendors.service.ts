@@ -1,8 +1,8 @@
 import { Types } from 'mongoose';
 
-import { VendorModel } from '../../vendors/vendor.model';
 import { UserModel } from '../../users/user.model';
-import { DriverModel } from '../models/driver.model';
+import { driverRepository } from '../../users/driver.repository';
+import { vendorRepository } from '../../vendors/vendor.repository';
 import { BookingModel } from '../../bookings/booking.model';
 import { TransactionModel } from '../models/transaction.model';
 import { VendorVehicleModel } from '../models/vendor-vehicle.model';
@@ -19,7 +19,12 @@ import {
   mapVerificationStage,
   mapVerificationStageLabel,
 } from '../shared/response-mappers';
+import {
+  mapVendorFilterToUserQuery,
+  toVendorRecord,
+} from '../../users/user-profile.mappers';
 import { BadRequestError, ConflictError, NotFoundError } from '../../../shared/utils/errors';
+import type { IUser } from '../../users/user.model';
 
 function mapAdminVendorStatus(status?: string): string {
   switch (String(status ?? 'PENDING').toUpperCase()) {
@@ -46,22 +51,13 @@ function mapVendorStatus(status: string): string {
   return 'PENDING';
 }
 
-function mapVendor(vendor: {
-  _id: { toString(): string };
-  businessName?: string;
-  ownerName?: string;
-  mobileNumber: string;
-  email?: string;
-  address?: string;
-  status: string;
-  verificationStage: string;
-  vendorType: string;
-}) {
+function mapVendorFromUser(user: IUser) {
+  const vendor = toVendorRecord(user);
   const city = vendor.address?.split(',')[0] ?? 'Odisha';
   const status = mapVendorStatus(vendor.status);
   const documents = buildVendorDocuments(vendor);
   return {
-    id: vendor._id.toString(),
+    id: vendor.id,
     businessName: vendor.businessName ?? vendor.ownerName ?? 'Vendor',
     ownerName: vendor.ownerName ?? '—',
     phone: vendor.mobileNumber,
@@ -106,13 +102,16 @@ export const adminVendorsService = {
       }
     }
 
-    const result = await paginate(VendorModel, query, filters as never, (doc) => mapVendor(doc as never));
+    const userQuery = mapVendorFilterToUserQuery(query);
+    const result = await paginate(UserModel, userQuery, filters as never, (doc) =>
+      mapVendorFromUser(doc as IUser),
+    );
 
     const vendorIds = result.items.map((v) => new Types.ObjectId(v.id));
     const [driverCounts, vehicleCounts, revenueAgg] = await Promise.all([
-      DriverModel.aggregate([
-        { $match: { vendorId: { $in: vendorIds } } },
-        { $group: { _id: '$vendorId', count: { $sum: 1 } } },
+      UserModel.aggregate([
+        { $match: { role: 'driver', 'driverProfile.vendorUserId': { $in: vendorIds } } },
+        { $group: { _id: '$driverProfile.vendorUserId', count: { $sum: 1 } } },
       ]),
       VendorVehicleModel.aggregate([
         { $match: { vendorId: { $in: vendorIds } } },
@@ -139,27 +138,24 @@ export const adminVendorsService = {
   },
 
   async getById(id: string) {
-    const vendor = await VendorModel.findById(id);
-    if (!vendor) throw new NotFoundError('Vendor not found');
-    const base = mapVendor(vendor);
-    const driverIds = (
-      await DriverModel.find({ vendorId: vendor._id }).select('_id').lean()
-    ).map((d) => d._id.toString());
+    const user = await UserModel.findOne({ _id: id, role: 'vendor' });
+    if (!user?.vendorProfile) throw new NotFoundError('Vendor not found');
+    const vendor = toVendorRecord(user);
+    const base = mapVendorFromUser(user);
+    const driverUsers = await UserModel.find({ role: 'driver', 'driverProfile.vendorUserId': user._id }).lean();
+    const driverIds = driverUsers.map((d) => d._id.toString());
 
     const bookingQuery =
       driverIds.length > 0
-        ? {
-            $or: [{ vendorId: vendor._id }, { 'driver.id': { $in: driverIds } }],
-          }
-        : { vendorId: vendor._id };
+        ? { $or: [{ vendorId: user._id }, { 'driver.id': { $in: driverIds } }] }
+        : { vendorId: user._id };
 
-    const [drivers, vehicles, bookings, activities, revenueAgg, bookingCount] = await Promise.all([
-      DriverModel.find({ vendorId: vendor._id }).lean(),
-      VendorVehicleModel.find({ vendorId: vendor._id }).lean(),
+    const [vehicles, bookings, activities, revenueAgg, bookingCount] = await Promise.all([
+      VendorVehicleModel.find({ vendorId: user._id }).lean(),
       BookingModel.find(bookingQuery).sort({ createdAt: -1 }).limit(10).lean(),
       getEntityActivities('vendor', id),
       TransactionModel.aggregate([
-        { $match: { vendorId: vendor._id, type: 'PAYMENT', status: 'COMPLETED' } },
+        { $match: { vendorId: user._id, type: 'PAYMENT', status: 'COMPLETED' } },
         { $group: { _id: null, total: { $sum: '$amount' } } },
       ]),
       BookingModel.countDocuments(bookingQuery),
@@ -176,7 +172,7 @@ export const adminVendorsService = {
     return {
       ...base,
       vehicleCount: vehicles.length,
-      driverCount: drivers.length,
+      driverCount: driverUsers.length,
       address: vendor.address ?? base.location,
       joinedAt: (vendor.approvedAt ?? vendor.submittedAt ?? vendor.createdAt).toISOString(),
       businessType: mapVendorTypeLabel(vendor.vendorType),
@@ -194,12 +190,12 @@ export const adminVendorsService = {
       reviewNotes: vendor.reviewNotes ?? '',
       documentsStatus: deriveDocumentsStatus(documents),
       documents,
-      assignedDrivers: drivers.map((d) => ({
+      assignedDrivers: driverUsers.map((d) => ({
         id: d._id.toString(),
-        name: d.name,
-        phone: d.phone,
-        status: mapAssignedDriverStatus(d.status),
-        initials: driverInitials(d.name),
+        name: d.fullName ?? 'Driver',
+        phone: d.mobileNumber,
+        status: mapAssignedDriverStatus(d.driverProfile?.status ?? 'PENDING'),
+        initials: driverInitials(d.fullName ?? 'Driver'),
       })),
       vehicles: vehicles.map((v) => ({
         id: v._id.toString(),
@@ -221,24 +217,9 @@ export const adminVendorsService = {
       })),
       activities,
       quickStats: [
-        {
-          id: 'bookings',
-          label: 'Total Bookings',
-          value: String(bookingCount),
-          icon: 'ClipboardList',
-        },
-        {
-          id: 'revenue',
-          label: 'Total Revenue',
-          value: formatInr(totalRevenue),
-          icon: 'IndianRupee',
-        },
-        {
-          id: 'rating',
-          label: 'Average Rating',
-          value: base.rating > 0 ? String(base.rating) : '—',
-          icon: 'Star',
-        },
+        { id: 'bookings', label: 'Total Bookings', value: String(bookingCount), icon: 'ClipboardList' },
+        { id: 'revenue', label: 'Total Revenue', value: formatInr(totalRevenue), icon: 'IndianRupee' },
+        { id: 'rating', label: 'Average Rating', value: base.rating > 0 ? String(base.rating) : '—', icon: 'Star' },
       ],
     };
   },
@@ -266,26 +247,14 @@ export const adminVendorsService = {
     if (!phone) throw new BadRequestError('Phone is required');
 
     const existingUser = await UserModel.findOne({ mobileNumber: phone });
-    if (existingUser) {
-      throw new ConflictError('A user with this phone number already exists');
-    }
+    if (existingUser) throw new ConflictError('A user with this phone number already exists');
 
     const vendorStatus = mapAdminVendorStatus(input.status);
     const isApproved = vendorStatus === 'approved';
 
-    const vendorUser = await UserModel.create({
-      mobileNumber: phone,
-      fullName: ownerName,
-      email: email || undefined,
-      role: 'vendor',
-      isVerified: true,
-      isProfileCompleted: false,
-    });
-
-    const vendor = await VendorModel.create({
-      userId: vendorUser._id,
+    const vendor = await vendorRepository.create({
       vendorType: (input.vendorType as never) ?? 'towing_company',
-      status: vendorStatus,
+      status: vendorStatus as never,
       verificationStage: isApproved ? 'approved' : 'document_review',
       businessName,
       ownerName,
@@ -302,7 +271,7 @@ export const adminVendorsService = {
       actorName: actor.name,
       action: 'VENDOR_CREATED',
       entityType: 'vendor',
-      entityId: vendor._id.toString(),
+      entityId: vendor.id,
       title: `Vendor ${vendor.businessName} created`,
     });
 
@@ -311,10 +280,10 @@ export const adminVendorsService = {
       message: `${vendor.businessName} added by admin`,
       category: 'vendor',
       entityType: 'vendor',
-      entityId: vendor._id.toString(),
+      entityId: vendor.id,
     });
 
-    return mapVendor(vendor);
+    return mapVendorFromUser((await UserModel.findById(vendor.id))!);
   },
 
   async update(
@@ -330,38 +299,37 @@ export const adminVendorsService = {
     }>,
     actor: { id: string; name: string },
   ) {
-    const vendor = await VendorModel.findById(id);
-    if (!vendor) throw new NotFoundError('Vendor not found');
+    const user = await UserModel.findOne({ _id: id, role: 'vendor' });
+    if (!user?.vendorProfile) throw new NotFoundError('Vendor not found');
 
-    if (input.businessName) vendor.businessName = input.businessName;
-    if (input.ownerName) vendor.ownerName = input.ownerName;
+    if (input.businessName) user.vendorProfile.businessName = input.businessName;
+    if (input.ownerName) {
+      user.vendorProfile.ownerName = input.ownerName;
+      user.fullName = input.ownerName;
+    }
     if (input.phone) {
       const phone = input.phone.trim();
-      const duplicate = await UserModel.findOne({
-        mobileNumber: phone,
-        _id: { $ne: vendor.userId },
-      });
+      const duplicate = await UserModel.findOne({ mobileNumber: phone, _id: { $ne: user._id } });
       if (duplicate) throw new ConflictError('A user with this phone number already exists');
-      vendor.mobileNumber = phone;
-      await UserModel.findByIdAndUpdate(vendor.userId, { mobileNumber: phone });
+      user.mobileNumber = phone;
     }
-    if (input.email !== undefined) vendor.email = input.email;
-    if (input.city) vendor.address = `${input.city}, Odisha`;
+    if (input.email !== undefined) user.email = input.email;
+    if (input.city) user.vendorProfile.address = `${input.city}, Odisha`;
     if (input.status) {
       const vendorStatus = mapAdminVendorStatus(input.status);
-      vendor.status = vendorStatus as never;
+      user.vendorProfile.status = vendorStatus as never;
       if (vendorStatus === 'approved') {
-        vendor.verificationStage = 'approved';
-        vendor.approvedAt = new Date();
+        user.vendorProfile.verificationStage = 'approved';
+        user.vendorProfile.approvedAt = new Date();
       }
-      vendor.statusHistory.push({
-        status: vendorStatus as never,
+      user.vendorProfile.statusHistory.push({
+        status: vendorStatus,
         changedAt: new Date(),
         note: 'Updated by admin',
       });
     }
-    if (input.bankDetails) vendor.bankDetails = input.bankDetails as never;
-    await vendor.save();
+    if (input.bankDetails) user.vendorProfile.bankDetails = input.bankDetails as never;
+    await user.save();
 
     await logActivity({
       actorId: actor.id,
@@ -369,18 +337,22 @@ export const adminVendorsService = {
       action: 'VENDOR_UPDATED',
       entityType: 'vendor',
       entityId: id,
-      title: `Vendor ${vendor.businessName ?? vendor.ownerName} updated`,
+      title: `Vendor ${user.vendorProfile.businessName ?? user.vendorProfile.ownerName} updated`,
     });
 
-    return mapVendor(vendor);
+    return mapVendorFromUser(user);
   },
 
   async suspend(id: string, note: string | undefined, actor: { id: string; name: string }) {
-    const vendor = await VendorModel.findById(id);
-    if (!vendor) throw new NotFoundError('Vendor not found');
-    vendor.status = 'changes_requested';
-    vendor.statusHistory.push({ status: 'changes_requested', changedAt: new Date(), note: note ?? 'Suspended' });
-    await vendor.save();
+    const user = await UserModel.findOne({ _id: id, role: 'vendor' });
+    if (!user?.vendorProfile) throw new NotFoundError('Vendor not found');
+    user.vendorProfile.status = 'changes_requested';
+    user.vendorProfile.statusHistory.push({
+      status: 'changes_requested',
+      changedAt: new Date(),
+      note: note ?? 'Suspended',
+    });
+    await user.save();
 
     await logActivity({
       actorId: actor.id,
@@ -388,64 +360,70 @@ export const adminVendorsService = {
       action: 'VENDOR_SUSPENDED',
       entityType: 'vendor',
       entityId: id,
-      title: `Vendor ${vendor.businessName ?? vendor.ownerName} suspended`,
+      title: `Vendor ${user.vendorProfile.businessName ?? user.vendorProfile.ownerName} suspended`,
     });
 
-    return mapVendor(vendor);
+    return mapVendorFromUser(user);
   },
 
   async approve(id: string, actor: { id: string; name: string }) {
-    const vendor = await VendorModel.findById(id);
-    if (!vendor) throw new NotFoundError('Vendor not found');
-    vendor.status = 'approved';
-    vendor.verificationStage = 'approved';
-    vendor.approvedAt = new Date();
-    vendor.statusHistory.push({ status: 'approved', changedAt: new Date(), note: 'Approved by admin' });
-    await vendor.save();
+    const user = await UserModel.findOne({ _id: id, role: 'vendor' });
+    if (!user?.vendorProfile) throw new NotFoundError('Vendor not found');
+    user.vendorProfile.status = 'approved';
+    user.vendorProfile.verificationStage = 'approved';
+    user.vendorProfile.approvedAt = new Date();
+    user.vendorProfile.statusHistory.push({
+      status: 'approved',
+      changedAt: new Date(),
+      note: 'Approved by admin',
+    });
+    await user.save();
+
     await logActivity({
       actorId: actor.id,
       actorName: actor.name,
       action: 'VENDOR_APPROVED',
       entityType: 'vendor',
       entityId: id,
-      title: `Vendor ${vendor.businessName ?? vendor.ownerName} approved`,
+      title: `Vendor ${user.vendorProfile.businessName ?? user.vendorProfile.ownerName} approved`,
     });
     await createNotification({
       title: 'Vendor approved',
-      message: `${vendor.businessName ?? vendor.ownerName} has been approved`,
+      message: `${user.vendorProfile.businessName ?? user.vendorProfile.ownerName} has been approved`,
       type: 'success',
       category: 'vendor',
       entityType: 'vendor',
       entityId: id,
     });
-    return mapVendor(vendor);
+    return mapVendorFromUser(user);
   },
 
   async reject(id: string, note: string | undefined, actor: { id: string; name: string }) {
-    const vendor = await VendorModel.findById(id);
-    if (!vendor) throw new NotFoundError('Vendor not found');
-    vendor.status = 'rejected';
-    vendor.verificationStage = 'rejected';
-    vendor.reviewNotes = note;
-    vendor.statusHistory.push({ status: 'rejected', changedAt: new Date(), note });
-    await vendor.save();
+    const user = await UserModel.findOne({ _id: id, role: 'vendor' });
+    if (!user?.vendorProfile) throw new NotFoundError('Vendor not found');
+    user.vendorProfile.status = 'rejected';
+    user.vendorProfile.verificationStage = 'rejected';
+    user.vendorProfile.reviewNotes = note;
+    user.vendorProfile.statusHistory.push({ status: 'rejected', changedAt: new Date(), note });
+    await user.save();
+
     await logActivity({
       actorId: actor.id,
       actorName: actor.name,
       action: 'VENDOR_REJECTED',
       entityType: 'vendor',
       entityId: id,
-      title: `Vendor ${vendor.businessName ?? vendor.ownerName} rejected`,
+      title: `Vendor ${user.vendorProfile.businessName ?? user.vendorProfile.ownerName} rejected`,
     });
     await createNotification({
       title: 'Vendor rejected',
-      message: `${vendor.businessName ?? vendor.ownerName} was rejected`,
+      message: `${user.vendorProfile.businessName ?? user.vendorProfile.ownerName} was rejected`,
       type: 'warning',
       category: 'vendor',
       entityType: 'vendor',
       entityId: id,
     });
-    return mapVendor(vendor);
+    return mapVendorFromUser(user);
   },
 
   async reviewDocument(
@@ -457,17 +435,17 @@ export const adminVendorsService = {
     if (status !== 'VERIFIED' && status !== 'REJECTED') {
       throw new BadRequestError('Invalid document status');
     }
-    const vendor = await VendorModel.findById(id);
-    if (!vendor) throw new NotFoundError('Vendor not found');
+    const user = await UserModel.findOne({ _id: id, role: 'vendor' });
+    if (!user?.vendorProfile) throw new NotFoundError('Vendor not found');
 
-    const reviews = [...(vendor.documentReviews ?? [])];
+    const reviews = [...(user.vendorProfile.documentReviews ?? [])];
     const idx = reviews.findIndex((review) => review.key === docKey);
     const entry = { key: docKey, status, reviewedAt: new Date() };
     if (idx >= 0) reviews[idx] = entry;
     else reviews.push(entry);
-    vendor.documentReviews = reviews;
-    vendor.verificationStage = 'document_review';
-    await vendor.save();
+    user.vendorProfile.documentReviews = reviews;
+    user.vendorProfile.verificationStage = 'document_review';
+    await user.save();
 
     await logActivity({
       actorId: actor.id,
@@ -475,7 +453,7 @@ export const adminVendorsService = {
       action: status === 'VERIFIED' ? 'VENDOR_DOCUMENT_VERIFIED' : 'VENDOR_DOCUMENT_REJECTED',
       entityType: 'vendor',
       entityId: id,
-      title: `${docKey} ${status === 'VERIFIED' ? 'verified' : 'rejected'} for ${vendor.businessName ?? vendor.ownerName}`,
+      title: `${docKey} ${status === 'VERIFIED' ? 'verified' : 'rejected'} for ${user.vendorProfile.businessName ?? user.vendorProfile.ownerName}`,
     });
 
     return this.getById(id);
@@ -483,23 +461,20 @@ export const adminVendorsService = {
 
   async getCounts() {
     const [all, pending, approved, rejected, suspended] = await Promise.all([
-      VendorModel.countDocuments(),
-      VendorModel.countDocuments({ status: { $in: ['pending', 'under_review'] } }),
-      VendorModel.countDocuments({ status: 'approved' }),
-      VendorModel.countDocuments({ status: 'rejected' }),
-      VendorModel.countDocuments({ status: 'changes_requested' }),
+      vendorRepository.countUsers({}),
+      vendorRepository.countUsers({ status: { $in: ['pending', 'under_review'] } }),
+      vendorRepository.countUsers({ status: 'approved' }),
+      vendorRepository.countUsers({ status: 'rejected' }),
+      vendorRepository.countUsers({ status: 'changes_requested' }),
     ]);
     return { all, pending, approved, rejected, suspended };
   },
 
   async assignDrivers(id: string, driverIds: string[], actor: { id: string; name: string }) {
-    const vendor = await VendorModel.findById(id);
-    if (!vendor) throw new NotFoundError('Vendor not found');
+    const user = await UserModel.findOne({ _id: id, role: 'vendor' });
+    if (!user?.vendorProfile) throw new NotFoundError('Vendor not found');
 
-    await DriverModel.updateMany(
-      { _id: { $in: driverIds } },
-      { $set: { vendorId: vendor._id } },
-    );
+    await driverRepository.updateManyVendor(driverIds, user._id);
 
     await logActivity({
       actorId: actor.id,
@@ -514,22 +489,22 @@ export const adminVendorsService = {
   },
 
   async remove(id: string, actor: { id: string; name: string }) {
-    const vendor = await VendorModel.findById(id);
-    if (!vendor) throw new NotFoundError('Vendor not found');
+    const user = await UserModel.findOne({ _id: id, role: 'vendor' });
+    if (!user?.vendorProfile) throw new NotFoundError('Vendor not found');
 
-    const vendorName = vendor.businessName ?? vendor.ownerName ?? 'Vendor';
+    const vendorName = user.vendorProfile.businessName ?? user.vendorProfile.ownerName ?? 'Vendor';
 
     await Promise.all([
-      DriverModel.updateMany({ vendorId: vendor._id }, { $unset: { vendorId: 1 } }),
-      VendorVehicleModel.deleteMany({ vendorId: vendor._id }),
-      BookingModel.updateMany({ vendorId: vendor._id }, { $unset: { vendorId: 1 } }),
-      TransactionModel.updateMany({ vendorId: vendor._id }, { $unset: { vendorId: 1 } }),
+      UserModel.updateMany(
+        { role: 'driver', 'driverProfile.vendorUserId': user._id },
+        { $unset: { 'driverProfile.vendorUserId': 1 } },
+      ),
+      VendorVehicleModel.deleteMany({ vendorId: user._id }),
+      BookingModel.updateMany({ vendorId: user._id }, { $unset: { vendorId: 1 } }),
+      TransactionModel.updateMany({ vendorId: user._id }, { $unset: { vendorId: 1 } }),
     ]);
 
-    await VendorModel.findByIdAndDelete(id);
-    if (vendor.userId) {
-      await UserModel.findByIdAndDelete(vendor.userId);
-    }
+    await UserModel.findByIdAndDelete(user._id);
 
     await logActivity({
       actorId: actor.id,

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
 import { Check, ShieldCheck } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useMutation } from '@tanstack/react-query';
 
 import GooglePayIcon from '../../components/icons/GooglePayIcon';
 import TowingBookingLayout, { useBookingTheme } from '../../components/booking/TowingBookingLayout';
@@ -13,6 +14,7 @@ import {
 import { ROADSIDE_ACCENT } from '../../constants/roadsideBooking';
 import type { HomeStackParamList } from '../../types/navigation';
 import { colors, shadows, typography } from '../../theme';
+import { initiateAdvancePayment, verifyAdvancePayment } from '../../services/bookings/serviceBookingApi';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'BookingPayment'>;
 
@@ -23,14 +25,43 @@ const NEXT_ROUTE: Record<BookingPaymentFlow, keyof HomeStackParamList> = {
 };
 
 export default function BookingPaymentScreen({ navigation, route }: Props) {
-  const { amount, flow } = route.params;
+  const { amount, flow, bookingId, bookingType } = route.params;
   const { t } = useBookingTheme();
   const accent = flow === 'roadside' ? ROADSIDE_ACCENT : colors.primary;
   const [selected, setSelected] = useState<PaymentMethodId>('wallet');
 
-  const handlePay = () => {
+  const payMutation = useMutation({
+    mutationFn: async () => {
+      if (!bookingId || !bookingType) {
+        throw new Error('Missing booking details for payment');
+      }
+      const session = await initiateAdvancePayment({ bookingId, bookingType });
+      return verifyAdvancePayment({ transactionId: session.transactionId, status: 'success' });
+    },
+  });
+
+  const handlePay = async () => {
+    if (!bookingId || !bookingType) {
+      Alert.alert('Payment unavailable', 'Booking details are missing. Please retry from booking review.');
+      return;
+    }
+    await payMutation.mutateAsync();
+    Alert.alert('Booking Confirmed', 'Driver being assigned...');
     const next = NEXT_ROUTE[flow];
-    navigation.navigate(next as 'TowingConfirmed' | 'DriverAssigned' | 'RoadsideHelpOnWay');
+    if (flow === 'towing') {
+      navigation.navigate('TowingConfirmed', {
+        bookingId,
+        apiBookingId: bookingId,
+        service: 'Towing',
+        eta: '60–90 min',
+      });
+      return;
+    }
+    if (flow === 'driver') {
+      navigation.navigate('DriverAssigned', { bookingId, bookingType: 'driver' });
+      return;
+    }
+    navigation.navigate(next as 'RoadsideHelpOnWay');
   };
 
   return (
@@ -39,8 +70,9 @@ export default function BookingPaymentScreen({ navigation, route }: Props) {
       step={flow === 'towing' ? 6 : flow === 'driver' ? 5 : 4}
       accentColor={accent}
       onBack={() => navigation.goBack()}
-      buttonLabel={`Pay ₹${amount}`}
-      onContinue={handlePay}
+      buttonLabel={payMutation.isPending ? 'Processing...' : `Pay ₹${amount}`}
+      onContinue={() => void handlePay()}
+      continueDisabled={payMutation.isPending}
       footerNoteBelow={
         <View
           style={{

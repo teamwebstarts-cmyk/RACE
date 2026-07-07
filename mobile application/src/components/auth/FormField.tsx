@@ -80,7 +80,7 @@ export default function FormField({
           },
           style,
         ]}
-        placeholderTextColor={colors.grey}
+        placeholderTextColor="#9CA3AF"
         editable={editable && !onPress}
         pointerEvents={onPress ? 'none' : 'auto'}
         {...inputProps}

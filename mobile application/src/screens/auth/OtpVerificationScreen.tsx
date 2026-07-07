@@ -31,7 +31,7 @@ const RESEND_SECONDS = 60;
 
 export default function OtpVerificationScreen({ navigation, route }: Props) {
   const dispatch = useAppDispatch();
-  const { mobileNumber, devOtp, isExistingUser = false } = route.params;
+  const { mobileNumber, isExistingUser = false } = route.params;
   const loading = useAppSelector((state) => state.auth.loading);
   const partnerSignupRequired = useAppSelector((state) => state.onboarding.partnerSignupRequired);
   const signupVendorType = useAppSelector((state) => state.onboarding.signupVendorType);
@@ -40,6 +40,9 @@ export default function OtpVerificationScreen({ navigation, route }: Props) {
   const [success, setSuccess] = useState('');
   const [secondsLeft, setSecondsLeft] = useState(RESEND_SECONDS);
   const [verified, setVerified] = useState(false);
+  const [activeOtpIndex, setActiveOtpIndex] = useState(0);
+  const otpDigits = Array.from({ length: 6 }, (_, i) => otp[i] ?? '');
+  const px = (n: number) => n;
 
   const verifyOtpMutation = useVerifyOtpMutation();
   const sendOtpMutation = useSendOtpMutation();
@@ -102,8 +105,8 @@ export default function OtpVerificationScreen({ navigation, route }: Props) {
       setSuccess('OTP resent successfully');
       setSecondsLeft(RESEND_SECONDS);
       setOtp('');
-      if (result.devOtp) {
-        navigation.setParams({ devOtp: result.devOtp, isExistingUser: result.isExistingUser });
+      if (result.isExistingUser !== undefined) {
+        navigation.setParams({ isExistingUser: result.isExistingUser });
       }
     } catch (err) {
       setError(getApiErrorMessage(err, 'Unable to resend OTP'));
@@ -131,14 +134,13 @@ export default function OtpVerificationScreen({ navigation, route }: Props) {
           </View>
 
           <View style={styles.card}>
-            {__DEV__ && devOtp ? (
-              <View style={styles.devOtpBox}>
-                <Text style={styles.devOtpLabel}>Dev OTP (no SMS in test mode)</Text>
-                <Text style={styles.devOtpCode}>{devOtp}</Text>
-              </View>
-            ) : null}
-
-            <OtpInput value={otp} onChange={setOtp} disabled={loading} />
+            <OtpInput
+              digits={otpDigits}
+              activeIndex={activeOtpIndex}
+              onActiveIndexChange={setActiveOtpIndex}
+              onChange={(digits) => setOtp(digits.join(''))}
+              px={px}
+            />
 
             <View style={styles.timerRow}>
               {secondsLeft > 0 ? (
@@ -223,26 +225,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 195, 38, 0.25)',
     gap: spacing.lg,
-  },
-  devOtpBox: {
-    backgroundColor: '#FFF4D6',
-    borderRadius: radius.md,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    alignItems: 'center',
-  },
-  devOtpLabel: {
-    color: colors.textDark,
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
-  },
-  devOtpCode: {
-    marginTop: spacing.xs,
-    color: colors.accentRed,
-    fontSize: typography.sizes.display,
-    fontWeight: typography.weights.extrabold,
-    letterSpacing: 8,
   },
   timerRow: {
     alignItems: 'center',

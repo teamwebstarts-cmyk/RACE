@@ -2,15 +2,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import {
-  addBooking,
   setBookings,
   setBookingsLoading,
   updateBooking,
 } from '../../redux/bookings/bookingsSlice';
-import type { Booking, CreateBookingRequest, SubmitRatingRequest } from '../../types/booking';
+import type { Booking, SubmitRatingRequest } from '../../types/booking';
 import {
-  createBookingApi,
-  createLocalBooking,
   getBooking,
   listBookings,
   submitBookingRating,
@@ -23,18 +20,19 @@ export const bookingKeys = {
 
 export function useBookingsQuery() {
   const dispatch = useAppDispatch();
-  const localBookings = useAppSelector((state) => state.bookings.items);
 
   return useQuery({
     queryKey: bookingKeys.all,
     queryFn: async () => {
       dispatch(setBookingsLoading(true));
-      const remote = await listBookings();
-      const merged = remote.length > 0 ? remote : localBookings;
-      dispatch(setBookings(merged));
-      return merged;
+      try {
+        const remote = await listBookings();
+        dispatch(setBookings(remote));
+        return remote;
+      } finally {
+        dispatch(setBookingsLoading(false));
+      }
     },
-    initialData: localBookings,
   });
 }
 
@@ -47,10 +45,17 @@ export function useBookingQuery(bookingId: string) {
   const query = useQuery({
     queryKey: bookingKeys.detail(bookingId),
     queryFn: async () => {
-      const remote = await getBooking(bookingId);
-      if (remote) {
-        dispatch(updateBooking(remote));
-        return remote;
+      try {
+        const remote = await getBooking(bookingId);
+        if (remote) {
+          dispatch(updateBooking(remote));
+          return remote;
+        }
+      } catch {
+        if (localBooking) {
+          return localBooking;
+        }
+        throw new Error('Failed to load booking');
       }
       return localBooking ?? null;
     },
@@ -62,23 +67,14 @@ export function useBookingQuery(bookingId: string) {
 }
 
 export function useCreateBookingMutation() {
-  const dispatch = useAppDispatch();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (params: {
-      payload: CreateBookingRequest;
-      vehicleNumber: string;
-      vehicleLabel?: string;
-    }) => {
-      const remote = await createBookingApi(params.payload);
-      if (remote) return remote;
-      return createLocalBooking(params.payload, params.vehicleNumber, params.vehicleLabel);
+    mutationFn: async () => {
+      throw new Error('Use the dedicated towing or driver booking flow from Home.');
     },
-    onSuccess: (booking) => {
-      dispatch(addBooking(booking));
+    onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: bookingKeys.all });
-      void queryClient.invalidateQueries({ queryKey: bookingKeys.detail(booking.id) });
     },
   });
 }
@@ -88,20 +84,13 @@ export function useSubmitRatingMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (params: { bookingId: string; payload: SubmitRatingRequest }) => {
-      try {
-        return await submitBookingRating(params.bookingId, params.payload);
-      } catch {
-        const bookings = queryClient.getQueryData<Booking[]>(bookingKeys.all);
-        const existing = bookings?.find((b) => b.id === params.bookingId);
-        if (!existing) throw new Error('Booking not found');
-        return {
-          ...existing,
-          rating: params.payload.rating,
-          review: params.payload.review,
-          status: 'PAID' as const,
-        };
-      }
+    mutationFn: async (params: {
+      bookingId: string;
+      bookingType?: 'towing' | 'driver';
+      payload: SubmitRatingRequest;
+    }) => {
+      const bookingType = params.bookingType ?? 'towing';
+      return submitBookingRating(params.bookingId, bookingType, params.payload);
     },
     onSuccess: (booking) => {
       dispatch(updateBooking(booking));

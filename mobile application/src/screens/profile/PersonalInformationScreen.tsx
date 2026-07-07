@@ -4,8 +4,6 @@ import {
   Camera,
   ChevronDown,
   Mail,
-  MapPin,
-  Phone,
   Plus,
   User,
 } from 'lucide-react-native';
@@ -13,11 +11,26 @@ import {
 import FormField from '../../components/auth/FormField';
 import DateOfBirthField from '../../components/auth/DateOfBirthField';
 import GoldButton from '../../components/auth/GoldButton';
+import ProfileAddressFields, {
+  type AddressFormValues,
+} from '../../components/profile/ProfileAddressFields';
+import ProfileEmergencyContactFields, {
+  type EmergencyContactFormValues,
+} from '../../components/profile/ProfileEmergencyContactFields';
 import ProfileSubScreenLayout, { useProfilePx } from '../../components/profile/ProfileSubScreenLayout';
+import { EMERGENCY_RELATIONSHIP_OPTIONS } from '../../constants/profileForm';
 import { useProfileStore } from '../../store/profileStore';
 import { getApiErrorMessage } from '../../services/api';
 import { buildUpdateProfilePayload, validateProfileForm } from '../../utils/profilePayload';
 import { colors, shadows, typography } from '../../theme';
+
+function formatRelationship(value?: string): string {
+  if (!value) return '';
+  const match = EMERGENCY_RELATIONSHIP_OPTIONS.find(
+    option => option.toLowerCase() === value.toLowerCase(),
+  );
+  return match ?? value;
+}
 
 export default function PersonalInformationScreen() {
   const px = useProfilePx();
@@ -26,8 +39,18 @@ export default function PersonalInformationScreen() {
   const [email, setEmail] = useState('');
   const [dob, setDob] = useState('');
   const [gender, setGender] = useState('');
-  const [emergency, setEmergency] = useState('');
-  const [address, setAddress] = useState('');
+  const [emergency, setEmergency] = useState<EmergencyContactFormValues>({
+    name: '',
+    phone: '',
+    relationship: '',
+  });
+  const [address, setAddress] = useState<AddressFormValues>({
+    line1: '',
+    line2: '',
+    city: '',
+    state: '',
+    pincode: '',
+  });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -40,9 +63,29 @@ export default function PersonalInformationScreen() {
     setEmail(profile.email ?? '');
     setDob(profile.dateOfBirth ?? '');
     setGender(profile.gender ?? '');
-    setEmergency(profile.emergencyContact?.mobileNumber ?? '');
-    setAddress(profile.address?.line1 ?? '');
+    setEmergency({
+      name: profile.emergencyContact?.name ?? '',
+      phone: profile.emergencyContact?.mobileNumber ?? '',
+      relationship: formatRelationship(profile.emergencyContact?.relationship),
+    });
+    setAddress({
+      line1: profile.address?.line1 ?? '',
+      line2: profile.address?.line2 ?? '',
+      city: profile.address?.city ?? '',
+      state: profile.address?.state ?? '',
+      pincode: profile.address?.pincode ?? '',
+    });
   }, [profile]);
+
+  const clearError = (key: string) => {
+    if (errors[key]) {
+      setErrors(prev => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    }
+  };
 
   const handleSave = async () => {
     const nextErrors = validateProfileForm({
@@ -50,12 +93,14 @@ export default function PersonalInformationScreen() {
       email,
       gender,
       dateOfBirth: dob,
-      emergencyPhone: emergency,
-      emergencyName: profile?.emergencyContact?.name,
-      addressLine1: address,
-      city: profile?.address?.city,
-      state: profile?.address?.state,
-      pincode: profile?.address?.pincode,
+      emergencyPhone: emergency.phone,
+      emergencyName: emergency.name,
+      emergencyRelationship: emergency.relationship,
+      addressLine1: address.line1,
+      addressLine2: address.line2,
+      city: address.city,
+      state: address.state,
+      pincode: address.pincode,
       country: profile?.address?.country,
     });
     setErrors(nextErrors);
@@ -68,12 +113,14 @@ export default function PersonalInformationScreen() {
           email,
           gender,
           dateOfBirth: dob,
-          emergencyPhone: emergency,
-          emergencyName: profile?.emergencyContact?.name,
-          addressLine1: address,
-          city: profile?.address?.city,
-          state: profile?.address?.state,
-          pincode: profile?.address?.pincode,
+          emergencyPhone: emergency.phone,
+          emergencyName: emergency.name,
+          emergencyRelationship: emergency.relationship,
+          addressLine1: address.line1,
+          addressLine2: address.line2,
+          city: address.city,
+          state: address.state,
+          pincode: address.pincode,
           country: profile?.address?.country,
         }),
       );
@@ -147,8 +194,11 @@ export default function PersonalInformationScreen() {
         <FormField
           label="Full Name"
           value={name}
-          onChangeText={setName}
-          placeholder="Full Name"
+          onChangeText={text => {
+            setName(text);
+            clearError('name');
+          }}
+          placeholder="e.g. Shivam Ramdasani"
           Icon={User}
           variant="outlined"
           compact
@@ -156,28 +206,33 @@ export default function PersonalInformationScreen() {
           error={errors.name}
         />
         <FormField
-          label="Email"
+          label="Email (optional)"
           value={email}
-          onChangeText={setEmail}
-          placeholder="john@example.com"
+          onChangeText={text => {
+            setEmail(text);
+            clearError('email');
+          }}
+          placeholder="your@email.com"
           Icon={Mail}
           variant="outlined"
           compact
-          required
           keyboardType="email-address"
           autoCapitalize="none"
           error={errors.email}
         />
         <DateOfBirthField
           value={dob}
-          onChange={setDob}
+          onChange={text => {
+            setDob(text);
+            clearError('dob');
+          }}
           error={errors.dob}
         />
         <FormField
           label="Gender"
           value={gender}
           onChangeText={() => {}}
-          placeholder="Gender"
+          placeholder="Select gender"
           Icon={User}
           variant="outlined"
           compact
@@ -197,34 +252,17 @@ export default function PersonalInformationScreen() {
             </View>
           }
         />
-        <View>
-          <FormField
-            label="Emergency Contact"
-            value={emergency}
-            onChangeText={setEmergency}
-            placeholder="Emergency Contact"
-            Icon={Phone}
-            variant="outlined"
-            compact
-            required
-            iconColor={colors.error}
-            keyboardType="phone-pad"
-            error={errors.emergency}
-          />
-          <Text style={{ marginTop: px(4), fontSize: px(10), color: colors.error }}>
-            Used in case of emergency
-          </Text>
-        </View>
-        <FormField
-          label="Address"
-          value={address}
-          onChangeText={setAddress}
-          placeholder="Address"
-          Icon={MapPin}
-          variant="outlined"
-          compact
-          required
-          error={errors.address}
+        <ProfileEmergencyContactFields
+          values={emergency}
+          errors={errors}
+          onChange={patch => setEmergency(prev => ({ ...prev, ...patch }))}
+          onClearError={clearError}
+        />
+        <ProfileAddressFields
+          values={address}
+          errors={errors}
+          onChange={patch => setAddress(prev => ({ ...prev, ...patch }))}
+          onClearError={clearError}
         />
       </View>
 

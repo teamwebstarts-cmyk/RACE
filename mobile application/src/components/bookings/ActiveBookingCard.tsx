@@ -48,7 +48,7 @@ export default function ActiveBookingCard({ booking, px, onTrack, onPress }: Pro
               fontWeight: typography.weights.bold,
               color: colors.dark,
             }}>
-            {booking.id}
+            {booking.displayId}
           </Text>
           <Copy size={px(13)} color={colors.grey} strokeWidth={2} />
         </View>

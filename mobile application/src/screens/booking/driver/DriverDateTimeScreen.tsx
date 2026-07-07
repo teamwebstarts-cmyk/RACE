@@ -83,7 +83,7 @@ export default function DriverDateTimeScreen({ navigation }: Props) {
   return (
     <TowingBookingLayout
       title="When do you need a driver?"
-      step={2}
+      step={1}
       scrollable={showTimePicker}
       onBack={() => navigation.goBack()}
       onContinue={() => {

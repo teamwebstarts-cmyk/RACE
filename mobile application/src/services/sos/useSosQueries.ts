@@ -15,10 +15,11 @@ export function useSosConfigQuery() {
   });
 }
 
-export function useSosContextQuery(vehicleId?: string) {
+export function useSosContextQuery(vehicleId?: string, enabled = true) {
   return useQuery({
     queryKey: sosKeys.context(vehicleId),
     queryFn: () => getSosContext(vehicleId),
+    enabled,
   });
 }
 

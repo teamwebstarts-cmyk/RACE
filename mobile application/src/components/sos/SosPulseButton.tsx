@@ -1,14 +1,15 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, Text, View } from 'react-native';
+import { Animated, Pressable, Text, View } from 'react-native';
 
 import { SOS_COLORS } from '../../constants/sosTheme';
 import { typography } from '../../theme';
 
 type Props = {
   px: (n: number) => number;
+  onPress?: () => void;
 };
 
-export default function SosPulseButton({ px }: Props) {
+export default function SosPulseButton({ px, onPress }: Props) {
   const pulse = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -53,7 +54,9 @@ export default function SosPulseButton({ px }: Props) {
           />
         );
       })}
-      <View
+      <Pressable
+        onPress={onPress}
+        disabled={!onPress}
         style={{
           width: px(76),
           height: px(76),
@@ -76,7 +79,7 @@ export default function SosPulseButton({ px }: Props) {
           }}>
           SOS
         </Text>
-      </View>
+      </Pressable>
     </View>
   );
 }

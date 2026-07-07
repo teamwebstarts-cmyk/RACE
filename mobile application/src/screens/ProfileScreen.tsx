@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -8,8 +8,6 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   ArrowRight,
   Bell,
@@ -21,14 +19,17 @@ import {
   Shield,
   UserRound,
 } from 'lucide-react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { PROFILE_MENU_ITEMS, PROFILE_QUICK_STATS } from '../constants/profileScreen';
+import { PROFILE_MENU_ITEMS } from '../constants/profileScreen';
 import { PROFILE_MENU_ROUTES } from '../constants/profileSubScreens';
 import AppScreenLayout from '../components/ui/AppScreenLayout';
 import TabRootHeader from '../components/ui/TabRootHeader';
 import { getProfileFirstName } from '../utils/profileDisplay';
 import { useAuthActions } from '../hooks/useAuth';
 import { useAuthStore } from '../store/authStore';
+import { useNotificationsQuery, useWalletQuery } from '../services/profile/useProfileQueries';
 import { useProfileStore } from '../store/profileStore';
 import type { ProfileStackParamList } from '../types/navigation';
 import { colors, shadows, typography } from '../theme';
@@ -64,6 +65,14 @@ export default function ProfileScreen() {
   const { logout } = useAuthActions();
   const authUser = useAuthStore(state => state.user);
   const { profile, fetchProfile, isLoading } = useProfileStore();
+  const { data: notificationsData } = useNotificationsQuery();
+  const {
+    data: wallet,
+    isLoading: isWalletLoading,
+    isError: isWalletError,
+    refetch: refetchWallet,
+  } = useWalletQuery();
+  const unreadCount = notificationsData?.unreadCount ?? 0;
   const { width } = useWindowDimensions();
   const s = width / REF_W;
   const px = (n: number) => Math.round(n * s);
@@ -77,6 +86,13 @@ export default function ProfileScreen() {
     getProfileFirstName(authUser?.fullName) ||
     'User';
   const displayPhone = profile?.mobileNumber ?? authUser?.mobileNumber ?? '';
+
+  const walletLabel = useMemo(() => {
+    if (isWalletLoading) return '...';
+    if (isWalletError) return 'Tap to retry';
+    if (wallet) return `₹${wallet.balance.toLocaleString('en-IN')}`;
+    return '—';
+  }, [isWalletError, isWalletLoading, wallet]);
 
   const handleLogout = () => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
@@ -108,7 +124,7 @@ export default function ProfileScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: px(12) }}>
               <Pressable hitSlop={8} style={styles.bellWrap} onPress={() => navigation.navigate('Notifications')}>
                 <Bell size={px(22)} color={colors.dark} strokeWidth={2} />
-                <View style={styles.bellDot} />
+                {unreadCount > 0 ? <View style={styles.bellDot} /> : null}
               </Pressable>
               <ProfileAvatar size={px(40)} px={px} />
             </View>
@@ -187,7 +203,7 @@ export default function ProfileScreen() {
                   }}
                 />
                 <Pressable
-                  onPress={() => navigation.navigate('ChoosePlan')}
+                  onPress={() => navigation.navigate('SubscriptionPlans')}
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',
@@ -222,54 +238,40 @@ export default function ProfileScreen() {
               </View>
             </View>
 
-            <View
+            <Pressable
+              onPress={() => {
+                if (isWalletError) {
+                  void refetchWallet();
+                  return;
+                }
+                navigation.navigate('PaymentMethods');
+              }}
               style={{
                 flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
                 borderRadius: px(14),
                 borderWidth: 1,
                 borderColor: colors.border,
                 backgroundColor: colors.background,
-                paddingVertical: px(12),
+                paddingVertical: px(14),
+                paddingHorizontal: px(16),
                 marginBottom: px(14),
               }}>
-              {PROFILE_QUICK_STATS.map((item, index) => (
-                <Pressable
-                  key={item.id}
-                  onPress={() => {
-                    if (item.id === 'wallet') navigation.navigate('PaymentMethods');
-                  }}
+              <View>
+                <Text style={{ fontSize: px(11), color: colors.grey }}>Wallet Balance</Text>
+                <Text
                   style={{
-                    flex: 1,
-                    minWidth: 0,
-                    alignItems: 'center',
-                    borderRightWidth: index < PROFILE_QUICK_STATS.length - 1 ? 1 : 0,
-                    borderRightColor: colors.border,
-                    paddingHorizontal: px(4),
+                    marginTop: px(4),
+                    fontSize: px(18),
+                    fontWeight: typography.weights.bold,
+                    color: colors.primary,
                   }}>
-                  <item.Icon size={px(16)} color={colors.primary} strokeWidth={2} />
-                  <Text
-                    style={{
-                      marginTop: px(4),
-                      fontSize: px(9),
-                      color: colors.grey,
-                      textAlign: 'center',
-                    }}>
-                    {item.label}
-                  </Text>
-                  <Text
-                    numberOfLines={1}
-                    style={{
-                      marginTop: px(2),
-                      fontSize: px(10),
-                      fontWeight: typography.weights.bold,
-                      color: colors.primary,
-                      textAlign: 'center',
-                    }}>
-                    {item.value}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
+                  {walletLabel}
+                </Text>
+              </View>
+              <ChevronRight size={px(18)} color={colors.primary} strokeWidth={2} />
+            </Pressable>
 
             <View
               style={{
@@ -368,7 +370,7 @@ export default function ProfileScreen() {
                     Priority support, faster dispatch & exclusive benefits
                   </Text>
                   <Pressable
-                    onPress={() => navigation.navigate('ChoosePlan')}
+                    onPress={() => navigation.navigate('SubscriptionPlans')}
                     style={{
                       alignSelf: 'flex-start',
                       flexDirection: 'row',

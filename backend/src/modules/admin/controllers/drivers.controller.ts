@@ -3,6 +3,7 @@ import type { Request, Response } from 'express';
 import { asyncHandler } from '../../../shared/utils/asyncHandler';
 import { sendSuccess } from '../../../shared/utils/apiResponse';
 import { adminDriversService } from '../drivers/admin-drivers.service';
+import { listAvailableDrivers } from '../../bookings/shared/driver-assignment.service';
 import { routeParam } from '../shared/route-param';
 import { getAdminActor } from '../utils/request.utils';
 
@@ -13,6 +14,24 @@ export const adminDriversController = {
 
   list: asyncHandler(async (req: Request, res: Response) => {
     sendSuccess(res, await adminDriversService.list(req.query as never));
+  }),
+
+  listAvailable: asyncHandler(async (req: Request, res: Response) => {
+    const lat = req.query.lat !== undefined ? Number(req.query.lat) : undefined;
+    const lng = req.query.lng !== undefined ? Number(req.query.lng) : undefined;
+    const bookingType =
+      req.query.bookingType === 'towing' || req.query.bookingType === 'driver'
+        ? req.query.bookingType
+        : undefined;
+    const hasCoords =
+      lat !== undefined && !Number.isNaN(lat) && lng !== undefined && !Number.isNaN(lng);
+    sendSuccess(
+      res,
+      await listAvailableDrivers({
+        ...(hasCoords ? { latitude: lat, longitude: lng } : {}),
+        ...(bookingType ? { bookingType } : {}),
+      }),
+    );
   }),
 
   getById: asyncHandler(async (req: Request, res: Response) => {

@@ -13,8 +13,9 @@ import { colors, shadows, typography } from '../../../theme';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'TowingDriverOnWay'>;
 
-export default function TowingDriverOnWayScreen({ navigation }: Props) {
+export default function TowingDriverOnWayScreen({ navigation, route }: Props) {
   const { t } = useBookingTheme();
+  const trackParams = route.params;
 
   return (
     <TowingBookingLayout
@@ -23,7 +24,7 @@ export default function TowingDriverOnWayScreen({ navigation }: Props) {
       headerVariant="inline"
       onBack={() => navigation.goBack()}
       buttonLabel="Continue"
-      onContinue={() => navigation.navigate('TowingCompleted')}>
+      onContinue={() => navigation.navigate('TowingCompleted', trackParams)}>
       <View style={{ flex: 1 }}>
         <View style={{ flex: 1, marginBottom: t.px(14) }}>
           <MapPlaceholder px={t.px} variant="driver" />

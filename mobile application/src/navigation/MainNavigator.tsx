@@ -10,6 +10,7 @@ import BookingsScreen from '../screens/booking/BookingsScreen';
 import LiveTrackingScreen from '../screens/booking/LiveTrackingScreen';
 import RatingReviewScreen from '../screens/booking/RatingReviewScreen';
 import HomeScreen from '../screens/HomeScreen';
+import SelectLocationScreen from '../screens/home/SelectLocationScreen';
 import MoreServicesScreen from '../screens/MoreServicesScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import EmergencySosScreen from '../screens/profile/EmergencySosScreen';
@@ -58,6 +59,11 @@ function HomeStackNavigator() {
   return (
     <HomeStack.Navigator screenOptions={stackScreenOptions}>
       <HomeStack.Screen name="HomeMain" component={HomeScreen} options={{ headerShown: false }} />
+      <HomeStack.Screen
+        name="SelectLocation"
+        component={SelectLocationScreen}
+        options={{ headerShown: false, presentation: 'fullScreenModal' }}
+      />
       <HomeStack.Screen
         name="ServiceList"
         component={ServiceListScreen}
@@ -162,13 +168,15 @@ function BookingsStackNavigator() {
   );
 }
 
-const TAB_ICONS: Record<
+const TAB_ICONS: Partial<Record<
   keyof RootTabParamList,
   { focused: keyof typeof Ionicons.glyphMap; default: keyof typeof Ionicons.glyphMap }
-> = {
+>> = {
   Home: { focused: 'home', default: 'home-outline' },
   Bookings: { focused: 'calendar', default: 'calendar-outline' },
   Profile: { focused: 'person', default: 'person-outline' },
+  Services: { focused: 'grid', default: 'grid-outline' },
+  Call: { focused: 'call', default: 'call-outline' },
 };
 
 function TabIcon({
@@ -178,7 +186,7 @@ function TabIcon({
   routeName: keyof RootTabParamList;
   focused: boolean;
 }) {
-  const icons = TAB_ICONS[routeName];
+  const icons = TAB_ICONS[routeName] ?? { focused: 'ellipse', default: 'ellipse-outline' };
   return (
     <View style={[tabIconStyles.wrap, focused && tabIconStyles.active]}>
       <Ionicons

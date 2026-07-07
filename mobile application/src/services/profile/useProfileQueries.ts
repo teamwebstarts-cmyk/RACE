@@ -12,6 +12,7 @@ import type { NotificationPreference, PaymentMethod, SavedLocation } from '../..
 import {
   listSavedLocations,
   createSavedLocation,
+  updateSavedLocation,
   deleteSavedLocation,
 } from './locationApi';
 import {
@@ -52,6 +53,17 @@ export function useCreateLocationMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: Omit<SavedLocation, 'id'>) => createSavedLocation(payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: profileKeys.locations });
+    },
+  });
+}
+
+export function useUpdateLocationMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: { id: string; payload: Partial<Omit<SavedLocation, 'id'>> }) =>
+      updateSavedLocation(params.id, params.payload),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: profileKeys.locations });
     },

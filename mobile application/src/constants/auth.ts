@@ -52,9 +52,11 @@ export const ONBOARDING_SLIDES = [
 export const VEHICLE_TYPES = [
   { id: 'car', label: 'Car', icon: 'Car' as const },
   { id: 'bike', label: 'Bike', icon: 'Bike' as const },
-  { id: 'suv', label: 'SUV', icon: 'Car' as const },
+  { id: 'ev', label: 'EV', icon: 'Car' as const },
   { id: 'truck', label: 'Truck', icon: 'Truck' as const },
+  { id: 'auto', label: 'Auto', icon: 'Car' as const },
   { id: 'bus', label: 'Bus', icon: 'Bus' as const },
+  { id: 'other', label: 'Other', icon: 'Car' as const },
 ];
 
 export const VEHICLE_COLORS = [
@@ -67,7 +69,7 @@ export const VEHICLE_COLORS = [
   '#6B7280',
 ];
 
-export const FUEL_TYPES = ['Petrol', 'Diesel', 'CNG', 'Electric'];
+export const FUEL_TYPES = ['Petrol', 'Diesel', 'CNG', 'Electric', 'Hybrid', 'Other'];
 
 export const QR_ACTIONS = [
   { icon: 'Phone' as const, label: 'Contact Owner' },

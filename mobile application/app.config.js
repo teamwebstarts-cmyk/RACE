@@ -1,3 +1,8 @@
+const googleMapsApiKey =
+  process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY ??
+  process.env.GOOGLE_MAPS_API_KEY ??
+  '';
+
 module.exports = {
   expo: {
     name: 'RACE Service',
@@ -14,6 +19,9 @@ module.exports = {
     ios: {
       bundleIdentifier: 'com.racecar.customer',
       supportsTablet: true,
+      config: {
+        googleMapsApiKey,
+      },
     },
     android: {
       package: 'com.racecar.customer',
@@ -21,6 +29,11 @@ module.exports = {
       adaptiveIcon: {
         foregroundImage: './src/assets/images/logo.png',
         backgroundColor: '#232323',
+      },
+      config: {
+        googleMaps: {
+          apiKey: googleMapsApiKey,
+        },
       },
     },
     scheme: 'race-customer',
@@ -36,9 +49,17 @@ module.exports = {
           cameraPermission: 'Allow RACE to use your camera for selfie verification.',
         },
       ],
+      [
+        'expo-location',
+        {
+          locationWhenInUsePermission:
+            'Allow RACE to use your location to set pickup and dropoff.',
+        },
+      ],
     ],
     extra: {
       apiUrl: process.env.EXPO_PUBLIC_API_URL ?? 'http://192.168.1.7:3000',
+      googleMapsApiKey,
     },
   },
 };

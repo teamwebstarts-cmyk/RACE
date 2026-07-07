@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
+  ActivityIndicator,
   Image,
   Pressable,
   StyleSheet,
@@ -13,7 +14,8 @@ import ServiceCategoryGridCard from '../components/services/ServiceCategoryGridC
 import AppScreenLayout from '../components/ui/AppScreenLayout';
 import TabRootHeader from '../components/ui/TabRootHeader';
 import { HOME_HERO_IMAGE } from '../constants/home';
-import { SERVICE_GRID_CARDS, SERVICES_TRUST_ITEMS } from '../constants/servicesScreen';
+import { mapApiCategoryToGridCard, SERVICES_TRUST_ITEMS } from '../constants/servicesScreen';
+import { useCatalogStore } from '../store/catalogStore';
 import type { ServicesStackParamList } from '../types/navigation';
 import { openServiceCategory } from '../utils/serviceNavigation';
 import { colors, shadows, typography } from '../theme';
@@ -26,6 +28,14 @@ export default function ServicesScreen({ navigation }: Props) {
   const { width } = useWindowDimensions();
   const s = width / REF_W;
   const px = (n: number) => Math.round(n * s);
+
+  const { services, fetchServices, isLoading, error } = useCatalogStore();
+
+  useEffect(() => {
+    void fetchServices();
+  }, [fetchServices]);
+
+  const gridCards = services.map(mapApiCategoryToGridCard);
 
   const openCategory = (categoryId: string, categoryTitle: string) => {
     openServiceCategory(navigation, categoryId, categoryTitle);
@@ -122,7 +132,6 @@ export default function ServicesScreen({ navigation }: Props) {
             </View>
           </View>
 
-          {/* Service categories */}
           <Text
             style={{
               fontSize: px(18),
@@ -133,31 +142,71 @@ export default function ServicesScreen({ navigation }: Props) {
             Service Categories
           </Text>
 
-          <View
-            style={{
-              flexDirection: 'row',
-              flexWrap: 'wrap',
-              justifyContent: 'space-between',
-              rowGap: px(12),
-              marginBottom: px(22),
-            }}>
-            {SERVICE_GRID_CARDS.map(card => (
-              <ServiceCategoryGridCard
-                key={card.id}
-                title={card.title}
-                description={card.description}
-                servicesCount={card.servicesCount}
-                Icon={card.Icon}
-                comingSoon={card.comingSoon}
-                scale={s}
-                onPress={() =>
-                  openCategory(card.categoryId, card.title)
-                }
-              />
-            ))}
-          </View>
+          {isLoading && gridCards.length === 0 ? (
+            <View style={{ alignItems: 'center', paddingVertical: px(40) }}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={{ marginTop: px(10), fontSize: px(13), color: colors.grey }}>
+                Loading services...
+              </Text>
+            </View>
+          ) : error && gridCards.length === 0 ? (
+            <Pressable
+              onPress={() => void fetchServices()}
+              style={{
+                alignItems: 'center',
+                paddingVertical: px(32),
+                borderRadius: px(12),
+                backgroundColor: colors.lightGrey,
+                marginBottom: px(22),
+              }}>
+              <Text style={{ fontSize: px(14), color: colors.error, textAlign: 'center' }}>
+                {error}
+              </Text>
+              <Text
+                style={{
+                  marginTop: px(8),
+                  fontSize: px(13),
+                  fontWeight: typography.weights.bold,
+                  color: colors.primary,
+                }}>
+                Tap to retry
+              </Text>
+            </Pressable>
+          ) : gridCards.length === 0 ? (
+            <View
+              style={{
+                alignItems: 'center',
+                paddingVertical: px(32),
+                marginBottom: px(22),
+              }}>
+              <Text style={{ fontSize: px(14), color: colors.grey, textAlign: 'center' }}>
+                No services available right now.
+              </Text>
+            </View>
+          ) : (
+            <View
+              style={{
+                flexDirection: 'row',
+                flexWrap: 'wrap',
+                justifyContent: 'space-between',
+                rowGap: px(12),
+                marginBottom: px(22),
+              }}>
+              {gridCards.map(card => (
+                <ServiceCategoryGridCard
+                  key={card.id}
+                  title={card.title}
+                  description={card.description}
+                  servicesCount={card.servicesCount}
+                  Icon={card.Icon}
+                  comingSoon={card.comingSoon}
+                  scale={s}
+                  onPress={() => openCategory(card.categoryId, card.title)}
+                />
+              ))}
+            </View>
+          )}
 
-          {/* Trust bar */}
           <View
             style={{
               flexDirection: 'row',

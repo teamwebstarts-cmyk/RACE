@@ -7,16 +7,26 @@ import GoldButton from '../../components/auth/GoldButton';
 import OtpInput from '../../components/auth/OtpInput';
 import ProfileSubScreenLayout, { useProfilePx } from '../../components/profile/ProfileSubScreenLayout';
 import { DEMO_OTP } from '../../constants/auth';
-import { USER } from '../../constants/demo';
+import { useAuthStore } from '../../store/authStore';
+import { useProfileStore } from '../../store/profileStore';
 import { colors, typography } from '../../theme';
 
 export default function ChangeMobileNumberScreen() {
   const px = useProfilePx();
+  const authUser = useAuthStore(state => state.user);
+  const profile = useProfileStore(state => state.profile);
+  const fetchProfile = useProfileStore(state => state.fetchProfile);
   const [newPhone, setNewPhone] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [digits, setDigits] = useState(['', '', '', '', '', '']);
   const [activeIndex, setActiveIndex] = useState(0);
   const [timer, setTimer] = useState(0);
+
+  const currentPhone = profile?.mobileNumber ?? authUser?.mobileNumber ?? '';
+
+  useEffect(() => {
+    void fetchProfile();
+  }, [fetchProfile]);
 
   useEffect(() => {
     if (timer <= 0) return;
@@ -29,7 +39,7 @@ export default function ChangeMobileNumberScreen() {
       Alert.alert('Invalid Number', 'Please enter a valid mobile number.');
       return;
     }
-    if (newPhone.replace(/\s/g, '') === USER.phone.replace(/\s/g, '')) {
+    if (newPhone.replace(/\s/g, '') === currentPhone.replace(/\s/g, '')) {
       Alert.alert('Same Number', 'New number must be different from current number.');
       return;
     }
@@ -68,7 +78,7 @@ export default function ChangeMobileNumberScreen() {
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: px(8) }}>
           <Smartphone size={px(18)} color={colors.primary} strokeWidth={2} />
           <Text style={{ fontSize: px(16), fontWeight: typography.weights.bold, color: colors.dark }}>
-            {USER.phone}
+            {currentPhone || '—'}
           </Text>
         </View>
       </View>
