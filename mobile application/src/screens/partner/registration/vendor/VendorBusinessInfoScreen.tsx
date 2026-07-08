@@ -49,6 +49,8 @@ export default function VendorBusinessInfoScreen({ navigation, route }: Props) {
       onBack={() => navigation.goBack()}
       footer={
         <PartnerRegistrationFooter
+          showBack
+          onBack={() => navigation.goBack()}
           onContinue={() => {
             if (!validate()) return;
             navigation.navigate('VendorBusinessAddress', route.params);

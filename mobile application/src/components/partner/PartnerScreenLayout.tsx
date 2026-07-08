@@ -62,11 +62,11 @@ export default function PartnerScreenLayout({
           {showBackButton && onBack ? (
             <Pressable
               onPress={onBack}
-              hitSlop={10}
+              hitSlop={12}
               style={({ pressed }) => [styles.sideSlot, pressed && styles.pressed]}
               accessibilityRole="button"
               accessibilityLabel="Go back">
-              <ArrowLeft size={22} color={colors.dark} strokeWidth={2.5} />
+              <ArrowLeft size={24} color={colors.dark} strokeWidth={2.5} />
             </Pressable>
           ) : (
             <View style={styles.sideSlot} />

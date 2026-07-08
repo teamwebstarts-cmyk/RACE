@@ -49,7 +49,13 @@ export default function DriverPersonalInfoScreen({ navigation, route }: Props) {
       steps={DRIVER_REGISTRATION_STEPS}
       activeStep={1}
       onBack={() => navigation.goBack()}
-      footer={<PartnerRegistrationFooter onContinue={handleContinue} />}>
+      footer={
+        <PartnerRegistrationFooter
+          showBack
+          onBack={() => navigation.goBack()}
+          onContinue={handleContinue}
+        />
+      }>
       <PartnerSectionHeader
         Icon={User}
         title="Personal Information"

@@ -3,6 +3,7 @@ import { StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
+import StackBackButton from '../components/navigation/StackBackButton';
 import PartnerTabBar from '../components/partner/PartnerTabBar';
 import PartnerHomeScreen from '../screens/partner/PartnerHomeScreen';
 import PartnerJobsScreen from '../screens/partner/PartnerJobsScreen';
@@ -33,6 +34,8 @@ const stackScreenOptions = {
   headerTitleAlign: 'center' as const,
   headerShadowVisible: false,
   headerBackTitleVisible: false,
+  headerBackVisible: false,
+  headerLeft: (props: Parameters<typeof StackBackButton>[0]) => <StackBackButton {...props} />,
   contentStyle: { backgroundColor: colors.background },
 };
 
