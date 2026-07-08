@@ -6,7 +6,6 @@ import { BookingModel } from '../../bookings/booking.model';
 import { userRepository } from '../../users/user.repository';
 import { UserModel } from '../../users/user.model';
 import { VehicleModel } from '../../vehicles/vehicle.model';
-import { VendorModel } from '../../vendors/vendor.model';
 import { TransactionModel } from '../models/transaction.model';
 import { UserSubscriptionModel } from '../../subscriptions/subscription.model';
 import { escapeRegex, paginate } from '../shared/pagination';
@@ -87,9 +86,12 @@ export const adminCustomersService = {
     ]);
 
     const vendorIds = [...new Set(bookings.map((b) => b.vendorId?.toString()).filter(Boolean))];
-    const vendors = await VendorModel.find({ _id: { $in: vendorIds } }).lean();
+    const vendors = await UserModel.find({ _id: { $in: vendorIds }, role: 'vendor' }).lean();
     const vendorMap = new Map(
-      vendors.map((v) => [v._id.toString(), v.businessName ?? v.ownerName ?? 'Vendor']),
+      vendors.map((v) => [
+        v._id.toString(),
+        v.vendorProfile?.businessName ?? v.vendorProfile?.ownerName ?? v.fullName ?? 'Vendor',
+      ]),
     );
 
     const base = mapCustomer(user, vehicleCount, bookings.length);

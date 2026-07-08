@@ -37,7 +37,7 @@ import {
   useUploadVendorSelfieMutation,
 } from '../../services/vendor/useVendorMutations';
 import type { AuthStackParamList, ProfileStackParamList } from '../../types/navigation';
-import type { VendorDraft, WizardStepConfig, UploadedDocument } from '../../types/vendor';
+import type { VendorDraft, WizardStepConfig, UploadedDocument, VendorType } from '../../types/vendor';
 import { colors, spacing, typography } from '../../theme';
 import type { PickedFile } from '../../components/vendor/DocumentUpload';
 
@@ -80,7 +80,8 @@ function validateStep(step: WizardStepConfig, draft: VendorDraft): string | null
 }
 
 export default function VendorWizardScreen({ navigation, route }: Props) {
-  const { vendorType } = route.params;
+  const vendorType: VendorType =
+    (route.params?.vendorType as VendorType | undefined) ?? 'towing_company';
   const dispatch = useAppDispatch();
   const user = useAppSelector((state) => state.auth.user);
   const draft = useAppSelector((state) => state.vendorOnboarding.draft);

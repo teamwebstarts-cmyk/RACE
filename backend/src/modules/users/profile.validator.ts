@@ -17,7 +17,10 @@ const addressSchema = z.object({
 
 export const completeProfileSchema = z.object({
   fullName: z.string().min(2).max(100),
-  email: z.string().email(),
+  email: z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+    z.string().email().optional(),
+  ),
   gender: z.enum(['male', 'female', 'other', 'prefer_not_to_say']),
   dateOfBirth: z
     .string()
@@ -30,7 +33,12 @@ export const completeProfileSchema = z.object({
 
 export type CompleteProfileDto = z.infer<typeof completeProfileSchema>;
 
-export const updateProfileSchema = completeProfileSchema;
+/** Partial update — only send fields you want to change. */
+export const updateProfileSchema = completeProfileSchema
+  .partial()
+  .refine((data) => Object.keys(data).length > 0, {
+    message: 'At least one profile field is required',
+  });
 
 export type UpdateProfileDto = z.infer<typeof updateProfileSchema>;
 

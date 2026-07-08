@@ -1,5 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 
+import { LoadingState } from '@race/ui';
+
 import { ProtectedRoute, PublicOnlyRoute } from '@/components/guards/protected-route';
 import { BookingDetailPage } from './pages/bookings/BookingDetailPage';
 import { BookingsPage } from './pages/bookings/BookingsPage';
@@ -8,6 +10,7 @@ import { CustomersPage } from './pages/customers/CustomersPage';
 import { DashboardLayout } from './layouts/DashboardLayout';
 import { DriverDetailPage } from './pages/drivers/DriverDetailPage';
 import { DriversPage } from './pages/drivers/DriversPage';
+import { AvailableDriversPage } from './pages/drivers/AvailableDriversPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { FinancialPage } from './pages/financial/FinancialPage';
 import { LoginPage } from './pages/LoginPage';
@@ -22,6 +25,12 @@ import { useAuthStore } from '@/stores/auth.store';
 
 function RootRedirect() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const hasHydrated = useAuthStore((s) => s.hasHydrated);
+
+  if (!hasHydrated) {
+    return <LoadingState message="Loading session..." />;
+  }
+
   return <Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />;
 }
 
@@ -42,6 +51,7 @@ export default function App() {
           <Route path="/vendors" element={<VendorsPage />} />
           <Route path="/vendors/:id" element={<VendorDetailPage />} />
           <Route path="/drivers" element={<DriversPage />} />
+          <Route path="/drivers/available" element={<AvailableDriversPage />} />
           <Route path="/drivers/:id" element={<DriverDetailPage />} />
           <Route path="/bookings" element={<BookingsPage />} />
           <Route path="/bookings/:id" element={<BookingDetailPage />} />

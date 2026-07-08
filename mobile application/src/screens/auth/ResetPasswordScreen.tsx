@@ -101,7 +101,7 @@ export default function ResetPasswordScreen({ navigation, route }: Props) {
               label="New Password"
               value={password}
               onChangeText={setPassword}
-              placeholder="New Password"
+              placeholder="At least 6 characters"
               Icon={Lock}
               variant="outlined"
               compact
@@ -121,7 +121,7 @@ export default function ResetPasswordScreen({ navigation, route }: Props) {
               label="Confirm Password"
               value={confirm}
               onChangeText={setConfirm}
-              placeholder="Confirm Password"
+              placeholder="Re-enter new password"
               Icon={Lock}
               variant="outlined"
               compact

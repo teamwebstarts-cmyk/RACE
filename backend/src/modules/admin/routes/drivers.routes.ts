@@ -20,6 +20,12 @@ router.get(
   adminDriversController.list,
 );
 router.get(
+  '/drivers/available',
+  adminAuthMiddleware,
+  requireAdminPermission(AdminPermission.DRIVERS_VIEW),
+  adminDriversController.listAvailable,
+);
+router.get(
   '/drivers/:id',
   adminAuthMiddleware,
   requireAdminPermission(AdminPermission.DRIVERS_VIEW),

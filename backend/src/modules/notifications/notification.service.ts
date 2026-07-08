@@ -6,12 +6,12 @@ import type {
   NotificationResponseDto,
   UpdateNotificationPrefsDto,
 } from './notification.validator';
-import type { NotificationType } from './notification.repository';
+import type { NotificationType } from './notification.model';
 
 function mapNotification(n: INotification): NotificationResponseDto {
   return {
     id: n.id,
-    type: n.type,
+    type: (n.type as NotificationType) ?? 'PROMOTION',
     title: n.title,
     message: n.message,
     isRead: n.isRead,
@@ -51,7 +51,7 @@ export class NotificationService {
     },
   ): Promise<NotificationResponseDto> {
     const notification = await notificationRepository.create({
-      userId: userId as unknown as INotification['userId'],
+      userId,
       type: data.type,
       title: data.title,
       message: data.message,
@@ -61,7 +61,7 @@ export class NotificationService {
   }
 
   async listForUser(userId: string): Promise<NotificationResponseDto[]> {
-    const notifications = await notificationRepository.findByUser(userId);
+    const notifications = await notificationRepository.findByUserId(userId);
     return notifications.map(mapNotification);
   }
 
@@ -95,7 +95,7 @@ export class NotificationService {
   }
 
   async seedWelcomeNotifications(userId: string): Promise<void> {
-    const existing = await notificationRepository.findByUser(userId);
+    const existing = await notificationRepository.findByUserId(userId);
     if (existing.length > 0) return;
 
     const samples = [

@@ -1,22 +1,35 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, Linking, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Animated, Linking, Pressable, Text, View } from 'react-native';
 import { ArrowRight, Check, MessageCircle, Phone, Star } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import TowingBookingLayout, { useBookingTheme } from '../../../components/booking/TowingBookingLayout';
 import DriverAvatar from '../../../components/bookings/DriverAvatar';
-import { DRIVER_ASSIGNED, getDriverTypeBadgeLabel } from '../../../constants/driverBooking';
+import { getDriverTypeBadgeLabel } from '../../../constants/driverBooking';
 import { useDriverBooking } from '../../../context/DriverBookingContext';
+import { useBookingTracking } from '../../../hooks/useBookingTracking';
+import { useBookingQuery } from '../../../services/bookings/useBookingQueries';
 import { brand } from '../../../theme/brand';
 import type { HomeStackParamList } from '../../../types/navigation';
 import { colors, shadows, typography } from '../../../theme';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'DriverAssigned'>;
 
-export default function DriverAssignedScreen({ navigation }: Props) {
+export default function DriverAssignedScreen({ navigation, route }: Props) {
   const { t } = useBookingTheme();
-  const { booking } = useDriverBooking();
+  const { booking: draftBooking } = useDriverBooking();
+  const bookingId = route.params?.bookingId;
+  const booking = useBookingQuery(bookingId ?? '');
+  const { etaMinutes, driverName, driverPhone, driverRating } = useBookingTracking(
+    bookingId,
+    'driver',
+  );
   const scaleAnim = useRef(new Animated.Value(0)).current;
+
+  const name = driverName ?? booking?.driver?.name ?? 'Assigning driver';
+  const rating = booking?.driver?.rating ?? driverRating;
+  const phone = driverPhone ?? booking?.driver?.phone ?? brand.phoneRaw;
+  const hasDriver = Boolean(driverName ?? booking?.driver?.name);
 
   useEffect(() => {
     Animated.spring(scaleAnim, {
@@ -26,6 +39,16 @@ export default function DriverAssignedScreen({ navigation }: Props) {
       useNativeDriver: true,
     }).start();
   }, [scaleAnim]);
+
+  if (bookingId && !booking && !hasDriver) {
+    return (
+      <TowingBookingLayout title=" " step={5} hideFooter>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator color={colors.primary} />
+        </View>
+      </TowingBookingLayout>
+    );
+  }
 
   return (
     <TowingBookingLayout
@@ -56,7 +79,7 @@ export default function DriverAssignedScreen({ navigation }: Props) {
               color: colors.success,
               marginBottom: t.px(20),
             }}>
-            Driver Assigned!
+            {hasDriver ? 'Driver Assigned!' : 'Finding your driver…'}
           </Text>
 
           <View
@@ -88,19 +111,21 @@ export default function DriverAssignedScreen({ navigation }: Props) {
                       fontWeight: typography.weights.bold,
                       color: colors.dark,
                     }}>
-                    {DRIVER_ASSIGNED.name}
+                    {name}
                   </Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.px(4) }}>
-                    <Star size={t.px(14)} color={colors.primary} fill={colors.primary} />
-                    <Text
-                      style={{
-                        fontSize: t.body,
-                        fontWeight: typography.weights.semibold,
-                        color: colors.grey,
-                      }}>
-                      {DRIVER_ASSIGNED.rating}
-                    </Text>
-                  </View>
+                  {hasDriver ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.px(4) }}>
+                      <Star size={t.px(14)} color={colors.primary} fill={colors.primary} />
+                      <Text
+                        style={{
+                          fontSize: t.body,
+                          fontWeight: typography.weights.semibold,
+                          color: colors.grey,
+                        }}>
+                        {rating.toFixed(1)}
+                      </Text>
+                    </View>
+                  ) : null}
                 </View>
 
                 <View
@@ -118,7 +143,7 @@ export default function DriverAssignedScreen({ navigation }: Props) {
                       fontWeight: typography.weights.bold,
                       color: colors.dark,
                     }}>
-                    {getDriverTypeBadgeLabel(booking.driverType)}
+                    {getDriverTypeBadgeLabel(draftBooking.driverType)}
                   </Text>
                 </View>
               </View>
@@ -132,7 +157,7 @@ export default function DriverAssignedScreen({ navigation }: Props) {
                   color: colors.dark,
                   marginBottom: t.px(4),
                 }}>
-                Arriving in
+                {hasDriver ? 'Arriving in' : 'Estimated arrival'}
               </Text>
               <Text
                 style={{
@@ -140,14 +165,15 @@ export default function DriverAssignedScreen({ navigation }: Props) {
                   fontWeight: typography.weights.extrabold,
                   color: colors.primary,
                 }}>
-                {DRIVER_ASSIGNED.etaMinutes} min
+                {etaMinutes} min
               </Text>
             </View>
           </View>
 
           <View style={{ flexDirection: 'row', gap: t.px(10), width: '100%', marginTop: t.px(16) }}>
             <Pressable
-              onPress={() => void Linking.openURL(`tel:${brand.phoneRaw}`)}
+              onPress={() => void Linking.openURL(`tel:${phone}`)}
+              disabled={!hasDriver}
               style={{
                 flex: 1,
                 height: t.px(48),
@@ -159,6 +185,7 @@ export default function DriverAssignedScreen({ navigation }: Props) {
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: t.px(6),
+                opacity: hasDriver ? 1 : 0.5,
               }}>
               <Phone size={t.px(18)} color={colors.primary} />
               <Text
@@ -182,6 +209,7 @@ export default function DriverAssignedScreen({ navigation }: Props) {
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: t.px(6),
+                opacity: 0.5,
               }}>
               <MessageCircle size={t.px(18)} color={colors.primary} />
               <Text
@@ -197,7 +225,12 @@ export default function DriverAssignedScreen({ navigation }: Props) {
         </View>
 
         <Pressable
-          onPress={() => navigation.popToTop()}
+          onPress={() =>
+            navigation.navigate('DriverTrack', {
+              bookingId,
+              bookingType: 'driver',
+            })
+          }
           style={{
             height: t.buttonHeight,
             borderRadius: t.cardRadius,

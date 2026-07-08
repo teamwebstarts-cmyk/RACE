@@ -1,11 +1,7 @@
 import {
-  Battery,
-  Circle,
-  Fuel,
   Headphones,
   ShieldCheck,
   Star,
-  Truck,
   Users,
   Zap,
   type LucideIcon,
@@ -14,43 +10,6 @@ import {
 import { images } from '../assets';
 
 export const HOME_HERO_IMAGE = images.homeHeroTruck;
-
-export const QUICK_SERVICES: Array<{
-  id: string;
-  label: string;
-  Icon: LucideIcon;
-  categoryId: string;
-  categoryTitle: string;
-}> = [
-  {
-    id: 'towing',
-    label: 'Towing',
-    Icon: Truck,
-    categoryId: 'towing',
-    categoryTitle: 'Towing Service',
-  },
-  {
-    id: 'battery',
-    label: 'Battery Jump Start',
-    Icon: Battery,
-    categoryId: 'roadside',
-    categoryTitle: 'Roadside Assistance',
-  },
-  {
-    id: 'tyre',
-    label: 'Flat Tyre',
-    Icon: Circle,
-    categoryId: 'roadside',
-    categoryTitle: 'Roadside Assistance',
-  },
-  {
-    id: 'fuel',
-    label: 'Fuel Delivery',
-    Icon: Fuel,
-    categoryId: 'roadside',
-    categoryTitle: 'Roadside Assistance',
-  },
-];
 
 export const TRUST_ITEMS: Array<{
   id: string;
@@ -63,49 +22,14 @@ export const TRUST_ITEMS: Array<{
   { id: 'support', Icon: Headphones, highlight: '24/7', label: 'Support' },
 ];
 
-/** Order matches provided banner assets */
-export const POPULAR_SERVICES = [
-  {
-    id: 'towing',
-    title: 'Towing Service',
-    price: 399,
-    image: images.homePopularTowing,
-    categoryId: 'towing',
-    categoryTitle: 'Towing Service',
-  },
-  {
-    id: 'roadside',
-    title: 'Roadside Assistance',
-    price: 299,
-    image: images.homePopularRoadside,
-    categoryId: 'roadside',
-    categoryTitle: 'Roadside Assistance',
-  },
-  {
-    id: 'driver',
-    title: 'Driver On Demand',
-    price: 399,
-    image: images.homePopularDriver,
-    categoryId: 'driver',
-    categoryTitle: 'Driver Service',
-  },
-  {
-    id: 'emergency_repair',
-    title: 'Emergency Repair',
-    price: 499,
-    image: images.homePopularRepair,
-    categoryId: 'emergency_repair',
-    categoryTitle: 'Emergency Repair',
-  },
-  {
-    id: 'vehicle_recovery',
-    title: 'Vehicle Recovery',
-    price: 999,
-    image: images.homePopularRecovery,
-    categoryId: 'vehicle_recovery',
-    categoryTitle: 'Vehicle Recovery',
-  },
-] as const;
+/** Banner images keyed by service category — UI assets only, not pricing data. */
+export const CATEGORY_HERO_IMAGES = {
+  towing: images.homePopularTowing,
+  roadside: images.homePopularRoadside,
+  driver: images.homePopularDriver,
+  emergency_repair: images.homePopularRepair,
+  vehicle_recovery: images.homePopularRecovery,
+} as const;
 
 export const HOME_STATS: Array<{
   id: string;

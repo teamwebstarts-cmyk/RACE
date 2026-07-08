@@ -1,8 +1,15 @@
 /**
- * Polls backend tracking endpoint; falls back to simulated updates if API unavailable.
+ * Polls backend tracking endpoint and emits real updates only.
  */
 import { getBookingTracking } from '../bookings/bookingApi';
-import type { BookingStatus } from '../../types/booking';
+import { getDriverBookingTracking, getTowingBookingTracking } from '../bookings/serviceBookingApi';
+import {
+  offBookingStatus,
+  offDriverLocation,
+  onBookingStatus,
+  onDriverLocation,
+  trackBooking,
+} from '../socketService';
 
 export interface TrackingUpdate {
   bookingId: string;
@@ -10,44 +17,127 @@ export interface TrackingUpdate {
   longitude: number;
   etaMinutes: number;
   status: string;
+  driver?: {
+    id: string;
+    name: string;
+    phone: string;
+    rating: number;
+  };
+  driverLocation?: {
+    latitude: number;
+    longitude: number;
+    updatedAt?: string;
+    driverName?: string;
+    driverPhone?: string;
+  };
 }
 
 type TrackingListener = (update: TrackingUpdate) => void;
+type BookingType = 'towing' | 'driver';
 
 class TrackingService {
   private listeners = new Map<string, Set<TrackingListener>>();
   private intervals = new Map<string, ReturnType<typeof setInterval>>();
+  private socketBound = new Set<string>();
 
-  subscribe(bookingId: string, listener: TrackingListener): () => void {
+  private pushUpdate(bookingId: string, update: TrackingUpdate): void {
+    this.listeners.get(bookingId)?.forEach((cb) => cb(update));
+  }
+
+  private bindSocket(bookingId: string, bookingType?: BookingType): void {
+    if (this.socketBound.has(bookingId)) return;
+    this.socketBound.add(bookingId);
+
+    trackBooking(bookingId, bookingType ?? 'towing');
+
+    onDriverLocation((data) => {
+      if (data.bookingId !== bookingId) return;
+      this.pushUpdate(bookingId, {
+        bookingId,
+        latitude: data.latitude,
+        longitude: data.longitude,
+        etaMinutes: 15,
+        status: 'DRIVER_EN_ROUTE',
+        driverLocation: {
+          latitude: data.latitude,
+          longitude: data.longitude,
+          updatedAt: data.updatedAt,
+        },
+      });
+    });
+
+    onBookingStatus((data) => {
+      if (data.bookingId !== bookingId) return;
+      this.pushUpdate(bookingId, {
+        bookingId,
+        latitude: 20.2961,
+        longitude: 85.8245,
+        etaMinutes: 15,
+        status: data.status,
+      });
+    });
+  }
+
+  subscribe(bookingId: string, listener: TrackingListener, bookingType?: BookingType): () => void {
     if (!this.listeners.has(bookingId)) {
       this.listeners.set(bookingId, new Set());
     }
     this.listeners.get(bookingId)!.add(listener);
+    this.bindSocket(bookingId, bookingType);
 
     if (!this.intervals.has(bookingId)) {
       const poll = async () => {
-        const tracking = await getBookingTracking(bookingId);
-        if (tracking) {
+        const legacy = await getBookingTracking(bookingId);
+        if (legacy) {
           const update: TrackingUpdate = {
             bookingId,
-            latitude: tracking.driverLocation?.latitude ?? 20.2961,
-            longitude: tracking.driverLocation?.longitude ?? 85.8245,
-            etaMinutes: tracking.etaMinutes,
-            status: tracking.status,
+            latitude: legacy.driverLocation?.latitude ?? 20.2961,
+            longitude: legacy.driverLocation?.longitude ?? 85.8245,
+            etaMinutes: legacy.etaMinutes,
+            status: legacy.status,
+            driverLocation: legacy.driverLocation,
           };
-          this.listeners.get(bookingId)?.forEach((cb) => cb(update));
+          this.pushUpdate(bookingId, update);
           return;
         }
 
-        // Fallback simulation when API unreachable
-        const fallback: TrackingUpdate = {
-          bookingId,
-          latitude: 20.2961 + Math.random() * 0.01,
-          longitude: 85.8245 + Math.random() * 0.01,
-          etaMinutes: 15,
-          status: 'EN_ROUTE' as BookingStatus,
-        };
-        this.listeners.get(bookingId)?.forEach((cb) => cb(fallback));
+        try {
+          const towing =
+            bookingType === 'driver' ? null : await getTowingBookingTracking(bookingId);
+          if (!towing) {
+            throw new Error('Skip towing tracking lookup');
+          }
+          const update: TrackingUpdate = {
+            bookingId,
+            latitude: towing.driverLocation?.latitude ?? 20.2961,
+            longitude: towing.driverLocation?.longitude ?? 85.8245,
+            etaMinutes: 15,
+            status: towing.status,
+            driver: towing.driver,
+            driverLocation: towing.driverLocation,
+          };
+          this.pushUpdate(bookingId, update);
+          return;
+        } catch {
+          // try driver booking tracking next
+        }
+
+        try {
+          const driver = await getDriverBookingTracking(bookingId);
+          const update: TrackingUpdate = {
+            bookingId,
+            latitude: driver.driverLocation?.latitude ?? 20.2961,
+            longitude: driver.driverLocation?.longitude ?? 85.8245,
+            etaMinutes: 15,
+            status: driver.status,
+            driver: driver.driver,
+            driverLocation: driver.driverLocation,
+          };
+          this.pushUpdate(bookingId, update);
+          return;
+        } catch {
+          // no-op: keep previous known state and wait for next poll/socket event
+        }
       };
 
       void poll();
@@ -64,6 +154,9 @@ class TrackingService {
         if (interval) clearInterval(interval);
         this.intervals.delete(bookingId);
         this.listeners.delete(bookingId);
+        this.socketBound.delete(bookingId);
+        offDriverLocation();
+        offBookingStatus();
       }
     };
   }
@@ -76,6 +169,9 @@ class TrackingService {
     this.intervals.forEach((interval) => clearInterval(interval));
     this.intervals.clear();
     this.listeners.clear();
+    this.socketBound.clear();
+    offDriverLocation();
+    offBookingStatus();
   }
 }
 

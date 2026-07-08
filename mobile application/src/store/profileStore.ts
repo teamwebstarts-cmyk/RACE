@@ -2,6 +2,7 @@ import { create } from 'zustand';
 
 import * as profileService from '../services/profileService';
 import { getApiErrorMessage } from '../services/api';
+import { syncOnboardingRequiredFromProfile } from './authState';
 import type { Profile } from '../types/models';
 import type { UpdateProfileRequest } from '../utils/profilePayload';
 
@@ -38,8 +39,7 @@ export const useProfileStore = create<ProfileState>((set) => ({
     try {
       const profile = await profileService.updateProfile(data);
       set({ profile, isLoading: false });
-      const { syncOnboardingRequired } = require('./authSession') as typeof import('./authSession');
-      syncOnboardingRequired(profile.isProfileCompleted);
+      syncOnboardingRequiredFromProfile(profile.isProfileCompleted);
       return profile;
     } catch (error) {
       set({

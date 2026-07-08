@@ -12,6 +12,7 @@ interface BookingFlowHeaderProps {
   theme: BookingTheme;
   variant?: 'centered' | 'inline';
   accentColor?: string;
+  showStep?: boolean;
 }
 
 export default function BookingFlowHeader({
@@ -21,6 +22,7 @@ export default function BookingFlowHeader({
   theme: t,
   variant = 'centered',
   accentColor = colors.primary,
+  showStep = true,
 }: BookingFlowHeaderProps) {
   if (variant === 'inline') {
     return (
@@ -60,19 +62,21 @@ export default function BookingFlowHeader({
           <ArrowLeft size={t.iconMd} color={colors.dark} strokeWidth={2.5} />
         </Pressable>
       ) : null}
-      <View
-        style={[
-          styles.stepCircle,
-          {
-            width: t.stepCircle,
-            height: t.stepCircle,
-            borderRadius: t.stepCircle / 2,
-            marginBottom: t.px(12),
-            backgroundColor: accentColor,
-          },
-        ]}>
-        <Text style={[styles.stepNumber, { fontSize: t.stepNumber }]}>{step}</Text>
-      </View>
+      {showStep ? (
+        <View
+          style={[
+            styles.stepCircle,
+            {
+              width: t.stepCircle,
+              height: t.stepCircle,
+              borderRadius: t.stepCircle / 2,
+              marginBottom: t.px(12),
+              backgroundColor: accentColor,
+            },
+          ]}>
+          <Text style={[styles.stepNumber, { fontSize: t.stepNumber }]}>{step}</Text>
+        </View>
+      ) : null}
       <Text style={[styles.centeredTitle, { fontSize: t.screenTitle }]}>{title}</Text>
     </View>
   );
@@ -87,6 +91,7 @@ interface BookingScreenShellProps {
   footer?: ReactNode;
   headerVariant?: 'centered' | 'inline';
   accentColor?: string;
+  showStep?: boolean;
 }
 
 export function BookingScreenShell({
@@ -98,6 +103,7 @@ export function BookingScreenShell({
   footer,
   headerVariant = 'centered',
   accentColor,
+  showStep = true,
 }: BookingScreenShellProps) {
   return (
     <View style={styles.shell}>
@@ -108,6 +114,7 @@ export function BookingScreenShell({
         theme={theme}
         variant={headerVariant}
         accentColor={accentColor}
+        showStep={showStep}
       />
       <View style={[styles.body, { paddingTop: theme.contentTop }]}>{children}</View>
       {footer}

@@ -11,38 +11,34 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Check, Mail, Phone, User } from 'lucide-react-native';
+import { Check, Phone } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import FormField from '../../components/auth/FormField';
 import GoldButton from '../../components/auth/GoldButton';
 import GoogleIcon from '../../components/auth/GoogleIcon';
 import { AuthBackHeader } from '../../components/auth/StepHeader';
-import { sendOtp } from '../../services/authService';
+import { useAuthActions } from '../../hooks/useAuth';
 import { getApiErrorMessage } from '../../services/api';
+import { useSignupDraftStore } from '../../store/signupDraftStore';
 import type { AuthStackParamList } from '../../types/navigation';
-import { formatPhoneE164, getPhoneDigits, isValidIndianMobile } from '../../utils/phone';
+import { formatPhoneE164, getPhoneDigits } from '../../utils/phone';
 import { colors, typography } from '../../theme';
 
 const REF_W = 390;
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'CreateAccount'>;
 
-function getPhoneDigitsLocal(phone: string) {
-  return getPhoneDigits(phone);
-}
-
 export default function CreateAccountScreen({ navigation }: Props) {
   const { width } = useWindowDimensions();
   const s = width / REF_W;
   const px = (n: number) => Math.round(n * s);
 
-  const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(true);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { sendOtp, isLoading } = useAuthActions();
+  const setDraft = useSignupDraftStore(state => state.setDraft);
 
   const clearError = (key: string) => {
     if (errors[key]) {
@@ -57,10 +53,7 @@ export default function CreateAccountScreen({ navigation }: Props) {
   const handleSignUp = async () => {
     const nextErrors: Record<string, string> = {};
 
-    if (!name.trim()) {
-      nextErrors.name = 'Please enter your name';
-    }
-    if (getPhoneDigitsLocal(phone).length !== 10) {
+    if (getPhoneDigits(phone).length !== 10) {
       nextErrors.phone = 'Enter valid 10-digit number';
     }
     if (!termsAccepted) {
@@ -71,19 +64,20 @@ export default function CreateAccountScreen({ navigation }: Props) {
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
-    setIsSubmitting(true);
+    const phoneDigits = getPhoneDigits(phone);
+
+    setDraft({ phone: phoneDigits });
+
     try {
-      const result = await sendOtp(getPhoneDigitsLocal(phone));
+      const result = await sendOtp({ mobileNumber: phoneDigits });
+
       navigation.navigate('OTP', {
-        phone: formatPhoneE164(getPhoneDigitsLocal(phone)),
-        flow: 'signup',
-        name: name.trim(),
-        devOtp: result.devOtp,
+        phone: formatPhoneE164(phoneDigits),
+        isExistingUser: result.isExistingUser,
       });
     } catch (error) {
-      setErrors({ phone: getApiErrorMessage(error, 'Unable to send OTP') });
-    } finally {
-      setIsSubmitting(false);
+      const message = getApiErrorMessage(error, 'Unable to send OTP');
+      setErrors({ phone: message });
     }
   };
 
@@ -94,14 +88,13 @@ export default function CreateAccountScreen({ navigation }: Props) {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
           style={styles.flex}
-          contentContainerStyle={[
-            styles.scroll,
-            {
-              paddingHorizontal: px(24),
-              paddingTop: px(4),
-              paddingBottom: px(16),
-            },
-          ]}
+          contentContainerStyle={{
+            flexGrow: 1,
+            paddingHorizontal: px(24),
+            paddingTop: px(4),
+            paddingBottom: px(16),
+            justifyContent: 'space-between',
+          }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
           <View style={styles.main}>
@@ -129,23 +122,8 @@ export default function CreateAccountScreen({ navigation }: Props) {
                 textAlign: 'center',
                 lineHeight: px(20),
               }}>
-              Create your account with your mobile number. We'll send an OTP to verify.
+              Enter your mobile number to get started
             </Text>
-
-            <FormField
-              variant="outlined"
-              compact
-              scale={s}
-              label="Full Name"
-              required
-              Icon={User}
-              value={name}
-              onChangeText={text => {
-                setName(text);
-                clearError('name');
-              }}
-              error={errors.name}
-            />
 
             <FormField
               variant="outlined"
@@ -160,22 +138,8 @@ export default function CreateAccountScreen({ navigation }: Props) {
                 clearError('phone');
               }}
               keyboardType="phone-pad"
+              placeholder="9876543210"
               error={errors.phone}
-            />
-
-            <FormField
-              variant="outlined"
-              compact
-              scale={s}
-              label="Email"
-              Icon={Mail}
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              rightElement={
-                <Text style={{ fontSize: px(11), color: colors.grey }}>(Optional)</Text>
-              }
             />
 
             <Pressable
@@ -184,11 +148,7 @@ export default function CreateAccountScreen({ navigation }: Props) {
               <View
                 style={[
                   styles.checkbox,
-                  {
-                    width: px(20),
-                    height: px(20),
-                    borderRadius: px(4),
-                  },
+                  { width: px(20), height: px(20), borderRadius: px(4) },
                   termsAccepted && styles.checkboxChecked,
                 ]}>
                 {termsAccepted ? (
@@ -204,13 +164,13 @@ export default function CreateAccountScreen({ navigation }: Props) {
             </Pressable>
 
             <GoldButton
-              label={isSubmitting ? 'Sending OTP...' : 'Continue'}
+              label={isLoading ? 'Sending OTP...' : 'Send OTP'}
               onPress={() => void handleSignUp()}
               style={{ width: '100%' }}
               height={px(54)}
               labelSize={px(17)}
               borderRadius={px(14)}
-              disabled={isSubmitting}
+              disabled={isLoading}
             />
 
             <View
@@ -220,12 +180,7 @@ export default function CreateAccountScreen({ navigation }: Props) {
                 marginVertical: px(20),
               }}>
               <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />
-              <Text
-                style={{
-                  marginHorizontal: px(12),
-                  fontSize: px(13),
-                  color: colors.grey,
-                }}>
+              <Text style={{ marginHorizontal: px(12), fontSize: px(13), color: colors.grey }}>
                 or continue with
               </Text>
               <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />
@@ -285,10 +240,6 @@ const styles = StyleSheet.create({
   },
   flex: {
     flex: 1,
-  },
-  scroll: {
-    flexGrow: 1,
-    justifyContent: 'space-between',
   },
   main: {
     width: '100%',

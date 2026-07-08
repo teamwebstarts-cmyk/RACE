@@ -23,13 +23,14 @@ import {
   useCreateVehicleMutation,
 } from '../../services/vehicles/useVehicleQueries';
 import type { AuthStackParamList } from '../../types/navigation';
+import { FUEL_TYPE_IDS, VEHICLE_TYPE_IDS } from '../../components/vehicles/vehicleUi';
 import type { FuelType, VehicleType } from '../../types/vehicle';
 import { colors, radius, spacing, typography } from '../../theme';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'AddFirstVehicle'>;
 
-const VEHICLE_TYPES: VehicleType[] = ['car', 'bike', 'ev', 'truck', 'auto'];
-const FUEL_TYPES: FuelType[] = ['petrol', 'diesel', 'cng', 'electric', 'hybrid', 'other'];
+const VEHICLE_TYPES = VEHICLE_TYPE_IDS;
+const FUEL_TYPES = FUEL_TYPE_IDS;
 
 export default function AddFirstVehicleScreen({ navigation }: Props) {
   const dispatch = useAppDispatch();

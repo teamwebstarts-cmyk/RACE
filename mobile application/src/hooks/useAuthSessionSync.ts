@@ -16,6 +16,10 @@ export function useAuthSessionSync() {
 
     void getProfile()
       .then((profile) => dispatch(updateUser(profile)))
-      .catch(() => undefined);
+      .catch((error) => {
+        if (__DEV__) {
+          console.warn('[AuthSessionSync] profile refresh failed', error);
+        }
+      });
   }, [accessToken, dispatch]);
 }

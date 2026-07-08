@@ -16,6 +16,7 @@ export function useBookings() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<string>('ALL');
   const [serviceType, setServiceType] = useState<string>('ALL');
+  const [bookingType, setBookingType] = useState<string>('all');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [page, setPage] = useState(1);
@@ -28,12 +29,13 @@ export function useBookings() {
       search,
       status: tabStatus as BookingListFilters['status'],
       serviceType,
+      type: bookingType as BookingListFilters['type'],
       dateFrom: dateFrom || undefined,
       dateTo: dateTo || undefined,
       page,
       pageSize: PAGE_SIZE,
     }),
-    [search, tabStatus, serviceType, dateFrom, dateTo, page],
+    [search, tabStatus, serviceType, bookingType, dateFrom, dateTo, page],
   );
 
   const query = useQuery({
@@ -56,6 +58,7 @@ export function useBookings() {
       search,
       status: tabStatus as BookingListFilters['status'],
       serviceType,
+      type: bookingType as BookingListFilters['type'],
       dateFrom: dateFrom || undefined,
       dateTo: dateTo || undefined,
     });
@@ -77,6 +80,11 @@ export function useBookings() {
     search,
     setSearch: (v: string) => {
       setSearch(v);
+      resetPage();
+    },
+    bookingType,
+    setBookingType: (v: string) => {
+      setBookingType(v);
       resetPage();
     },
     status,

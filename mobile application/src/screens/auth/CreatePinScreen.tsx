@@ -81,12 +81,15 @@ export default function CreatePinScreen({ navigation }: Props) {
     setPinSet(true);
   };
 
-  const handleGoHome = () => {
+  const handleGoHome = async () => {
     if (!pinSet) {
       Alert.alert('Set PIN first', 'Please set your PIN before continuing to Home.');
       return;
     }
     setOnboardingRequired(false);
+    const { store } = await import('../../redux/store');
+    const { completeOnboarding } = await import('../../redux/auth/authSlice');
+    store.dispatch(completeOnboarding());
   };
 
   return (

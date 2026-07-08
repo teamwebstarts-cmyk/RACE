@@ -1,91 +1,74 @@
 import { env } from '../../config/env';
-import { getCache } from '../../config/cache';
-import { TooManyRequestsError } from '../../shared/utils/errors';
+import { AppError, TooManyRequestsError } from '../../shared/utils/errors';
 import { generateOtp } from '../../shared/utils/otp';
-import { logger } from '../../shared/utils/logger';
+import { sendSms } from '../../utils/sms';
 import { authRepository } from './auth.repository';
 
+/** Fixed OTP in non-production so mobile + partner demo login is reliable. */
 const DEV_DEMO_OTP = '247392';
 
-const OTP_KEY = (mobile: string) => `otp:${mobile}`;
-const RESEND_KEY = (mobile: string) => `otp:resend:${mobile}`;
-const VERIFY_KEY = (mobile: string) => `otp:verify:${mobile}`;
-
 export class OtpService {
-  async sendOtp(mobileNumber: string): Promise<{ message: string; expiresIn: number; devOtp?: string }> {
-    const cache = getCache();
+  private getExpiryDate(): Date {
+    return new Date(Date.now() + env.OTP_EXPIRY_SECONDS * 1000);
+  }
 
-    const resendCount = Number((await cache.get(RESEND_KEY(mobileNumber))) ?? 0);
+  private async assertResendAllowed(mobileNumber: string): Promise<void> {
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const resendCount = await authRepository.countRecentOtpSends(mobileNumber, oneHourAgo);
+
     if (resendCount >= env.OTP_MAX_RESEND_ATTEMPTS) {
       throw new TooManyRequestsError('Maximum OTP resend attempts exceeded');
     }
+  }
 
-    const otp = env.NODE_ENV === 'production' ? generateOtp() : DEV_DEMO_OTP;
-    const expiresAt = new Date(Date.now() + env.OTP_EXPIRY_SECONDS * 1000);
+  private async dispatchSms(mobileNumber: string, otp: string): Promise<void> {
+    await sendSms(mobileNumber, otp);
+  }
 
-    await cache.set(OTP_KEY(mobileNumber), otp, 'EX', env.OTP_EXPIRY_SECONDS);
-    await cache.set(VERIFY_KEY(mobileNumber), '0', 'EX', env.OTP_EXPIRY_SECONDS);
-    const newResendCount = await cache.incr(RESEND_KEY(mobileNumber));
-    if (newResendCount === 1) {
-      await cache.set(RESEND_KEY(mobileNumber), String(newResendCount), 'EX', 60 * 60);
-    }
+  async sendOtp(mobileNumber: string): Promise<{ message: string; expiresIn: number }> {
+    await this.assertResendAllowed(mobileNumber);
+    await authRepository.invalidatePendingOtps(mobileNumber);
+
+    const mobileOtp = env.NODE_ENV === 'production' ? generateOtp() : DEV_DEMO_OTP;
+    const expiry = this.getExpiryDate();
 
     await authRepository.createOtpLog({
       mobileNumber,
-      otp,
-      status: 'pending',
-      expiresAt,
-      attempts: 0,
+      mobileOtp,
+      mobileOtpExpiry: expiry,
+      mobileVerified: false,
+      emailVerified: false,
+      mobileAttempts: 0,
+      emailAttempts: 0,
     });
 
-    if (env.NODE_ENV !== 'production') {
-      logger.info('────────────────────────────────────────');
-      logger.info(`DEV OTP → ${mobileNumber} → ${otp}`);
-      logger.info('(HTTP 200 body mein devOtp bhi milta hai — woh OTP use karo)');
-      logger.info('────────────────────────────────────────');
-    }
+    await this.dispatchSms(mobileNumber, mobileOtp);
 
     return {
-      message: 'OTP sent successfully',
+      message: 'OTP sent',
       expiresIn: env.OTP_EXPIRY_SECONDS,
-      ...(env.NODE_ENV !== 'production' ? { devOtp: otp } : {}),
     };
   }
 
-  async verifyOtp(mobileNumber: string, otp: string): Promise<boolean> {
-    const cache = getCache();
+  async verifyOtp(mobileNumber: string, otp: string): Promise<void> {
+    const log = await authRepository.findLatestValidOtpLog(mobileNumber);
 
-    const attempts = Number((await cache.get(VERIFY_KEY(mobileNumber))) ?? 0);
-    if (attempts >= env.OTP_MAX_VERIFY_ATTEMPTS) {
+    if (!log || !log.mobileOtpExpiry || log.mobileOtpExpiry <= new Date()) {
+      throw new AppError('OTP expired', 400);
+    }
+
+    if (log.mobileAttempts >= env.OTP_MAX_VERIFY_ATTEMPTS) {
       throw new TooManyRequestsError('Maximum OTP verification attempts exceeded');
     }
 
-    await cache.incr(VERIFY_KEY(mobileNumber));
-
-    const storedOtp = await cache.get(OTP_KEY(mobileNumber));
-    if (!storedOtp) {
-      return false;
+    if (!log.mobileOtp || log.mobileOtp !== otp) {
+      log.mobileAttempts += 1;
+      await log.save();
+      throw new AppError('Invalid OTP', 400);
     }
 
-    if (storedOtp !== otp) {
-      const log = await authRepository.findLatestPendingOtp(mobileNumber);
-      if (log) {
-        await authRepository.updateOtpLog(log.id, {
-          attempts: log.attempts + 1,
-          status: log.attempts + 1 >= env.OTP_MAX_VERIFY_ATTEMPTS - 1 ? 'failed' : 'pending',
-        });
-      }
-      return false;
-    }
-
-    await cache.del(OTP_KEY(mobileNumber), VERIFY_KEY(mobileNumber), RESEND_KEY(mobileNumber));
-
-    const log = await authRepository.findLatestPendingOtp(mobileNumber);
-    if (log) {
-      await authRepository.updateOtpLog(log.id, { status: 'verified' });
-    }
-
-    return true;
+    log.mobileVerified = true;
+    await log.save();
   }
 }
 

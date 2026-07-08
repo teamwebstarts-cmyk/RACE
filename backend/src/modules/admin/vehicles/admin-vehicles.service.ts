@@ -1,7 +1,7 @@
 import { Types } from 'mongoose';
 
 import { VendorVehicleModel } from '../models/vendor-vehicle.model';
-import { VendorModel } from '../../vendors/vendor.model';
+import { UserModel } from '../../users/user.model';
 import { logActivity } from '../shared/activity-logger';
 import { createNotification } from '../shared/notification-service';
 import { NotFoundError } from '../../../shared/utils/errors';
@@ -48,8 +48,8 @@ export const adminVehiclesService = {
     },
     actor: { id: string; name: string },
   ) {
-    const vendor = await VendorModel.findById(vendorId);
-    if (!vendor) throw new NotFoundError('Vendor not found');
+    const vendor = await UserModel.findOne({ _id: vendorId, role: 'vendor' });
+    if (!vendor?.vendorProfile) throw new NotFoundError('Vendor not found');
 
     const vehicle = await VendorVehicleModel.create({
       vendorId: vendor._id,
@@ -72,7 +72,7 @@ export const adminVehiclesService = {
 
     await createNotification({
       title: 'Vehicle added',
-      message: `${vehicle.registrationNo} added to ${vendor.businessName ?? vendor.ownerName}`,
+      message: `${vehicle.registrationNo} added to ${vendor.vendorProfile?.businessName ?? vendor.vendorProfile?.ownerName ?? vendor.fullName}`,
       category: 'vendor',
       entityType: 'vehicle',
       entityId: vehicle._id.toString(),

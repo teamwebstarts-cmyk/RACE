@@ -3,12 +3,33 @@ import type { IUser } from './user.model';
 export function computeProfileCompleted(
   user: Pick<
     IUser,
-    'fullName' | 'email' | 'gender' | 'emergencyContact' | 'address'
+    'role' | 'mobileNumber' | 'fullName' | 'email' | 'gender' | 'emergencyContact' | 'address' | 'vendorProfile' | 'driverProfile'
   >,
 ): boolean {
+  if (user.role === 'vendor') {
+    const profile = user.vendorProfile;
+    return Boolean(
+      user.fullName &&
+        profile?.businessName &&
+        profile?.ownerName &&
+        user.mobileNumber &&
+        (profile.address || user.address?.city),
+    );
+  }
+
+  if (user.role === 'driver') {
+    const profile = user.driverProfile;
+    return Boolean(
+      user.fullName &&
+        user.mobileNumber &&
+        profile?.licenseNo &&
+        profile?.driverCode &&
+        profile?.city,
+    );
+  }
+
   return Boolean(
     user.fullName &&
-      user.email &&
       user.gender &&
       user.emergencyContact?.name &&
       user.emergencyContact?.mobileNumber &&

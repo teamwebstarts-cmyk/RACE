@@ -1,255 +1,176 @@
-import React, { useState } from 'react';
-import { Alert, Pressable, Text, View } from 'react-native';
-import { ArrowRight, Building2, Car, Check, Truck, X } from 'lucide-react-native';
+import React from 'react';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useNavigation } from '@react-navigation/native';
 
-import ProfileSubScreenLayout, { useProfilePx } from '../../components/profile/ProfileSubScreenLayout';
+import SubscriptionCard from '../../components/subscription/SubscriptionCard';
+import LoadingState from '../../components/ui/LoadingState';
+import Screen, { ScreenContent } from '../../components/ui/Screen';
+import { useAppDispatch, useAppSelector } from '../../redux/hooks';
+import { setBillingPeriod } from '../../redux/subscriptions/subscriptionsSlice';
+import { getApiErrorMessage } from '../../services/api';
 import {
-  DRIVER_PLANS,
-  TOWING_PLANS,
-  getPlanPriceLabel,
-  type BillingCycle,
-} from '../../constants/choosePlan';
-import type { PlanFeature, SubscriptionPlan } from '../../types/models';
-import { colors, shadows, typography } from '../../theme';
-
-function isFeatureObject(feature: PlanFeature | string): feature is PlanFeature {
-  return typeof feature !== 'string';
-}
-
-function TowingPlanCard({
-  plan,
-  cycle,
-  px,
-}: {
-  plan: SubscriptionPlan;
-  cycle: BillingCycle;
-  px: (n: number) => number;
-}) {
-  const popular = plan.isPopular;
-
-  return (
-    <View
-      style={[
-        {
-          borderRadius: px(14),
-          borderWidth: popular ? 0 : 1,
-          borderColor: colors.border,
-          backgroundColor: popular ? colors.primary : colors.background,
-          padding: px(14),
-          marginBottom: px(12),
-          position: 'relative',
-        },
-        !popular ? shadows.card : undefined,
-      ]}>
-      {popular ? (
-        <View
-          style={{
-            position: 'absolute',
-            top: px(12),
-            right: px(12),
-            paddingHorizontal: px(10),
-            paddingVertical: px(4),
-            borderRadius: px(12),
-            backgroundColor: colors.background,
-          }}>
-          <Text style={{ fontSize: px(9), fontWeight: typography.weights.bold, color: colors.primary }}>
-            MOST POPULAR
-          </Text>
-        </View>
-      ) : null}
-
-      <Text
-        style={{
-          fontSize: px(18),
-          fontWeight: typography.weights.extrabold,
-          color: popular ? colors.background : colors.dark,
-          marginBottom: px(4),
-        }}>
-        {plan.name}
-      </Text>
-      <Text
-        style={{
-          fontSize: px(15),
-          fontWeight: typography.weights.bold,
-          color: popular ? colors.background : colors.primary,
-          marginBottom: px(10),
-        }}>
-        {getPlanPriceLabel(plan.price, cycle)}
-      </Text>
-
-      <View style={{ height: 1, backgroundColor: popular ? 'rgba(255,255,255,0.25)' : colors.border, marginBottom: px(10) }} />
-
-      {plan.features.map(feature => {
-        const text = isFeatureObject(feature) ? feature.text : feature;
-        const included = isFeatureObject(feature) ? feature.included : true;
-        const Icon = included ? Check : X;
-        return (
-          <View key={text} style={{ flexDirection: 'row', alignItems: 'center', gap: px(8), marginBottom: px(6) }}>
-            <Icon
-              size={px(14)}
-              color={included ? (popular ? colors.background : colors.primary) : colors.grey}
-              strokeWidth={2.5}
-            />
-            <Text style={{ flex: 1, fontSize: px(12), color: popular ? colors.background : colors.dark }}>{text}</Text>
-          </View>
-        );
-      })}
-
-      <Pressable
-        onPress={() => Alert.alert(plan.name, `${plan.name} plan selected.`)}
-        style={{
-          alignSelf: 'flex-end',
-          marginTop: px(8),
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: px(4),
-          paddingHorizontal: px(14),
-          paddingVertical: px(8),
-          borderRadius: px(10),
-          backgroundColor: popular ? colors.background : colors.background,
-          borderWidth: popular ? 0 : 1.5,
-          borderColor: colors.primary,
-        }}>
-        <Text
-          style={{
-            fontSize: px(12),
-            fontWeight: typography.weights.bold,
-            color: popular ? colors.primary : colors.primary,
-          }}>
-          {popular ? 'Get Premium' : plan.name === 'Family' ? 'Get Family Plan' : 'Get Started'}
-        </Text>
-        {popular ? <ArrowRight size={px(14)} color={colors.primary} strokeWidth={2.5} /> : null}
-      </Pressable>
-    </View>
-  );
-}
+  useCancelSubscriptionMutation,
+  useCurrentSubscriptionQuery,
+  useSubscribeMutation,
+  useSubscriptionPlansQuery,
+} from '../../services/subscriptions/useSubscriptionQueries';
+import type { ProfileStackParamList } from '../../types/navigation';
+import { colors, spacing, typography } from '../../theme';
 
 export default function ChoosePlanScreen() {
-  const px = useProfilePx();
-  const [cycle, setCycle] = useState<BillingCycle>('yearly');
+  const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const dispatch = useAppDispatch();
+  const plans = useAppSelector(state => state.subscriptions.plans);
+  const billingPeriod = useAppSelector(state => state.subscriptions.billingPeriod);
+  const { isLoading } = useSubscriptionPlansQuery(billingPeriod);
+  const { data: currentSub } = useCurrentSubscriptionQuery();
+  const subscribe = useSubscribeMutation();
+  const cancelSub = useCancelSubscriptionMutation();
+
+  const handleSelect = (planSlug: string, actionType?: string) => {
+    if (actionType === 'contact') {
+      Alert.alert('Corporate Plan', 'Please contact RACE support to activate corporate billing.');
+      return;
+    }
+
+    subscribe.mutate(
+      { planSlug, billingCycle: billingPeriod },
+      {
+        onSuccess: () => {
+          Alert.alert('Subscribed', 'Your plan is now active.', [
+            { text: 'OK', onPress: () => navigation.goBack() },
+          ]);
+        },
+        onError: error => Alert.alert('Subscription failed', getApiErrorMessage(error)),
+      },
+    );
+  };
+
+  const handleCancel = () => {
+    Alert.alert('Cancel subscription', 'Are you sure you want to cancel your current plan?', [
+      { text: 'Keep plan', style: 'cancel' },
+      {
+        text: 'Cancel plan',
+        style: 'destructive',
+        onPress: () => {
+          cancelSub.mutate(undefined, {
+            onSuccess: () => Alert.alert('Cancelled', 'Your subscription has been cancelled.'),
+            onError: error => Alert.alert('Cancel failed', getApiErrorMessage(error)),
+          });
+        },
+      },
+    ]);
+  };
+
+  if (isLoading && plans.length === 0) {
+    return (
+      <Screen>
+        <LoadingState message="Loading subscription plans..." />
+      </Screen>
+    );
+  }
 
   return (
-    <ProfileSubScreenLayout title="Choose Your Plan" subtitle="Get more with RACE Premium">
-      <View
-        style={{
-          flexDirection: 'row',
-          borderRadius: px(24),
-          borderWidth: 1,
-          borderColor: colors.border,
-          backgroundColor: colors.lightGrey,
-          padding: px(4),
-          marginBottom: px(18),
-        }}>
-        {(['monthly', 'yearly'] as BillingCycle[]).map(option => {
-          const active = cycle === option;
-          return (
-            <Pressable
-              key={option}
-              onPress={() => setCycle(option)}
-              style={{
-                flex: 1,
-                paddingVertical: px(10),
-                borderRadius: px(20),
-                backgroundColor: active ? colors.primary : 'transparent',
-                alignItems: 'center',
-              }}>
-              <Text
-                style={{
-                  fontSize: px(12),
-                  fontWeight: typography.weights.bold,
-                  color: active ? colors.dark : colors.grey,
-                }}>
-                {option === 'monthly' ? 'Monthly' : 'Yearly — Save 20%'}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+    <Screen>
+      <SafeAreaView style={styles.safe}>
+        <ScrollView contentContainerStyle={styles.scroll}>
+          <ScreenContent>
+            <Text style={styles.title}>Choose Your Plan</Text>
+            <Text style={styles.subtitle}>Get more with RACE Premium</Text>
 
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: px(6), marginBottom: px(10) }}>
-        <Truck size={px(16)} color={colors.primary} strokeWidth={2.2} />
-        <Text style={{ fontSize: px(15), fontWeight: typography.weights.bold, color: colors.dark }}>Towing Plans</Text>
-      </View>
-      {TOWING_PLANS.map(plan => (
-        <TowingPlanCard key={plan.id} plan={plan} cycle={cycle} px={px} />
-      ))}
+            {currentSub?.status === 'active' ? (
+              <View style={styles.activeBanner}>
+                <Text style={styles.activeTitle}>Current plan: {currentSub.planName ?? currentSub.planId}</Text>
+                {currentSub.expiresAt ? (
+                  <Text style={styles.activeMeta}>
+                    Renews / expires {new Date(currentSub.expiresAt).toLocaleDateString('en-IN')}
+                  </Text>
+                ) : null}
+                <Pressable onPress={handleCancel} disabled={cancelSub.isPending}>
+                  <Text style={styles.cancelLink}>{cancelSub.isPending ? 'Cancelling...' : 'Cancel subscription'}</Text>
+                </Pressable>
+              </View>
+            ) : null}
 
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: px(6), marginTop: px(4), marginBottom: px(10) }}>
-        <Car size={px(16)} color={colors.primary} strokeWidth={2.2} />
-        <Text style={{ fontSize: px(15), fontWeight: typography.weights.bold, color: colors.dark }}>
-          Driver Service Plans
-        </Text>
-      </View>
-      <View style={{ flexDirection: 'row', gap: px(10), marginBottom: px(16) }}>
-        {DRIVER_PLANS.map(plan => (
-          <View
-            key={plan.id}
-            style={{
-              flex: 1,
-              borderRadius: px(14),
-              borderWidth: 1,
-              borderColor: colors.border,
-              backgroundColor: colors.background,
-              padding: px(12),
-            }}>
-            <View
-              style={{
-                width: px(36),
-                height: px(36),
-                borderRadius: px(18),
-                backgroundColor: colors.goldLight,
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: px(8),
-              }}>
-              {plan.name === 'Corporate' ? (
-                <Building2 size={px(18)} color={colors.primary} strokeWidth={2.2} />
-              ) : (
-                <Car size={px(18)} color={colors.primary} strokeWidth={2.2} />
-              )}
-            </View>
-            <Text style={{ fontSize: px(13), fontWeight: typography.weights.bold, color: colors.dark, marginBottom: px(4) }}>
-              {plan.name}
-            </Text>
-            <Text style={{ fontSize: px(12), fontWeight: typography.weights.bold, color: colors.primary, marginBottom: px(8) }}>
-              {getPlanPriceLabel(plan.price, cycle)}
-            </Text>
-            <View style={{ height: 1, backgroundColor: colors.border, marginBottom: px(8) }} />
-            {plan.features.map(feature => {
-              const text = typeof feature === 'string' ? feature : feature.text;
-              return (
-                <Text key={text} style={{ fontSize: px(10), color: colors.grey, marginBottom: px(4) }}>
-                  • {text}
+            <View style={styles.toggle}>
+              <Pressable
+                style={[styles.toggleBtn, billingPeriod === 'monthly' && styles.toggleActive]}
+                onPress={() => dispatch(setBillingPeriod('monthly'))}>
+                <Text style={[styles.toggleText, billingPeriod === 'monthly' && styles.toggleTextActive]}>
+                  Monthly
                 </Text>
-              );
-            })}
-            <Pressable
-              onPress={() => Alert.alert(plan.name, `${plan.name} plan selected.`)}
-              style={{
-                marginTop: px(8),
-                paddingVertical: px(8),
-                borderRadius: px(10),
-                backgroundColor: plan.name === 'Corporate' ? colors.background : colors.primary,
-                borderWidth: plan.name === 'Corporate' ? 1.5 : 0,
-                borderColor: colors.primary,
-                alignItems: 'center',
-              }}>
-              <Text
-                style={{
-                  fontSize: px(11),
-                  fontWeight: typography.weights.bold,
-                  color: plan.name === 'Corporate' ? colors.primary : colors.dark,
-                }}>
-                {plan.name === 'Corporate' ? 'Contact Us' : 'Book Now'}
-              </Text>
-            </Pressable>
-          </View>
-        ))}
-      </View>
+              </Pressable>
+              <Pressable
+                style={[styles.toggleBtn, billingPeriod === 'yearly' && styles.toggleActive]}
+                onPress={() => dispatch(setBillingPeriod('yearly'))}>
+                <Text style={[styles.toggleText, billingPeriod === 'yearly' && styles.toggleTextActive]}>
+                  Yearly — Save 20%
+                </Text>
+              </Pressable>
+            </View>
 
-      <Text style={{ fontSize: px(11), color: colors.grey, textAlign: 'center', fontStyle: 'italic', lineHeight: px(16) }}>
-        All plans include 24/7 emergency support and verified professionals.
-      </Text>
-    </ProfileSubScreenLayout>
+            {plans.map(plan => (
+              <SubscriptionCard
+                key={plan.id}
+                plan={plan}
+                onSelect={() => handleSelect(plan.slug ?? plan.id, plan.actionType)}
+              />
+            ))}
+
+            <Text style={styles.disclaimer}>
+              All plans include 24/7 emergency support and verified professionals.
+            </Text>
+          </ScreenContent>
+        </ScrollView>
+      </SafeAreaView>
+    </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  safe: { flex: 1 },
+  scroll: { flexGrow: 1 },
+  title: {
+    fontSize: typography.sizes.xxl,
+    fontWeight: typography.weights.bold,
+    color: colors.textDark,
+    textAlign: 'center',
+  },
+  subtitle: { color: colors.textMuted, textAlign: 'center', marginBottom: spacing.lg },
+  activeBanner: {
+    backgroundColor: colors.goldLight,
+    borderRadius: 12,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  activeTitle: { fontWeight: typography.weights.bold, color: colors.textDark },
+  activeMeta: { color: colors.textMuted, marginTop: spacing.xs, fontSize: typography.sizes.sm },
+  cancelLink: {
+    marginTop: spacing.sm,
+    color: colors.error,
+    fontWeight: typography.weights.bold,
+    fontSize: typography.sizes.sm,
+  },
+  toggle: {
+    flexDirection: 'row',
+    backgroundColor: colors.backgroundSoft,
+    borderRadius: 24,
+    padding: 4,
+    marginBottom: spacing.xl,
+  },
+  toggleBtn: { flex: 1, paddingVertical: spacing.sm, borderRadius: 20, alignItems: 'center' },
+  toggleActive: { backgroundColor: colors.primary },
+  toggleText: { fontWeight: typography.weights.semibold, color: colors.textMuted, fontSize: typography.sizes.sm },
+  toggleTextActive: { color: colors.textDark },
+  disclaimer: {
+    textAlign: 'center',
+    color: colors.textMuted,
+    fontSize: typography.sizes.sm,
+    fontStyle: 'italic',
+    marginTop: spacing.md,
+  },
+});

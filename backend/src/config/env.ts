@@ -27,6 +27,13 @@ const envSchema = z.object({
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
   SMTP_FROM: z.string().default('noreply@raceservice.com'),
+  GOOGLE_MAPS_API_KEY: z.string().optional(),
+  SOS_EMERGENCY_PHONE: z.string().default('+911080808080'),
+  SOS_SUPPORT_PHONE: z.string().default('+911800123456'),
+  SOS_AVG_ARRIVAL_MINUTES: z.coerce.number().default(25),
+  ADMIN_EMAIL: z.string().email().default('admin@raceservice.com'),
+  ADMIN_PASSWORD: z.string().min(8).default('Admin@123'),
+  ADMIN_NAME: z.string().default('Admin User'),
 });
 
 const parsed = envSchema.safeParse(process.env);

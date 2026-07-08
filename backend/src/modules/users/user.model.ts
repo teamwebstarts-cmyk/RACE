@@ -1,8 +1,14 @@
-import { Schema, model, type Document } from 'mongoose';
+import { Schema, model, type Document, Types } from 'mongoose';
 
 import { computeProfileCompleted } from './user.utils';
+import {
+  DriverProfileSchema,
+  VendorProfileSchema,
+  type IDriverProfile,
+  type IVendorProfile,
+} from './user-profile.schema';
 
-export type UserRole = 'customer' | 'vendor' | 'admin';
+export type UserRole = 'customer' | 'vendor' | 'driver';
 
 export interface IEmergencyContact {
   name: string;
@@ -19,6 +25,14 @@ export interface IAddress {
   country?: string;
 }
 
+export interface IDriverCurrentLocation {
+  latitude?: number;
+  longitude?: number;
+  updatedAt?: Date;
+}
+
+export type ActiveBookingType = 'towing' | 'driver';
+
 export interface IUser extends Document {
   mobileNumber: string;
   fullName?: string;
@@ -33,6 +47,13 @@ export interface IUser extends Document {
   role: UserRole;
   customerCode?: string;
   accountStatus?: 'ACTIVE' | 'SUSPENDED' | 'INACTIVE';
+  vendorProfile?: IVendorProfile;
+  driverProfile?: IDriverProfile;
+  /** Only relevant when role === 'driver' */
+  isAvailable?: boolean;
+  currentLocation?: IDriverCurrentLocation;
+  activeBookingId?: Types.ObjectId | null;
+  activeBookingType?: ActiveBookingType | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -58,6 +79,15 @@ const AddressSchema = new Schema<IAddress>(
   { _id: false },
 );
 
+const DriverCurrentLocationSchema = new Schema<IDriverCurrentLocation>(
+  {
+    latitude: { type: Number },
+    longitude: { type: Number },
+    updatedAt: { type: Date },
+  },
+  { _id: false },
+);
+
 const UserSchema = new Schema<IUser>(
   {
     mobileNumber: { type: String, required: true, unique: true, index: true },
@@ -73,7 +103,7 @@ const UserSchema = new Schema<IUser>(
     profilePhoto: { type: String },
     isVerified: { type: Boolean, default: false },
     isProfileCompleted: { type: Boolean, default: false },
-    role: { type: String, enum: ['customer', 'vendor', 'admin'], default: 'customer' },
+    role: { type: String, enum: ['customer', 'vendor', 'driver'], default: 'customer', index: true },
     customerCode: { type: String, unique: true, sparse: true, index: true },
     accountStatus: {
       type: String,
@@ -81,9 +111,23 @@ const UserSchema = new Schema<IUser>(
       default: 'ACTIVE',
       index: true,
     },
+    vendorProfile: { type: VendorProfileSchema },
+    driverProfile: { type: DriverProfileSchema },
+    isAvailable: { type: Boolean, default: true },
+    currentLocation: { type: DriverCurrentLocationSchema },
+    activeBookingId: { type: Schema.Types.ObjectId, default: null },
+    activeBookingType: { type: String, enum: ['towing', 'driver'], default: null },
   },
   { timestamps: true },
 );
+
+UserSchema.index({ 'vendorProfile.status': 1, 'vendorProfile.submittedAt': -1 });
+UserSchema.index({ 'vendorProfile.verificationStage': 1 });
+UserSchema.index({ 'driverProfile.driverCode': 1 }, { unique: true, sparse: true });
+UserSchema.index({ 'driverProfile.licenseNo': 1 }, { unique: true, sparse: true });
+UserSchema.index({ 'driverProfile.status': 1 });
+UserSchema.index({ 'driverProfile.vendorUserId': 1 });
+UserSchema.index({ fullName: 'text', mobileNumber: 'text', 'driverProfile.driverCode': 'text' });
 
 UserSchema.pre('save', function (next) {
   this.isProfileCompleted = computeProfileCompleted(this);

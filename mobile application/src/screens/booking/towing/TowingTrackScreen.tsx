@@ -1,24 +1,87 @@
-import React from 'react';
-import { Text, View } from 'react-native';
+import React, { useMemo } from 'react';
+import { ActivityIndicator, Text, View } from 'react-native';
 import { Clock, MapPin, Navigation, Radio } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import MapPlaceholder from '../../../components/booking/MapPlaceholder';
 import DriverAvatar from '../../../components/bookings/DriverAvatar';
 import TowingBookingLayout, { useBookingTheme } from '../../../components/booking/TowingBookingLayout';
-import { TOWING_DRIVER } from '../../../constants/towingBooking';
-import { useTowingBooking } from '../../../context/TowingBookingContext';
-import type { HomeStackParamList } from '../../../types/navigation';
+import { useBookingTracking } from '../../../hooks/useBookingTracking';
+import { useBookingQuery } from '../../../services/bookings/useBookingQueries';
+import type { BookingsStackParamList, HomeStackParamList } from '../../../types/navigation';
+import {
+  formatBookingDisplayId,
+  formatUnifiedStatusLabel,
+  isCompletedUnifiedStatus,
+} from '../../../utils/bookingDisplay';
+import { formatReadableAddress } from '../../../utils/readableAddress';
 import { colors, shadows, typography } from '../../../theme';
 
-type Props = NativeStackScreenProps<HomeStackParamList, 'TowingTrack'>;
+type Props = NativeStackScreenProps<HomeStackParamList & BookingsStackParamList, 'TowingTrack'>;
 
 const TRACK_STEPS = ['Confirmed', 'On the Way', 'Pickup', 'Drop-off'];
 
+function stepIndexForStatus(status: string): number {
+  switch (status) {
+    case 'PENDING':
+    case 'CONFIRMED':
+    case 'DRIVER_ASSIGNED':
+      return 0;
+    case 'DRIVER_EN_ROUTE':
+      return 1;
+    case 'DRIVER_ARRIVED':
+    case 'IN_PROGRESS':
+      return 2;
+    case 'COMPLETED':
+    case 'RATED':
+      return 3;
+    default:
+      return 0;
+  }
+}
+
 export default function TowingTrackScreen({ navigation, route }: Props) {
   const { t } = useBookingTheme();
-  const { booking } = useTowingBooking();
+  const bookingId = route.params?.bookingId;
   const fromBookings = route.params?.fromBookings;
+  const booking = useBookingQuery(bookingId ?? '');
+  const { etaLabel, status, driverLocation, driverName, driverRating } = useBookingTracking(
+    bookingId,
+    'towing',
+  );
+  const displayDriverName =
+    driverName ?? booking?.driver?.name ?? 'Assigning driver';
+  const hasAssignedDriver = Boolean(driverName ?? booking?.driver?.name);
+  const activeStep = useMemo(() => stepIndexForStatus(status), [status]);
+  const isCompleted = isCompletedUnifiedStatus(status);
+
+  const trackParams = bookingId
+    ? { bookingId, bookingType: 'towing' as const, fromBookings }
+    : undefined;
+
+  const handleContinue = () => {
+    if (fromBookings) {
+      navigation.goBack();
+      return;
+    }
+    if (isCompleted && bookingId) {
+      navigation.navigate('TowingRate', { bookingId, bookingType: 'towing' });
+      return;
+    }
+    if (trackParams) {
+      navigation.navigate('TowingDriverOnWay', trackParams);
+    }
+  };
+
+  if (bookingId && !booking) {
+    return (
+      <TowingBookingLayout title="Live Tracking" step={7} headerVariant="inline" hideFooter>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator color={colors.primary} />
+        </View>
+      </TowingBookingLayout>
+    );
+  }
 
   return (
     <TowingBookingLayout
@@ -26,12 +89,8 @@ export default function TowingTrackScreen({ navigation, route }: Props) {
       step={7}
       headerVariant="inline"
       onBack={() => navigation.goBack()}
-      buttonLabel={fromBookings ? 'Back to Bookings' : 'Continue'}
-      onContinue={
-        fromBookings
-          ? () => navigation.goBack()
-          : () => navigation.navigate('TowingDriverOnWay')
-      }>
+      buttonLabel={fromBookings ? 'Back to Bookings' : isCompleted ? 'Rate Experience' : 'Continue'}
+      onContinue={handleContinue}>
       <View style={{ flex: 1 }}>
         <View
           style={{
@@ -62,7 +121,8 @@ export default function TowingTrackScreen({ navigation, route }: Props) {
             </Text>
           </View>
           <Text style={{ fontSize: t.caption, color: colors.grey }}>
-            {booking.bookingId} · Towing Service
+            {booking ? formatBookingDisplayId(booking.bookingNumber) : 'Towing'} ·{' '}
+            {formatUnifiedStatusLabel(status)}
           </Text>
         </View>
 
@@ -78,7 +138,7 @@ export default function TowingTrackScreen({ navigation, route }: Props) {
             paddingHorizontal: t.px(4),
           }}>
           {TRACK_STEPS.map((step, index) => {
-            const active = index <= 1;
+            const active = index <= activeStep;
             return (
               <View key={step} style={{ alignItems: 'center', flex: 1 }}>
                 <View
@@ -126,8 +186,7 @@ export default function TowingTrackScreen({ navigation, route }: Props) {
               fontWeight: typography.weights.semibold,
               color: colors.dark,
             }}>
-            ETA:{' '}
-            <Text style={{ color: colors.primary }}>{TOWING_DRIVER.arrivalMinutes} min</Text>
+            ETA: <Text style={{ color: colors.primary }}>{etaLabel}</Text>
           </Text>
           <Navigation size={t.iconSm} color={colors.grey} style={{ marginLeft: 'auto' }} />
         </View>
@@ -154,14 +213,24 @@ export default function TowingTrackScreen({ navigation, route }: Props) {
                 fontWeight: typography.weights.bold,
                 color: colors.dark,
               }}>
-              {TOWING_DRIVER.name}
+              {displayDriverName}
             </Text>
+            {hasAssignedDriver ? (
+              <Text style={{ fontSize: t.caption, color: colors.grey, marginBottom: t.px(2) }}>
+                ★ {driverRating.toFixed(1)} · Tow driver
+              </Text>
+            ) : null}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.px(4) }}>
               <MapPin size={t.px(12)} color={colors.grey} />
               <Text style={{ fontSize: t.caption, color: colors.grey }}>
-                Flatbed · {TOWING_DRIVER.rating} ★
+                Towing · {formatReadableAddress(booking?.pickup.address) || 'Pickup en route'}
               </Text>
             </View>
+            {!!driverLocation && (
+              <Text style={{ fontSize: t.caption, color: colors.grey }}>
+                Live: {driverLocation.latitude.toFixed(4)}, {driverLocation.longitude.toFixed(4)}
+              </Text>
+            )}
           </View>
         </View>
       </View>

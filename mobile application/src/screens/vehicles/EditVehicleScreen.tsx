@@ -17,13 +17,15 @@ import PrimaryButton from '../../components/ui/PrimaryButton';
 import Screen, { ScreenContent } from '../../components/ui/Screen';
 import { useVehicleStore } from '../../store/vehicleStore';
 import type { ProfileStackParamList } from '../../types/navigation';
+import { FORM_PLACEHOLDER_COLOR } from '../../constants/profileForm';
+import { FUEL_TYPE_IDS, VEHICLE_TYPE_IDS } from '../../components/vehicles/vehicleUi';
 import type { FuelType, VehicleType } from '../../types/vehicle';
 import { colors, radius, spacing, typography } from '../../theme';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'EditVehicle'>;
 
-const VEHICLE_TYPES: VehicleType[] = ['car', 'bike', 'truck', 'bus', 'other'];
-const FUEL_TYPES: FuelType[] = ['petrol', 'diesel', 'cng', 'electric', 'hybrid', 'other'];
+const VEHICLE_TYPES = VEHICLE_TYPE_IDS;
+const FUEL_TYPES = FUEL_TYPE_IDS;
 
 export default function EditVehicleScreen({ navigation, route }: Props) {
   const { vehicleId } = route.params;
@@ -97,10 +99,10 @@ export default function EditVehicleScreen({ navigation, route }: Props) {
               <ChipRow label="Vehicle Type" options={VEHICLE_TYPES} value={vehicleType} onChange={setVehicleType} />
               <ChipRow label="Fuel Type" options={FUEL_TYPES} value={fuelType} onChange={setFuelType} />
 
-              <Field label="Vehicle Number" value={vehicleNumber} onChangeText={setVehicleNumber} placeholder="OD02AB1234" autoCapitalize="characters" />
-              <Field label="Brand" value={brand} onChangeText={setBrand} placeholder="Hyundai" />
-              <Field label="Model" value={model} onChangeText={setModel} placeholder="i20" />
-              <Field label="Color (optional)" value={color} onChangeText={setColor} placeholder="White" />
+              <Field label="Vehicle Number" value={vehicleNumber} onChangeText={setVehicleNumber} placeholder="e.g. OD02AB1234" autoCapitalize="characters" />
+              <Field label="Brand" value={brand} onChangeText={setBrand} placeholder="e.g. Hyundai" />
+              <Field label="Model" value={model} onChangeText={setModel} placeholder="e.g. i20" />
+              <Field label="Color (optional)" value={color} onChangeText={setColor} placeholder="e.g. White" />
 
               <AuthToast message={error || storeError || ''} />
 
@@ -138,7 +140,7 @@ function Field({
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor={colors.textMuted}
+        placeholderTextColor={FORM_PLACEHOLDER_COLOR}
         autoCapitalize={autoCapitalize}
       />
     </View>

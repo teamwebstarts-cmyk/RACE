@@ -1,5 +1,15 @@
-import { Headphones, LayoutGrid, ShieldCheck, Timer, Truck, User, Wrench } from 'lucide-react-native';
-import type { LucideIcon } from 'lucide-react-native';
+import {
+  Headphones,
+  LayoutGrid,
+  ShieldCheck,
+  Timer,
+  Truck,
+  User,
+  Wrench,
+  type LucideIcon,
+} from 'lucide-react-native';
+
+import type { ServiceCategory } from '../types/models';
 
 export const SERVICES_TRUST_ITEMS: Array<{
   id: string;
@@ -12,46 +22,25 @@ export const SERVICES_TRUST_ITEMS: Array<{
   { id: 'trust', Icon: ShieldCheck, highlight: 'Trusted', label: 'Professionals' },
 ];
 
-export const SERVICE_GRID_CARDS: Array<{
-  id: string;
-  categoryId: string;
-  title: string;
-  description: string;
-  servicesCount: number;
-  Icon: LucideIcon;
-  comingSoon?: boolean;
-}> = [
-  {
-    id: 'towing',
-    categoryId: 'towing',
-    title: 'Towing Service',
-    description: 'Professional towing with under-lift and flatbed options',
-    servicesCount: 3,
-    Icon: Truck,
-  },
-  {
-    id: 'driver',
-    categoryId: 'driver',
-    title: 'Driver Service',
-    description: 'Hire verified drivers for daily or long trips',
-    servicesCount: 4,
-    Icon: User,
-  },
-  {
-    id: 'roadside',
-    categoryId: 'roadside',
-    title: 'Roadside Assistance',
-    description: 'Battery, tyre, fuel and minor repair assistance',
-    servicesCount: 4,
-    Icon: Wrench,
-  },
-  {
-    id: 'future',
-    categoryId: 'future',
-    title: 'More Services',
-    description: 'Additional services launching soon',
-    servicesCount: 8,
-    Icon: LayoutGrid,
-    comingSoon: true,
-  },
-];
+const CATEGORY_ICONS: Record<string, LucideIcon> = {
+  towing: Truck,
+  driver: User,
+  roadside: Wrench,
+  future: LayoutGrid,
+};
+
+export function getServiceCategoryIcon(categoryId: string): LucideIcon {
+  return CATEGORY_ICONS[categoryId] ?? LayoutGrid;
+}
+
+export function mapApiCategoryToGridCard(category: ServiceCategory) {
+  return {
+    id: category.id,
+    categoryId: category.id,
+    title: category.title,
+    description: category.description ?? '',
+    servicesCount: category.services.length,
+    Icon: getServiceCategoryIcon(category.id),
+    comingSoon: category.id === 'future',
+  };
+}

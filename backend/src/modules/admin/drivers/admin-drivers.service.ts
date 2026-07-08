@@ -1,32 +1,25 @@
 import { Types } from 'mongoose';
 
-import { VendorModel } from '../../vendors/vendor.model';
+import { UserModel } from '../../users/user.model';
+import { driverRepository } from '../../users/driver.repository';
 import { BookingModel } from '../../bookings/booking.model';
-import { DriverModel, type IDriver } from '../models/driver.model';
 import { VendorVehicleModel } from '../models/vendor-vehicle.model';
 import { escapeRegex, paginate } from '../shared/pagination';
 import { logActivity } from '../shared/activity-logger';
 import { getEntityActivities } from '../shared/entity-activities';
 import { buildDriverDocuments, deriveDocumentsStatus, mapVerificationStage } from '../shared/response-mappers';
+import {
+  mapDriverFilterToUserQuery,
+  toDriverRecord,
+} from '../../users/user-profile.mappers';
 import { NotFoundError, BadRequestError } from '../../../shared/utils/errors';
+import type { IUser } from '../../users/user.model';
 
-async function mapDriver(driver: {
-  _id: Types.ObjectId;
-  driverCode: string;
-  name: string;
-  phone: string;
-  licenseNo: string;
-  driverType: string;
-  vendorId?: Types.ObjectId;
-  city: string;
-  vehicleRegistration?: string;
-  rating: number;
-  reviewCount: number;
-  status: string;
-}, vendorName?: string) {
+async function mapDriver(user: IUser, vendorName?: string) {
+  const driver = toDriverRecord(user);
   const documents = buildDriverDocuments(driver);
   return {
-    id: driver._id.toString(),
+    id: driver.id,
     name: driver.name,
     phone: driver.phone,
     licenseNo: driver.licenseNo,
@@ -70,30 +63,46 @@ export const adminDriversService = {
       query.$or = [{ name: regex }, { phone: regex }, { licenseNo: regex }, { driverCode: regex }];
     }
 
-    const result = await paginate<IDriver, IDriver>(DriverModel, query, filters, (doc) => doc);
-    const vendorIds = [...new Set(result.items.map((d) => d.vendorId?.toString()).filter(Boolean))];
-    const vendors = await VendorModel.find({ _id: { $in: vendorIds } }).lean();
-    const vendorMap = new Map(vendors.map((v) => [v._id.toString(), v.businessName ?? v.ownerName ?? 'Vendor']));
+    const userQuery = mapDriverFilterToUserQuery(query);
+    const result = await paginate(UserModel, userQuery, filters, (doc) => doc as IUser);
+    const vendorIds = [
+      ...new Set(
+        result.items
+          .map((d) => d.driverProfile?.vendorUserId?.toString())
+          .filter(Boolean) as string[],
+      ),
+    ];
+    const vendors = await UserModel.find({ _id: { $in: vendorIds }, role: 'vendor' }).lean();
+    const vendorMap = new Map(
+      vendors.map((v) => [v._id.toString(), v.vendorProfile?.businessName ?? v.vendorProfile?.ownerName ?? 'Vendor']),
+    );
 
     return {
       ...result,
       items: await Promise.all(
         result.items.map((d) =>
-          mapDriver(d, d.vendorId ? vendorMap.get(d.vendorId.toString()) : undefined),
+          mapDriver(
+            d,
+            d.driverProfile?.vendorUserId
+              ? vendorMap.get(d.driverProfile.vendorUserId.toString())
+              : undefined,
+          ),
         ),
       ),
     };
   },
 
   async getById(id: string) {
-    const driver = await DriverModel.findById(id);
-    if (!driver) throw new NotFoundError('Driver not found');
+    const user = await UserModel.findOne({ _id: id, role: 'driver' });
+    if (!user?.driverProfile) throw new NotFoundError('Driver not found');
+    const driver = toDriverRecord(user);
+
     let vendorName: string | undefined;
     if (driver.vendorId) {
-      const vendor = await VendorModel.findById(driver.vendorId).lean();
-      vendorName = vendor?.businessName ?? vendor?.ownerName;
+      const vendor = await UserModel.findOne({ _id: driver.vendorId, role: 'vendor' }).lean();
+      vendorName = vendor?.vendorProfile?.businessName ?? vendor?.vendorProfile?.ownerName;
     }
-    const base = await mapDriver(driver, vendorName);
+    const base = await mapDriver(user, vendorName);
 
     const [bookings, activities, fleetVehicle] = await Promise.all([
       BookingModel.find({ 'driver.id': id }).sort({ createdAt: -1 }).limit(20).lean(),
@@ -134,20 +143,20 @@ export const adminDriversService = {
   },
 
   async create(input: Record<string, string>, actor: { id: string; name: string }) {
-    const count = await DriverModel.countDocuments();
-    const driver = await DriverModel.create({
+    const count = await driverRepository.count();
+    const driver = await driverRepository.create({
       driverCode: `DRV${String(count + 1).padStart(4, '0')}`,
-      name: input.name,
-      phone: input.phone,
+      fullName: input.name,
+      mobileNumber: input.phone,
       email: input.email,
       licenseNo: input.licenseNo,
       driverType: input.driverType ?? 'Tow Driver',
-      vendorId: input.vendorId || undefined,
+      vendorUserId: input.vendorId || undefined,
       city: input.city ?? 'Bhubaneswar',
       state: input.state ?? 'Odisha',
       vehicleRegistration: input.vehicleRegistration,
-      status: input.status ?? 'PENDING',
-      statusHistory: [{ status: (input.status ?? 'PENDING') as never, changedAt: new Date() }],
+      status: (input.status ?? 'PENDING') as never,
+      statusHistory: [{ status: input.status ?? 'PENDING', changedAt: new Date() }],
     });
 
     await logActivity({
@@ -155,44 +164,44 @@ export const adminDriversService = {
       actorName: actor.name,
       action: 'DRIVER_CREATED',
       entityType: 'driver',
-      entityId: driver._id.toString(),
+      entityId: driver.id,
       title: `Driver ${driver.name} created`,
     });
 
-    return mapDriver(driver);
+    return mapDriver((await UserModel.findById(driver.id))!);
   },
 
   async update(id: string, input: Record<string, string>, actor: { id: string; name: string }) {
-    const driver = await DriverModel.findById(id);
-    if (!driver) throw new NotFoundError('Driver not found');
+    const existing = await driverRepository.findById(id);
+    if (!existing) throw new NotFoundError('Driver not found');
 
-    Object.assign(driver, {
-      name: input.name ?? driver.name,
-      phone: input.phone ?? driver.phone,
-      email: input.email ?? driver.email,
-      licenseNo: input.licenseNo ?? driver.licenseNo,
-      driverType: input.driverType ?? driver.driverType,
-      city: input.city ?? driver.city,
-      vehicleRegistration: input.vehicleRegistration ?? driver.vehicleRegistration,
-      vendorId: input.vendorId || driver.vendorId,
-      status: input.status ?? driver.status,
+    const driver = await driverRepository.updateById(id, {
+      name: input.name ?? existing.name,
+      phone: input.phone ?? existing.phone,
+      email: input.email ?? existing.email,
+      licenseNo: input.licenseNo ?? existing.licenseNo,
+      driverType: input.driverType ?? existing.driverType,
+      city: input.city ?? existing.city,
+      vehicleRegistration: input.vehicleRegistration ?? existing.vehicleRegistration,
+      vendorId: input.vendorId ? new Types.ObjectId(input.vendorId) : existing.vendorId,
+      status: (input.status ?? existing.status) as never,
     });
-    await driver.save();
+    if (!driver) throw new NotFoundError('Driver not found');
 
     await logActivity({
       actorId: actor.id,
       actorName: actor.name,
       action: 'DRIVER_UPDATED',
       entityType: 'driver',
-      entityId: driver._id.toString(),
+      entityId: id,
       title: `Driver ${driver.name} updated`,
     });
 
-    return mapDriver(driver);
+    return mapDriver((await UserModel.findById(id))!);
   },
 
   async remove(id: string, actor: { id: string; name: string }) {
-    const driver = await DriverModel.findByIdAndDelete(id);
+    const driver = await driverRepository.deleteById(id);
     if (!driver) throw new NotFoundError('Driver not found');
     await logActivity({
       actorId: actor.id,
@@ -213,10 +222,10 @@ export const adminDriversService = {
     if (status !== 'VERIFIED' && status !== 'REJECTED') {
       throw new BadRequestError('Invalid document status');
     }
-    const driver = await DriverModel.findById(id);
-    if (!driver) throw new NotFoundError('Driver not found');
+    const user = await driverRepository.findUserById(id);
+    if (!user?.driverProfile) throw new NotFoundError('Driver not found');
 
-    const driverId = driver._id.toString();
+    const driverId = user._id.toString();
     const DOC_BY_KEY: Record<string, string> = {
       dl: 'Driving License',
       aadhaar: 'Aadhaar Card',
@@ -233,27 +242,27 @@ export const adminDriversService = {
       const docType = DOC_BY_KEY[docKey];
       if (!docType) throw new NotFoundError('Document not found');
 
-      if (!driver.documents?.length) {
-        driver.documents = [];
+      if (!user.driverProfile.documents?.length) {
+        user.driverProfile.documents = [];
       }
-      docIndex = driver.documents.findIndex((doc) => doc.type === docType);
+      docIndex = user.driverProfile.documents.findIndex((doc) => doc.type === docType);
       if (docIndex < 0) {
-        driver.documents.push({
+        user.driverProfile.documents.push({
           type: docType,
           url: `/admin/documents/driver/${driverId}/${docKey}`,
           status,
           uploadedAt: new Date(),
         });
-        docIndex = driver.documents.length - 1;
+        docIndex = user.driverProfile.documents.length - 1;
       }
     } else {
       throw new NotFoundError('Document not found');
     }
 
-    if (!driver.documents[docIndex]) throw new NotFoundError('Document not found');
+    if (!user.driverProfile.documents[docIndex]) throw new NotFoundError('Document not found');
 
-    driver.documents[docIndex].status = status;
-    await driver.save();
+    user.driverProfile.documents[docIndex].status = status;
+    await user.save();
 
     await logActivity({
       actorId: actor.id,
@@ -261,7 +270,7 @@ export const adminDriversService = {
       action: status === 'VERIFIED' ? 'DRIVER_DOCUMENT_VERIFIED' : 'DRIVER_DOCUMENT_REJECTED',
       entityType: 'driver',
       entityId: id,
-      title: `${driver.documents[docIndex].type} ${status === 'VERIFIED' ? 'verified' : 'rejected'} for ${driver.name}`,
+      title: `${user.driverProfile.documents[docIndex].type} ${status === 'VERIFIED' ? 'verified' : 'rejected'} for ${user.fullName}`,
     });
 
     return this.getById(id);
@@ -269,11 +278,11 @@ export const adminDriversService = {
 
   async getCounts() {
     const [all, pending, approved, rejected, suspended] = await Promise.all([
-      DriverModel.countDocuments(),
-      DriverModel.countDocuments({ status: 'PENDING' }),
-      DriverModel.countDocuments({ status: 'APPROVED' }),
-      DriverModel.countDocuments({ status: 'REJECTED' }),
-      DriverModel.countDocuments({ status: 'SUSPENDED' }),
+      driverRepository.count(),
+      driverRepository.count({ status: 'PENDING' }),
+      driverRepository.count({ status: 'APPROVED' }),
+      driverRepository.count({ status: 'REJECTED' }),
+      driverRepository.count({ status: 'SUSPENDED' }),
     ]);
     return { all, pending, approved, rejected, suspended };
   },

@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   Image,
   ImageSourcePropType,
   Linking,
@@ -21,17 +22,21 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import {
+  CATEGORY_HERO_IMAGES,
   getGreeting,
   HOME_HERO_IMAGE,
   HOME_STATS,
-  POPULAR_SERVICES,
-  QUICK_SERVICES,
   TRUST_ITEMS,
 } from '../constants/home';
+import { getServiceCategoryIcon } from '../constants/servicesScreen';
+import { images } from '../assets';
+import LocationSelectorSheet from '../components/location/LocationSelectorSheet';
+import NotServiceableScreen from '../components/location/NotServiceableScreen';
 import AppScreenLayout from '../components/ui/AppScreenLayout';
 import TabRootHeader from '../components/ui/TabRootHeader';
 import { useAuthStore } from '../store/authStore';
 import { useCatalogStore } from '../store/catalogStore';
+import { useLocationStore } from '../store/locationStore';
 import { useProfileStore } from '../store/profileStore';
 import { getProfileFirstName } from '../utils/profileDisplay';
 import { brand } from '../theme/brand';
@@ -48,7 +53,17 @@ export default function HomeScreen({ navigation }: Props) {
   const s = width / REF_W;
   const px = (n: number) => Math.round(n * s);
 
-  const { services, fetchServices, fetchBrand, brand: apiBrand } = useCatalogStore();
+  const {
+    hasSelectedLocation,
+    isServiceable,
+    selectedLocation,
+    isHydrated: isLocationHydrated,
+  } = useLocationStore();
+
+  const [showLocationSheet, setShowLocationSheet] = useState(false);
+
+  const { services, fetchServices, fetchBrand, brand: apiBrand, isLoading, error } =
+    useCatalogStore();
   const profile = useProfileStore(state => state.profile);
   const authUser = useAuthStore(state => state.user);
 
@@ -57,99 +72,121 @@ export default function HomeScreen({ navigation }: Props) {
     void fetchBrand();
   }, [fetchBrand, fetchServices]);
 
+  useEffect(() => {
+    if (isLocationHydrated && !hasSelectedLocation) {
+      setShowLocationSheet(true);
+    }
+  }, [hasSelectedLocation, isLocationHydrated]);
+
   const quickItems = useMemo(() => {
-    if (!services.length) return QUICK_SERVICES;
-    return services.slice(0, 4).map(category => {
-      const fallback = QUICK_SERVICES.find(item => item.categoryId === category.id);
-      return {
-        id: category.id,
-        label: category.title,
-        categoryId: category.id,
-        categoryTitle: category.title,
-        Icon: fallback?.Icon ?? QUICK_SERVICES[0].Icon,
-      };
-    });
+    return services.slice(0, 4).map(category => ({
+      id: category.id,
+      label: category.title,
+      categoryId: category.id,
+      categoryTitle: category.title,
+      Icon: getServiceCategoryIcon(category.id),
+    }));
   }, [services]);
 
   const popularItems = useMemo(() => {
-    if (!services.length) return POPULAR_SERVICES;
-    const flattened = services.flatMap(category =>
+    return services.flatMap(category =>
       category.services.map(service => ({
         id: service.id,
         title: service.label,
         categoryId: category.id,
         categoryTitle: category.title,
-        price: 0,
-        image: POPULAR_SERVICES[0].image,
+        image:
+          CATEGORY_HERO_IMAGES[category.id as keyof typeof CATEGORY_HERO_IMAGES] ??
+          images.homePopularTowing,
       })),
-    );
-    return flattened.length ? flattened.slice(0, 6) : POPULAR_SERVICES;
+    ).slice(0, 6);
   }, [services]);
 
   const displayName =
     getProfileFirstName(profile?.fullName) ||
     getProfileFirstName(authUser?.fullName) ||
     'there';
-  const displayLocation = apiBrand?.location ?? brand.location;
+  // Prefer saved name whenever present — don't gate on hydration (that caused "Locating..." stuck)
+  const displayLocation =
+    selectedLocation?.displayName ??
+    (isLocationHydrated ? 'Set your location' : 'Locating...');
 
-  const tabNav = navigation.getParent<BottomTabNavigationProp<RootTabParamList>>();
+  const callSupport = () => {
+    const phone = apiBrand?.phoneRaw ?? brand.phoneRaw;
+    void Linking.openURL(`tel:${phone}`);
+  };
+
+  const openServicesTab = () => {
+    const tabNav = navigation.getParent<BottomTabNavigationProp<RootTabParamList>>();
+    tabNav?.navigate('Services');
+  };
 
   const openCategory = (categoryId: string, categoryTitle: string) => {
     openServiceCategory(navigation, categoryId, categoryTitle);
   };
 
-  const openServicesTab = () => {
-    tabNav?.navigate('Services');
+  const openLocationSheet = () => setShowLocationSheet(true);
+
+  const onLocationSelected = () => {
+    setShowLocationSheet(false);
   };
 
-  const callSupport = () => {
-    void Linking.openURL(`tel:${apiBrand?.phoneRaw ?? brand.phoneRaw}`);
-  };
+  if (isLocationHydrated && hasSelectedLocation && !isServiceable) {
+    return (
+      <>
+        <NotServiceableScreen onChangeLocation={openLocationSheet} />
+        <LocationSelectorSheet
+          visible={showLocationSheet}
+          dismissible
+          onRequestClose={() => setShowLocationSheet(false)}
+          onLocationSelected={onLocationSelected}
+        />
+      </>
+    );
+  }
 
   return (
+    <>
     <AppScreenLayout
-      contentStyle={{ paddingTop: px(16) }}
+      contentStyle={{ paddingTop: px(10) }}
       header={
-        <TabRootHeader
-          leading={
-            <>
-              <Text
-                style={{
-                  fontSize: px(20),
-                  fontWeight: typography.weights.extrabold,
-                  color: colors.dark,
-                }}>
-                {getGreeting(displayName)}
-              </Text>
-              <Pressable
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  marginTop: px(4),
-                  gap: px(4),
-                }}>
-                <MapPin size={px(14)} color={colors.primary} strokeWidth={2.5} />
-                <Text
-                  style={{
-                    fontSize: px(13),
-                    fontWeight: typography.weights.semibold,
-                    color: colors.primary,
-                  }}>
-                  {displayLocation}
-                </Text>
-                <ChevronDown size={px(14)} color={colors.primary} />
-              </Pressable>
-            </>
-          }
-        />
+        <View>
+          <Pressable
+            onPress={openLocationSheet}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: px(6),
+              paddingHorizontal: px(20),
+              paddingTop: px(4),
+              paddingBottom: px(8),
+            }}>
+            <MapPin size={px(16)} color={colors.primary} strokeWidth={2.4} />
+            <Text
+              numberOfLines={1}
+              style={{
+                flexShrink: 1,
+                fontSize: px(14),
+                fontWeight: typography.weights.bold,
+                color: colors.dark,
+              }}>
+              {displayLocation}
+            </Text>
+            <ChevronDown size={px(14)} color={colors.grey} strokeWidth={2.4} />
+          </Pressable>
+          <TabRootHeader
+            title={getGreeting(displayName)}
+            subtitle="What do you need help with today?"
+          />
+        </View>
       }>
+          {/* Hero */}
           <View
             style={[
               styles.heroCard,
               shadows.card,
               {
                 borderRadius: px(20),
-                marginTop: px(16),
                 marginBottom: px(18),
                 padding: px(14),
                 paddingRight: 0,
@@ -282,44 +319,76 @@ export default function HomeScreen({ navigation }: Props) {
           </View>
 
           {/* Quick services */}
-          <View style={{ flexDirection: 'row', gap: px(8), marginBottom: px(18) }}>
-            {quickItems.map(item => (
-              <Pressable
-                key={item.id}
-                onPress={() => openCategory(item.categoryId, item.categoryTitle)}
-                style={[
-                  styles.quickCard,
-                  shadows.card,
-                  {
-                    borderRadius: px(14),
-                    height: px(78),
-                    paddingTop: px(8),
-                    paddingBottom: px(8),
-                    paddingHorizontal: px(4),
-                  },
-                ]}>
-                <item.Icon size={px(18)} color={colors.primary} strokeWidth={2} />
-                <Text
-                  numberOfLines={2}
-                  style={{
-                    marginTop: px(4),
-                    fontSize: px(10),
-                    fontWeight: typography.weights.bold,
-                    color: colors.dark,
-                    textAlign: 'center',
-                    lineHeight: px(12),
-                  }}>
-                  {item.label}
-                </Text>
-                <ArrowRight
-                  size={px(11)}
-                  color={colors.primary}
-                  strokeWidth={2.5}
-                  style={{ marginTop: px(4) }}
-                />
-              </Pressable>
-            ))}
-          </View>
+          {isLoading && services.length === 0 ? (
+            <View style={{ alignItems: 'center', paddingVertical: px(24), marginBottom: px(18) }}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text style={{ marginTop: px(8), fontSize: px(12), color: colors.grey }}>
+                Loading services...
+              </Text>
+            </View>
+          ) : error && services.length === 0 ? (
+            <Pressable
+              onPress={() => void fetchServices()}
+              style={{
+                alignItems: 'center',
+                paddingVertical: px(20),
+                marginBottom: px(18),
+                borderRadius: px(12),
+                backgroundColor: colors.lightGrey,
+              }}>
+              <Text style={{ fontSize: px(13), color: colors.error, textAlign: 'center' }}>
+                {error}
+              </Text>
+              <Text
+                style={{
+                  marginTop: px(6),
+                  fontSize: px(12),
+                  fontWeight: typography.weights.bold,
+                  color: colors.primary,
+                }}>
+                Tap to retry
+              </Text>
+            </Pressable>
+          ) : quickItems.length > 0 ? (
+            <View style={{ flexDirection: 'row', gap: px(8), marginBottom: px(18) }}>
+              {quickItems.map(item => (
+                <Pressable
+                  key={item.id}
+                  onPress={() => openCategory(item.categoryId, item.categoryTitle)}
+                  style={[
+                    styles.quickCard,
+                    shadows.card,
+                    {
+                      borderRadius: px(14),
+                      height: px(78),
+                      paddingTop: px(8),
+                      paddingBottom: px(8),
+                      paddingHorizontal: px(4),
+                    },
+                  ]}>
+                  <item.Icon size={px(18)} color={colors.primary} strokeWidth={2} />
+                  <Text
+                    numberOfLines={2}
+                    style={{
+                      marginTop: px(4),
+                      fontSize: px(10),
+                      fontWeight: typography.weights.bold,
+                      color: colors.dark,
+                      textAlign: 'center',
+                      lineHeight: px(12),
+                    }}>
+                    {item.label}
+                  </Text>
+                  <ArrowRight
+                    size={px(11)}
+                    color={colors.primary}
+                    strokeWidth={2.5}
+                    style={{ marginTop: px(4) }}
+                  />
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
 
           {/* Trust bar */}
           <View
@@ -349,86 +418,89 @@ export default function HomeScreen({ navigation }: Props) {
           </View>
 
           {/* Popular services */}
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: px(14),
-            }}>
-            <Text
-              style={{
-                fontSize: px(18),
-                fontWeight: typography.weights.extrabold,
-                color: colors.dark,
-              }}>
-              Popular Services
-            </Text>
-            <Pressable
-              onPress={openServicesTab}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: px(2) }}>
-              <Text
+          {popularItems.length > 0 ? (
+            <>
+              <View
                 style={{
-                  fontSize: px(13),
-                  fontWeight: typography.weights.bold,
-                  color: colors.primary,
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: px(14),
                 }}>
-                View All
-              </Text>
-              <ArrowRight size={px(14)} color={colors.primary} strokeWidth={2.5} />
-            </Pressable>
-          </View>
-
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ gap: px(12) }}
-            style={{ marginBottom: px(20) }}>
-            {popularItems.map(item => (
-              <Pressable
-                key={item.id}
-                onPress={() => openCategory(item.categoryId, item.categoryTitle)}
-                style={[
-                  styles.popularCard,
-                  shadows.card,
-                  { width: px(148), borderRadius: px(16) },
-                ]}>
-                <Image
-                  source={item.image as ImageSourcePropType}
+                <Text
                   style={{
-                    width: '100%',
-                    height: px(100),
-                    borderTopLeftRadius: px(16),
-                    borderTopRightRadius: px(16),
-                  }}
-                  resizeMode="cover"
-                />
-                <View style={{ padding: px(12) }}>
+                    fontSize: px(18),
+                    fontWeight: typography.weights.extrabold,
+                    color: colors.dark,
+                  }}>
+                  Popular Services
+                </Text>
+                <Pressable
+                  onPress={openServicesTab}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: px(2) }}>
                   <Text
                     style={{
                       fontSize: px(13),
                       fontWeight: typography.weights.bold,
-                      color: colors.dark,
-                      marginBottom: px(6),
+                      color: colors.primary,
                     }}>
-                    {item.title}
+                    View All
                   </Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: px(4) }}>
-                    <Text style={{ fontSize: px(12), color: colors.grey }}>From</Text>
-                    <Text
+                  <ArrowRight size={px(14)} color={colors.primary} strokeWidth={2.5} />
+                </Pressable>
+              </View>
+
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ gap: px(12) }}
+                style={{ marginBottom: px(20) }}>
+                {popularItems.map(item => (
+                  <Pressable
+                    key={item.id}
+                    onPress={() => openCategory(item.categoryId, item.categoryTitle)}
+                    style={[
+                      styles.popularCard,
+                      shadows.card,
+                      { width: px(148), borderRadius: px(16) },
+                    ]}>
+                    <Image
+                      source={item.image as ImageSourcePropType}
                       style={{
-                        fontSize: px(13),
-                        fontWeight: typography.weights.bold,
-                        color: colors.primary,
-                      }}>
-                      ₹{item.price || '—'}
-                    </Text>
-                    <ArrowRight size={px(12)} color={colors.primary} strokeWidth={2.5} />
-                  </View>
-                </View>
-              </Pressable>
-            ))}
-          </ScrollView>
+                        width: '100%',
+                        height: px(100),
+                        borderTopLeftRadius: px(16),
+                        borderTopRightRadius: px(16),
+                      }}
+                      resizeMode="cover"
+                    />
+                    <View style={{ padding: px(12) }}>
+                      <Text
+                        style={{
+                          fontSize: px(13),
+                          fontWeight: typography.weights.bold,
+                          color: colors.dark,
+                          marginBottom: px(6),
+                        }}>
+                        {item.title}
+                      </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: px(4) }}>
+                        <Text
+                          style={{
+                            fontSize: px(12),
+                            fontWeight: typography.weights.bold,
+                            color: colors.primary,
+                          }}>
+                          Book now
+                        </Text>
+                        <ArrowRight size={px(12)} color={colors.primary} strokeWidth={2.5} />
+                      </View>
+                    </View>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </>
+          ) : null}
 
           {/* Stats */}
           <View
@@ -459,7 +531,6 @@ export default function HomeScreen({ navigation }: Props) {
                     fontSize: px(14),
                     fontWeight: typography.weights.extrabold,
                     color: colors.dark,
-                    textAlign: 'center',
                   }}>
                   {item.value}
                 </Text>
@@ -469,7 +540,6 @@ export default function HomeScreen({ navigation }: Props) {
                     fontSize: px(10),
                     color: colors.grey,
                     textAlign: 'center',
-                    lineHeight: px(13),
                   }}>
                   {item.label}
                 </Text>
@@ -477,6 +547,14 @@ export default function HomeScreen({ navigation }: Props) {
             ))}
           </View>
     </AppScreenLayout>
+
+      <LocationSelectorSheet
+        visible={showLocationSheet || (isLocationHydrated && !hasSelectedLocation)}
+        dismissible={hasSelectedLocation}
+        onRequestClose={() => setShowLocationSheet(false)}
+        onLocationSelected={onLocationSelected}
+      />
+    </>
   );
 }
 
@@ -489,15 +567,13 @@ const styles = StyleSheet.create({
   quickCard: {
     flex: 1,
     backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
     alignItems: 'center',
-    justifyContent: 'flex-start',
+    justifyContent: 'center',
+    borderWidth: 0,
   },
   popularCard: {
     backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderWidth: 0,
     overflow: 'hidden',
   },
 });

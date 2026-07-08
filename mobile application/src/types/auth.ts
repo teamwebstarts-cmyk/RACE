@@ -1,7 +1,7 @@
 export interface AuthUser {
   id: string;
   mobileNumber: string;
-  role: 'customer' | 'vendor' | 'admin';
+  role: 'customer' | 'vendor' | 'driver';
   isVerified: boolean;
   isProfileCompleted: boolean;
   fullName?: string;
@@ -35,6 +35,7 @@ export interface SendOtpResponse {
   expiresIn: number;
   isExistingUser: boolean;
   isProfileCompleted: boolean;
+  onboardingRequired?: boolean;
   devOtp?: string;
 }
 

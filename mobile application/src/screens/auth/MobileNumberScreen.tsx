@@ -64,7 +64,6 @@ export default function MobileNumberScreen({ navigation }: Props) {
       }
       navigation.navigate('OtpVerification', {
         mobileNumber,
-        devOtp: result.devOtp,
         isExistingUser: result.isExistingUser ?? false,
       });
     } catch (err) {
@@ -146,9 +145,6 @@ export default function MobileNumberScreen({ navigation }: Props) {
 
             {!signupLabel ? (
               <>
-                <Pressable style={styles.forgotWrap}>
-                  <Text style={styles.forgotText}>Forgot Password?</Text>
-                </Pressable>
                 <View style={styles.dividerWrap}>
                   <View style={styles.divider} />
                   <Text style={styles.dividerText}>or continue with</Text>
@@ -278,14 +274,6 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: typography.sizes.xs,
     textAlign: 'center',
-  },
-  forgotWrap: {
-    alignItems: 'flex-end',
-    marginBottom: spacing.sm,
-  },
-  forgotText: {
-    color: colors.primary,
-    fontWeight: typography.weights.semibold,
   },
   dividerWrap: {
     flexDirection: 'row',

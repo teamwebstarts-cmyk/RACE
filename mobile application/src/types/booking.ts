@@ -46,6 +46,8 @@ export interface BookingInvoice {
 export interface Booking {
   id: string;
   bookingNumber: string;
+  bookingType?: 'towing' | 'driver';
+  unifiedStatus?: string;
   categoryId: string;
   serviceId: string;
   serviceLabel: string;
@@ -67,6 +69,11 @@ export interface Booking {
   timeline: BookingTimelineEvent[];
   rating?: number;
   review?: string;
+  advanceAmount?: number;
+  remainingAmount?: number;
+  advancePaid?: boolean;
+  remainingPaid?: boolean;
+  paymentStatus?: string;
 }
 
 export interface CreateBookingRequest {

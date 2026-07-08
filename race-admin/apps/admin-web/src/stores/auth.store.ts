@@ -67,8 +67,11 @@ export const useAuthStore = create<AuthState>()(
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,
       }),
-      onRehydrateStorage: () => (state) => {
-        if (state?.accessToken) {
+      onRehydrateStorage: () => (state, error) => {
+        if (error) {
+          console.error('Failed to restore auth session', error);
+          useAuthStore.getState().logout();
+        } else if (state?.accessToken) {
           setAccessToken(state.accessToken);
         }
       },

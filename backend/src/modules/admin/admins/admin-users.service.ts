@@ -1,90 +1,60 @@
-import { AdminModel } from '../models/admin.model';
+import { getPlatformAdmin } from '../../../config/hardcoded-admin';
 import { ActivityLogModel } from '../models/activity-log.model';
-import { adminAuthService } from '../auth/admin-auth.service';
-import { AdminRole, getPermissionsForRole } from '../shared/rbac';
+import { BadRequestError } from '../../../shared/utils/errors';
 import { paginate } from '../shared/pagination';
-import { logActivity } from '../shared/activity-logger';
-import { NotFoundError } from '../../../shared/utils/errors';
 
 export const adminUsersService = {
   async list(filters: { page?: number; pageSize?: number; search?: string }) {
-    const query: Record<string, unknown> = {};
+    const admin = getPlatformAdmin();
+    const items = [
+      {
+        id: admin.id,
+        name: admin.name,
+        email: admin.email,
+        role: admin.role,
+        permissions: admin.permissions,
+        isActive: admin.isActive,
+        lastLoginAt: undefined,
+        createdAt: new Date(0).toISOString(),
+      },
+    ];
+
     if (filters.search) {
       const regex = new RegExp(filters.search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-      query.$or = [{ name: regex }, { email: regex }];
+      if (!regex.test(admin.name) && !regex.test(admin.email)) {
+        return { items: [], total: 0, page: 1, pageSize: filters.pageSize ?? 10, totalPages: 1 };
+      }
     }
-    return paginate(AdminModel, query, filters, (doc) => ({
-      id: doc._id.toString(),
-      name: doc.name,
-      email: doc.email,
-      role: doc.role,
-      permissions: doc.permissions,
-      isActive: doc.isActive,
-      lastLoginAt: doc.lastLoginAt?.toISOString(),
-      createdAt: doc.createdAt.toISOString(),
-    }));
-  },
 
-  async create(input: {
-    name: string;
-    email: string;
-    password: string;
-    role: AdminRole;
-  }, actor: { id: string; name: string }) {
-    const user = await adminAuthService.createAdmin({
-      ...input,
-      permissions: getPermissionsForRole(input.role),
-    });
-    await logActivity({
-      actorId: actor.id,
-      actorName: actor.name,
-      action: 'ADMIN_CREATED',
-      entityType: 'admin',
-      entityId: user.id,
-      title: `Admin user ${user.name} created`,
-    });
-    return user;
-  },
-
-  async update(id: string, input: Partial<{ name: string; role: AdminRole; isActive: boolean }>, actor: { id: string; name: string }) {
-    const admin = await AdminModel.findById(id);
-    if (!admin) throw new NotFoundError('Admin not found');
-    if (input.name) admin.name = input.name;
-    if (input.role) {
-      admin.role = input.role;
-      admin.permissions = getPermissionsForRole(input.role);
-    }
-    if (input.isActive != null) admin.isActive = input.isActive;
-    await admin.save();
-    await logActivity({
-      actorId: actor.id,
-      actorName: actor.name,
-      action: 'ADMIN_UPDATED',
-      entityType: 'admin',
-      entityId: id,
-      title: `Admin user ${admin.name} updated`,
-    });
     return {
-      id: admin._id.toString(),
-      name: admin.name,
-      email: admin.email,
-      role: admin.role,
-      permissions: admin.permissions,
-      isActive: admin.isActive,
+      items,
+      total: 1,
+      page: 1,
+      pageSize: filters.pageSize ?? 10,
+      totalPages: 1,
     };
   },
 
-  async remove(id: string, actor: { id: string; name: string }) {
-    const admin = await AdminModel.findByIdAndDelete(id);
-    if (!admin) throw new NotFoundError('Admin not found');
-    await logActivity({
-      actorId: actor.id,
-      actorName: actor.name,
-      action: 'ADMIN_DELETED',
-      entityType: 'admin',
-      entityId: id,
-      title: `Admin user ${admin.name} deleted`,
-    });
+  async create(
+    _input?: unknown,
+    _actor?: { id: string; name: string },
+  ) {
+    throw new BadRequestError('Platform admin is hardcoded in server configuration');
+  },
+
+  async update(
+    _id?: string,
+    _input?: unknown,
+    _actor?: { id: string; name: string },
+  ) {
+    throw new BadRequestError('Platform admin is hardcoded in server configuration');
+  },
+
+  async remove(
+    _id?: string,
+    _actor?: { id: string; name: string },
+  ) {
+    throw new BadRequestError('Platform admin is hardcoded in server configuration');
   },
 };
 

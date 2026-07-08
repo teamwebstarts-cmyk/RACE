@@ -1,20 +1,17 @@
-import bcrypt from 'bcryptjs';
-
 import { BookingModel } from '../modules/bookings/booking.model';
+import { PLATFORM_ADMIN_ID, getPlatformAdmin } from '../config/hardcoded-admin';
 import { UserModel, type IUser } from '../modules/users/user.model';
 import { VehicleModel } from '../modules/vehicles/vehicle.model';
-import { VendorModel } from '../modules/vendors/vendor.model';
+import { driverRepository } from '../modules/users/driver.repository';
+import { vendorRepository } from '../modules/vendors/vendor.repository';
 import {
   SubscriptionPlanModel,
   UserSubscriptionModel,
 } from '../modules/subscriptions/subscription.model';
-import { AdminModel } from '../modules/admin/models/admin.model';
-import { DriverModel } from '../modules/admin/models/driver.model';
 import { TransactionModel } from '../modules/admin/models/transaction.model';
 import { PlatformSettingsModel } from '../modules/admin/models/platform-settings.model';
-import { AdminNotificationModel } from '../modules/admin/models/admin-notification.model';
+import { NotificationModel } from '../modules/notifications/notification.model';
 import { ActivityLogModel } from '../modules/admin/models/activity-log.model';
-import { AdminRole, getPermissionsForRole } from '../modules/admin/shared/rbac';
 import { logger } from '../shared/utils/logger';
 
 const CITIES = ['Bhubaneswar', 'Cuttack', 'Puri', 'Rourkela', 'Berhampur'];
@@ -103,10 +100,8 @@ export async function seedAdminPlatform(): Promise<void> {
   logger.info('Clearing admin platform collections...');
 
   await Promise.all([
-    AdminModel.deleteMany({}),
-    DriverModel.deleteMany({}),
     TransactionModel.deleteMany({}),
-    AdminNotificationModel.deleteMany({}),
+    NotificationModel.deleteMany({}),
     ActivityLogModel.deleteMany({}),
     BookingModel.deleteMany({ bookingNumber: { $regex: /^BK100/ } }),
     VehicleModel.deleteMany({
@@ -115,7 +110,6 @@ export async function seedAdminPlatform(): Promise<void> {
         { vehicleNumber: { $regex: /^OD-0[1-9]-AB-/ } },
       ],
     }),
-    VendorModel.deleteMany({}),
     UserSubscriptionModel.deleteMany({}),
     SubscriptionPlanModel.deleteMany({}),
     UserModel.deleteMany({
@@ -126,7 +120,7 @@ export async function seedAdminPlatform(): Promise<void> {
         { fullName: { $regex: /^Customer \d+$/ } },
       ],
     }),
-    UserModel.deleteMany({ role: 'vendor' }),
+    UserModel.deleteMany({ role: { $in: ['vendor', 'driver'] } }),
   ]);
 
   logger.info('Seeding admin platform data...');
@@ -145,76 +139,68 @@ export async function seedAdminPlatform(): Promise<void> {
     { upsert: true },
   );
 
-  const passwordHash = await bcrypt.hash('Admin@123', 12);
-  const superAdmin = await AdminModel.create({
-    name: 'Admin User',
-    email: 'admin@raceservice.com',
-    passwordHash,
-    role: AdminRole.SUPER_ADMIN,
-    permissions: getPermissionsForRole(AdminRole.SUPER_ADMIN),
-    isActive: true,
-    lastLoginAt: new Date(),
-  });
+  const platformAdmin = getPlatformAdmin();
 
   const customers: IUser[] = [];
 
   const vendors = [];
   for (let i = 0; i < 5; i++) {
-    const vendorUser = await UserModel.create({
-      mobileNumber: `98123${String(45670 + i).padStart(5, '0')}`,
-      fullName: `Vendor Owner ${i + 1}`,
-      email: `vendor${i + 1}@business.com`,
-      role: 'vendor',
-      isVerified: true,
-      isProfileCompleted: true,
-    });
-
-    const vendor = await VendorModel.create({
-      userId: vendorUser._id,
+    const vendor = await vendorRepository.create({
       vendorType: i % 2 === 0 ? 'towing_company' : 'tow_truck_driver',
       status: i === 2 ? 'pending' : 'approved',
       verificationStage: i === 2 ? 'document_review' : 'approved',
       businessName: `RACE Partner ${i + 1}`,
-      ownerName: vendorUser.fullName,
-      mobileNumber: vendorUser.mobileNumber,
-      email: vendorUser.email,
+      ownerName: `Vendor Owner ${i + 1}`,
+      mobileNumber: `98123${String(45670 + i).padStart(5, '0')}`,
+      email: `vendor${i + 1}@business.com`,
       address: `${CITIES[i % CITIES.length]}, Odisha`,
-      bankDetails: {
-        accountHolderName: vendorUser.fullName,
-        accountNumber: `XXXX${String(1000 + i).slice(-4)}`,
-        ifsc: 'HDFC0001234',
-        bankName: 'HDFC Bank',
-      },
-      towVehicle: {
-        registrationNumber: `OD-VND-${1000 + i}`,
-        vehicleType: 'Tow Truck',
-        capacity: '3 Ton',
-      },
       submittedAt: new Date(),
       approvedAt: i === 2 ? undefined : new Date(),
       statusHistory: [{ status: 'approved', changedAt: new Date() }],
     });
+
+    const vendorUser = await UserModel.findById(vendor.id);
+    if (vendorUser?.vendorProfile) {
+      vendorUser.vendorProfile.bankDetails = {
+        accountHolderName: vendor.ownerName ?? '',
+        accountNumber: `XXXX${String(1000 + i).slice(-4)}`,
+        ifsc: 'HDFC0001234',
+        bankName: 'HDFC Bank',
+      };
+      vendorUser.vendorProfile.towVehicle = {
+        registrationNumber: `OD-VND-${1000 + i}`,
+        vehicleType: 'Tow Truck',
+        capacity: '3 Ton',
+      };
+      await vendorUser.save();
+    }
+
     vendors.push(vendor);
   }
 
   const drivers = [];
   for (let i = 0; i < 10; i++) {
-    const driver = await DriverModel.create({
+    const driver = await driverRepository.create({
       driverCode: `DRV${String(i + 1).padStart(4, '0')}`,
-      name: `Driver ${i + 1}`,
-      phone: `98989${String(10000 + i).padStart(5, '0')}`,
+      fullName: `Driver ${i + 1}`,
+      mobileNumber: `98989${String(10000 + i).padStart(5, '0')}`,
       email: `driver${i + 1}@example.com`,
       licenseNo: `OD${20240000 + i}`,
       driverType: i % 2 === 0 ? 'Tow Driver' : 'Full-Time',
-      vendorId: vendors[i % vendors.length]._id,
+      vendorUserId: vendors[i % vendors.length].id,
       city: CITIES[i % CITIES.length],
       state: 'Odisha',
       vehicleRegistration: `OD-DRV-${1000 + i}`,
-      rating: 4 + (i % 10) / 10,
-      reviewCount: 10 + i * 3,
       status: i === 3 ? 'PENDING' : 'APPROVED',
-      totalTrips: i * 12,
-      documents: [
+      statusHistory: [{ status: i === 3 ? 'PENDING' : 'APPROVED', changedAt: new Date() }],
+    });
+
+    const driverUser = await UserModel.findById(driver.id);
+    if (driverUser?.driverProfile) {
+      driverUser.driverProfile.rating = 4 + (i % 10) / 10;
+      driverUser.driverProfile.reviewCount = 10 + i * 3;
+      driverUser.driverProfile.totalTrips = i * 12;
+      driverUser.driverProfile.documents = [
         {
           type: 'Driving License',
           url: `/documents/driver/${i + 1}/dl.pdf`,
@@ -239,9 +225,10 @@ export async function seedAdminPlatform(): Promise<void> {
           status: i === 3 ? 'PENDING' : 'VERIFIED',
           uploadedAt: new Date(),
         },
-      ],
-      statusHistory: [{ status: i === 3 ? 'PENDING' : 'APPROVED', changedAt: new Date() }],
-    });
+      ];
+      await driverUser.save();
+    }
+
     drivers.push(driver);
   }
 
@@ -255,7 +242,7 @@ export async function seedAdminPlatform(): Promise<void> {
 
       await BookingModel.create({
         customerId: customer._id,
-        vendorId: assignedDriver.vendorId,
+        vendorId: assignedDriver.vendorId as never,
         bookingNumber: `BK${1000 + i}${String.fromCharCode(65 + (i % 26))}`,
         categoryId: 'towing',
         serviceId: 'towing-standard',
@@ -265,7 +252,7 @@ export async function seedAdminPlatform(): Promise<void> {
         vehicleNumber: vehicle!.vehicleNumber,
         pickup: { label: CITIES[i % CITIES.length], address: `${CITIES[i % CITIES.length]}, Odisha` },
         driver: {
-          id: assignedDriver._id.toString(),
+          id: assignedDriver.id,
           name: assignedDriver.name,
           rating: assignedDriver.rating,
           phone: assignedDriver.phone,
@@ -287,7 +274,7 @@ export async function seedAdminPlatform(): Promise<void> {
         amount,
         currency: 'INR',
         customerId: customers[i % customers.length]._id,
-        vendorId: vendors[i % vendors.length]._id,
+        vendorId: vendors[i % vendors.length].id as never,
         description: `${type} transaction`,
         reference: `REF-${i + 1}`,
         completedAt: new Date(Date.now() - i * 43200000),
@@ -331,8 +318,9 @@ export async function seedAdminPlatform(): Promise<void> {
     }
   }
 
-  await AdminNotificationModel.insertMany([
+  await NotificationModel.insertMany([
     {
+      recipient: { audience: 'admin' },
       title: 'New vendor registration',
       message: 'RACE Partner 3 is awaiting verification review.',
       type: 'info',
@@ -340,6 +328,7 @@ export async function seedAdminPlatform(): Promise<void> {
       isRead: false,
     },
     {
+      recipient: { audience: 'admin' },
       title: 'Booking surge detected',
       message: 'Booking volume is 20% above average today.',
       type: 'warning',
@@ -347,6 +336,7 @@ export async function seedAdminPlatform(): Promise<void> {
       isRead: false,
     },
     {
+      recipient: { audience: 'admin' },
       title: 'Payout batch ready',
       message: '12 vendor payouts are ready for approval.',
       type: 'success',
@@ -354,6 +344,7 @@ export async function seedAdminPlatform(): Promise<void> {
       isRead: true,
     },
     {
+      recipient: { audience: 'admin' },
       title: 'Driver document expired',
       message: 'Driver DRV0004 license renewal is due.',
       type: 'warning',
@@ -361,6 +352,7 @@ export async function seedAdminPlatform(): Promise<void> {
       isRead: false,
     },
     {
+      recipient: { audience: 'admin' },
       title: 'New subscription',
       message: 'Customer subscribed to Plus Care plan.',
       type: 'info',
@@ -368,6 +360,7 @@ export async function seedAdminPlatform(): Promise<void> {
       isRead: false,
     },
     {
+      recipient: { audience: 'admin' },
       title: 'Refund processed',
       message: 'Refund TXN000042 completed successfully.',
       type: 'success',
@@ -375,6 +368,7 @@ export async function seedAdminPlatform(): Promise<void> {
       isRead: true,
     },
     {
+      recipient: { audience: 'admin' },
       title: 'Customer account suspended',
       message: 'Customer CUST0007 was suspended by operations.',
       type: 'error',
@@ -382,6 +376,7 @@ export async function seedAdminPlatform(): Promise<void> {
       isRead: false,
     },
     {
+      recipient: { audience: 'admin' },
       title: 'Weekly report available',
       message: 'Platform performance report for last week is ready.',
       type: 'info',
@@ -405,24 +400,24 @@ export async function seedAdminPlatform(): Promise<void> {
 
   await ActivityLogModel.insertMany(
     activityEntries.map((entry, index) => ({
-      actorId: superAdmin._id,
-      actorName: superAdmin.name,
+      actorId: PLATFORM_ADMIN_ID,
+      actorName: platformAdmin.name,
       ...entry,
       createdAt: new Date(Date.now() - index * 3600000),
     })),
   );
 
   await ActivityLogModel.create({
-    actorId: superAdmin._id,
-    actorName: superAdmin.name,
+    actorId: PLATFORM_ADMIN_ID,
+    actorName: platformAdmin.name,
     action: 'SEED_COMPLETED',
     entityType: 'system',
     title: 'Development database seeded',
-    description: 'All admin collections cleared and re-seeded into MongoDB (race-service)',
+    description: 'Unified users collection seeded into MongoDB (race)',
   });
 
   logger.info('Admin platform seed completed', {
-    superAdmin: superAdmin.email,
+    superAdmin: platformAdmin.email,
     admins: 1,
     customers: customers.length,
     vendors: vendors.length,

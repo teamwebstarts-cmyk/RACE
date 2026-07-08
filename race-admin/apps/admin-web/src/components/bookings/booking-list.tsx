@@ -15,6 +15,12 @@ import { RowActionsMenu } from '@/components/shared/row-actions-menu';
 import { useBookingMutations } from '@/hooks/use-booking-mutations';
 import { useBookings } from '@/hooks/use-bookings';
 
+function bookingTypeBadge(type?: string) {
+  if (type === 'towing') return 'bg-blue-100 text-blue-700';
+  if (type === 'driver') return 'bg-green-100 text-green-700';
+  return 'bg-slate-100 text-slate-700';
+}
+
 const TABS = [
   { key: 'ALL', label: 'All Bookings' },
   { key: 'CREATED', label: 'Created' },
@@ -70,6 +76,8 @@ export function BookingList() {
     setSearch,
     serviceType,
     setServiceType,
+    bookingType,
+    setBookingType,
     dateFrom,
     setDateFrom,
     dateTo,
@@ -90,6 +98,19 @@ export function BookingList() {
   const columns = useMemo<ColumnDef<BookingListItem, unknown>[]>(
     () => [
       {
+        accessorKey: 'bookingType',
+        header: 'Type',
+        cell: ({ row }) => (
+          <span className={`rounded-full px-2 py-1 text-xs font-semibold ${bookingTypeBadge(row.original.bookingType)}`}>
+            {row.original.bookingType === 'towing'
+              ? 'Towing'
+              : row.original.bookingType === 'driver'
+                ? 'Driver'
+                : 'Legacy'}
+          </span>
+        ),
+      },
+      {
         accessorKey: 'bookingNumber',
         header: 'Booking ID',
         cell: ({ row }) => (
@@ -102,6 +123,11 @@ export function BookingList() {
         accessorKey: 'driverName',
         header: 'Driver',
         cell: ({ row }) => row.original.driverName ?? '—',
+      },
+      {
+        accessorKey: 'driverAssignment',
+        header: 'Assignment',
+        cell: ({ row }) => row.original.driverName ?? row.original.driverAssignment ?? 'Unassigned',
       },
       { accessorKey: 'service', header: 'Service' },
       {
@@ -124,7 +150,11 @@ export function BookingList() {
         header: 'Actions',
         cell: ({ row }) => (
           <RowActionsMenu
-            onView={() => navigate(`/bookings/${row.original.id}`)}
+            onView={() =>
+              navigate(
+                `/bookings/${row.original.id}${row.original.bookingType ? `?type=${row.original.bookingType}` : ''}`,
+              )
+            }
             onEdit={() => {
               setEditing(row.original);
               setFormOpen(true);
@@ -177,6 +207,18 @@ export function BookingList() {
             searchPlaceholder="Search by booking ID, customer, driver..."
             filters={[
               {
+                id: 'bookingType',
+                label: 'Booking Type',
+                value: bookingType,
+                onChange: setBookingType,
+                options: [
+                  { label: 'All', value: 'all' },
+                  { label: 'Towing', value: 'towing' },
+                  { label: 'Driver', value: 'driver' },
+                  { label: 'Legacy', value: 'legacy' },
+                ],
+              },
+              {
                 id: 'serviceType',
                 label: 'Service Type',
                 value: serviceType,
@@ -201,7 +243,9 @@ export function BookingList() {
             columns={columns}
             data={data?.items ?? []}
             emptyMessage="No bookings found"
-            onRowClick={(row) => navigate(`/bookings/${row.id}`)}
+            onRowClick={(row) =>
+              navigate(`/bookings/${row.id}${row.bookingType ? `?type=${row.bookingType}` : ''}`)
+            }
             getRowId={(row) => row.id}
           />
 

@@ -3,6 +3,7 @@ import type { Request, Response } from 'express';
 import { asyncHandler } from '../../../shared/utils/asyncHandler';
 import { sendSuccess } from '../../../shared/utils/apiResponse';
 import { adminBookingsService } from '../bookings/admin-bookings.service';
+import { adminServiceBookingsService } from '../bookings/admin-service-bookings.service';
 import { routeParam } from '../shared/route-param';
 import { getAdminActor } from '../utils/request.utils';
 
@@ -16,7 +17,11 @@ export const adminBookingsController = {
   }),
 
   getById: asyncHandler(async (req: Request, res: Response) => {
-    sendSuccess(res, await adminBookingsService.getById(routeParam(req.params.id)));
+    const type =
+      req.query.type === 'towing' || req.query.type === 'driver' || req.query.type === 'legacy'
+        ? req.query.type
+        : undefined;
+    sendSuccess(res, await adminBookingsService.getById(routeParam(req.params.id), type));
   }),
 
   create: asyncHandler(async (req: Request, res: Response) => {
@@ -48,12 +53,26 @@ export const adminBookingsController = {
     ));
   }),
 
+  assignServiceDriver: asyncHandler(async (req: Request, res: Response) => {
+    sendSuccess(res, await adminServiceBookingsService.assignDriver(
+      routeParam(req.params.id),
+      req.body,
+    ));
+  }),
+
+  cancelServiceBooking: asyncHandler(async (req: Request, res: Response) => {
+    sendSuccess(res, await adminServiceBookingsService.cancelBooking(
+      routeParam(req.params.id),
+      req.body,
+    ));
+  }),
+
   updateStatus: asyncHandler(async (req: Request, res: Response) => {
     sendSuccess(res, await adminBookingsService.updateStatus(
       routeParam(req.params.id),
       req.body.status,
       getAdminActor(req),
-      { reason: req.body.reason, amount: req.body.amount },
+      { reason: req.body.reason, amount: req.body.amount, bookingType: req.body.bookingType },
     ));
   }),
 };

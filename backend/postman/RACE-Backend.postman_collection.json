@@ -9,6 +9,9 @@
     { "key": "accessToken", "value": "" },
     { "key": "vehicleId", "value": "" },
     { "key": "bookingId", "value": "" },
+    { "key": "towingBookingId", "value": "" },
+    { "key": "driverBookingId", "value": "" },
+    { "key": "paymentTransactionId", "value": "" },
     { "key": "locationId", "value": "" }
   ],
   "item": [
@@ -164,10 +167,24 @@
       ]
     },
     {
-      "name": "5. Bookings",
+      "name": "5. Bookings (combined)",
       "item": [
         {
-          "name": "POST Create Booking",
+          "name": "GET All Bookings (towing + driver)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/bookings",
+            "description": "Merged list of towing and driver bookings. Optional: ?status=PENDING&type=towing"
+          }
+        }
+      ]
+    },
+    {
+      "name": "5b. Towing Bookings",
+      "item": [
+        {
+          "name": "POST Create Towing Booking",
           "event": [
             {
               "listen": "test",
@@ -175,7 +192,7 @@
                 "exec": [
                   "const json = pm.response.json();",
                   "if (json.success && json.data.id) {",
-                  "  pm.collectionVariables.set('bookingId', json.data.id);",
+                  "  pm.collectionVariables.set('towingBookingId', json.data.id);",
                   "}"
                 ]
               }
@@ -189,46 +206,70 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"categoryId\": \"towing\",\n  \"serviceId\": \"towing_instant\",\n  \"serviceLabel\": \"Instant Towing\",\n  \"serviceDescription\": \"Dispatched immediately\",\n  \"vehicleId\": \"{{vehicleId}}\",\n  \"pickup\": {\n    \"label\": \"Current Location\",\n    \"address\": \"Patia Square, Bhubaneswar\",\n    \"latitude\": 20.2961,\n    \"longitude\": 85.8245\n  },\n  \"dropoff\": {\n    \"label\": \"Drop\",\n    \"address\": \"Cuttack Road, Bhubaneswar\"\n  }\n}"
+              "raw": "{\n  \"vehicleId\": \"{{vehicleId}}\",\n  \"pickup\": {\n    \"address\": \"Patia Square, Bhubaneswar\",\n    \"latitude\": 20.2961,\n    \"longitude\": 85.8245\n  },\n  \"dropoff\": {\n    \"address\": \"Cuttack Road, Bhubaneswar\",\n    \"latitude\": 20.4625,\n    \"longitude\": 85.8830\n  }\n}"
             },
-            "url": "{{baseUrl}}/api/v1/bookings"
+            "url": "{{baseUrl}}/api/v1/bookings/towing"
           }
         },
         {
-          "name": "GET All Bookings",
+          "name": "GET Towing Bookings",
           "request": {
             "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
-            "url": "{{baseUrl}}/api/v1/bookings"
+            "url": "{{baseUrl}}/api/v1/bookings/towing"
           }
         },
         {
-          "name": "GET Booking By ID",
+          "name": "GET Towing Booking By ID",
           "request": {
             "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
-            "url": "{{baseUrl}}/api/v1/bookings/{{bookingId}}"
+            "url": "{{baseUrl}}/api/v1/bookings/towing/{{towingBookingId}}"
           }
         },
         {
-          "name": "GET Booking Tracking",
+          "name": "PATCH Towing Booking Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"DRIVER_ASSIGNED\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/bookings/towing/{{towingBookingId}}/status"
+          }
+        },
+        {
+          "name": "GET Towing Tracking",
           "request": {
             "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
-            "url": "{{baseUrl}}/api/v1/bookings/{{bookingId}}/tracking"
+            "url": "{{baseUrl}}/api/v1/bookings/towing/{{towingBookingId}}/tracking"
           }
-        },
+        }
+      ]
+    },
+    {
+      "name": "5c. Driver Bookings",
+      "item": [
         {
-          "name": "POST Advance Booking (demo)",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
-            "url": "{{baseUrl}}/api/v1/bookings/{{bookingId}}/advance",
-            "description": "Steps booking to next status for testing."
-          }
-        },
-        {
-          "name": "POST Submit Rating",
+          "name": "POST Create Driver Booking",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.success && json.data.id) {",
+                  "  pm.collectionVariables.set('driverBookingId', json.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -237,10 +278,168 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"rating\": 5,\n  \"review\": \"Excellent service!\",\n  \"tipAmount\": 100,\n  \"tags\": [\"professional\", \"on_time\", \"helpful\"]\n}"
+              "raw": "{\n  \"vehicleId\": \"{{vehicleId}}\",\n  \"pickup\": {\n    \"address\": \"Patia Square, Bhubaneswar\",\n    \"latitude\": 20.2961,\n    \"longitude\": 85.8245\n  },\n  \"estimatedDurationHours\": 3\n}"
             },
-            "url": "{{baseUrl}}/api/v1/bookings/{{bookingId}}/rating",
-            "description": "Run Advance several times until SERVICE_COMPLETED first."
+            "url": "{{baseUrl}}/api/v1/bookings/driver"
+          }
+        },
+        {
+          "name": "GET Driver Bookings",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/bookings/driver"
+          }
+        },
+        {
+          "name": "GET Driver Booking By ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/bookings/driver/{{driverBookingId}}"
+          }
+        },
+        {
+          "name": "PATCH Driver Booking Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"DRIVER_ASSIGNED\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/bookings/driver/{{driverBookingId}}/status"
+          }
+        },
+        {
+          "name": "GET Driver Tracking",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/bookings/driver/{{driverBookingId}}/tracking"
+          }
+        }
+      ]
+    },
+    {
+      "name": "5d. Roadside Bookings",
+      "item": [
+        {
+          "name": "GET Roadside Availability",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/bookings/roadside/availability"
+          }
+        },
+        {
+          "name": "POST Roadside Booking (Towing redirect)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serviceType\": \"towing_instant\",\n  \"vehicleId\": \"{{vehicleId}}\",\n  \"pickup\": {\n    \"address\": \"NH-16, Bhubaneswar\",\n    \"latitude\": 20.2961,\n    \"longitude\": 85.8245\n  }\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/bookings/roadside"
+          }
+        },
+        {
+          "name": "POST Roadside Booking (Coming soon)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serviceType\": \"roadside_battery_jump\",\n  \"vehicleId\": \"{{vehicleId}}\",\n  \"pickup\": {\n    \"address\": \"Patia Square, Bhubaneswar\",\n    \"latitude\": 20.2961,\n    \"longitude\": 85.8245\n  }\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/bookings/roadside"
+          }
+        }
+      ]
+    },
+    {
+      "name": "5e. Booking Payments (stub)",
+      "item": [
+        {
+          "name": "POST Initiate Advance Payment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.success && json.data.transactionId) {",
+                  "  pm.collectionVariables.set('paymentTransactionId', json.data.transactionId);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bookingId\": \"{{towingBookingId}}\",\n  \"bookingType\": \"towing\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/payments/advance"
+          }
+        },
+        {
+          "name": "POST Verify Advance Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transactionId\": \"{{paymentTransactionId}}\",\n  \"status\": \"success\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/payments/advance/verify"
+          }
+        },
+        {
+          "name": "POST Initiate Final Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bookingId\": \"{{towingBookingId}}\",\n  \"bookingType\": \"towing\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/payments/final"
+          }
+        },
+        {
+          "name": "POST Verify Final Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transactionId\": \"{{paymentTransactionId}}\",\n  \"status\": \"success\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/payments/final/verify"
           }
         }
       ]

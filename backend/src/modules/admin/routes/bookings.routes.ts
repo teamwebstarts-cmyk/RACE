@@ -3,8 +3,13 @@ import { Router } from 'express';
 import { AdminPermission } from '../shared/rbac';
 import { adminAuthMiddleware } from '../middleware/admin-auth.middleware';
 import { requireAdminPermission } from '../middleware/require-permission.middleware';
+import { validate } from '../../../middleware/validation.middleware';
 import { adminBookingsController } from '../controllers/bookings.controller';
 import { adminVehiclesController } from '../controllers/vehicles.controller';
+import {
+  assignServiceBookingDriverSchema,
+  cancelServiceBookingSchema,
+} from '../bookings/admin-service-bookings.validator';
 
 const router = Router();
 
@@ -56,7 +61,27 @@ router.post(
   requireAdminPermission(AdminPermission.BOOKINGS_MANAGE),
   adminBookingsController.assignDriver,
 );
+router.patch(
+  '/bookings/:id/assign-driver',
+  adminAuthMiddleware,
+  requireAdminPermission(AdminPermission.BOOKINGS_MANAGE),
+  validate(assignServiceBookingDriverSchema),
+  adminBookingsController.assignServiceDriver,
+);
 router.post(
+  '/bookings/:id/cancel',
+  adminAuthMiddleware,
+  requireAdminPermission(AdminPermission.BOOKINGS_MANAGE),
+  validate(cancelServiceBookingSchema),
+  adminBookingsController.cancelServiceBooking,
+);
+router.post(
+  '/bookings/:id/status',
+  adminAuthMiddleware,
+  requireAdminPermission(AdminPermission.BOOKINGS_MANAGE),
+  adminBookingsController.updateStatus,
+);
+router.patch(
   '/bookings/:id/status',
   adminAuthMiddleware,
   requireAdminPermission(AdminPermission.BOOKINGS_MANAGE),

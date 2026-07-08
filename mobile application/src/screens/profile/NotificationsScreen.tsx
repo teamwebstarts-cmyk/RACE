@@ -1,50 +1,55 @@
-import React, { useMemo, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
-import {
-  Bell,
-  CheckCircle,
-  IndianRupee,
-  Star,
-  Tag,
-  Truck,
-  type LucideIcon,
-} from 'lucide-react-native';
+import React, { useMemo } from 'react';
+import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native';
+import { Bell, CheckCircle, IndianRupee, Star, Tag, Truck, type LucideIcon } from 'lucide-react-native';
 
 import ProfileSubScreenLayout, { useProfilePx } from '../../components/profile/ProfileSubScreenLayout';
-import { NOTIFICATIONS } from '../../constants/demo';
-import type { NotificationItem } from '../../types/models';
+import { getApiErrorMessage } from '../../services/api';
+import {
+  useMarkAllNotificationsReadMutation,
+  useNotificationsQuery,
+} from '../../services/profile/useProfileQueries';
+import type { AppNotification } from '../../types/profile';
 import { colors, typography } from '../../theme';
 
 const ICONS: Record<string, LucideIcon> = {
-  Truck,
-  Star,
-  Tag,
-  CheckCircle,
-  IndianRupee,
+  booking: Truck,
+  offers: Tag,
+  subscription: Star,
+  general: Bell,
 };
 
-function groupNotifications(items: NotificationItem[]) {
-  const today: NotificationItem[] = [];
-  const yesterday: NotificationItem[] = [];
-  items.forEach(item => {
-    if (item.time.toLowerCase().includes('min') || item.time.toLowerCase().includes('hour')) {
-      today.push(item);
-    } else {
-      yesterday.push(item);
-    }
-  });
-  return { today, yesterday };
+function formatNotificationTime(iso: string): string {
+  const date = new Date(iso);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60_000);
+  if (diffMins < 60) return `${Math.max(1, diffMins)} min ago`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
+  return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 }
 
-function NotificationCard({
-  item,
-  px,
-}: {
-  item: NotificationItem;
-  px: (n: number) => number;
-}) {
-  const Icon = ICONS[item.icon] ?? Bell;
-  const unread = !item.isRead;
+function groupByDay(items: AppNotification[]) {
+  const today: AppNotification[] = [];
+  const earlier: AppNotification[] = [];
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+
+  items.forEach(item => {
+    const created = new Date(item.createdAt);
+    if (created >= startOfToday) {
+      today.push(item);
+    } else {
+      earlier.push(item);
+    }
+  });
+
+  return { today, earlier };
+}
+
+function NotificationCard({ item, px }: { item: AppNotification; px: (n: number) => number }) {
+  const Icon = ICONS[item.category] ?? Bell;
+  const unread = !item.read;
 
   return (
     <View
@@ -85,10 +90,12 @@ function NotificationCard({
             }}>
             {item.title}
           </Text>
-          <Text style={{ fontSize: px(10), color: colors.grey, flexShrink: 0 }}>{item.time}</Text>
+          <Text style={{ fontSize: px(10), color: colors.grey, flexShrink: 0 }}>
+            {formatNotificationTime(item.createdAt)}
+          </Text>
         </View>
         <Text style={{ fontSize: px(11), color: colors.grey, marginTop: px(4), lineHeight: px(15) }}>
-          {item.message}
+          {item.body}
         </Text>
       </View>
     </View>
@@ -97,66 +104,106 @@ function NotificationCard({
 
 export default function NotificationsScreen() {
   const px = useProfilePx();
-  const [items, setItems] = useState(NOTIFICATIONS);
-  const groups = useMemo(() => groupNotifications(items), [items]);
+  const { data, isLoading, isError, error, refetch } = useNotificationsQuery();
+  const markAllRead = useMarkAllNotificationsReadMutation();
 
-  const markAllRead = () => {
-    setItems(prev => prev.map(n => ({ ...n, isRead: true })));
+  const items = data?.notifications ?? [];
+  const groups = useMemo(() => groupByDay(items), [items]);
+
+  const handleMarkAllRead = () => {
+    markAllRead.mutate(undefined, {
+      onError: err => {
+        Alert.alert('Error', getApiErrorMessage(err, 'Unable to mark notifications as read'));
+      },
+    });
   };
 
   return (
     <ProfileSubScreenLayout
       title="Notifications"
       headerRight={
-        <Pressable onPress={markAllRead} hitSlop={8}>
-          <Text style={{ fontSize: px(12), fontWeight: typography.weights.bold, color: colors.primary }}>
-            Mark all read
-          </Text>
-        </Pressable>
+        items.length > 0 ? (
+          <Pressable onPress={handleMarkAllRead} hitSlop={8} disabled={markAllRead.isPending}>
+            <Text
+              style={{
+                fontSize: px(12),
+                fontWeight: typography.weights.bold,
+                color: markAllRead.isPending ? colors.grey : colors.primary,
+              }}>
+              Mark all read
+            </Text>
+          </Pressable>
+        ) : null
       }>
-      {groups.today.length > 0 ? (
-        <>
-          <Text
-            style={{
-              fontSize: px(11),
-              fontWeight: typography.weights.bold,
-              color: colors.grey,
-              letterSpacing: 0.8,
-              marginBottom: px(8),
-            }}>
-            TODAY
+      {isLoading ? (
+        <View style={{ alignItems: 'center', paddingVertical: px(40) }}>
+          <ActivityIndicator color={colors.primary} />
+        </View>
+      ) : isError ? (
+        <View style={{ alignItems: 'center', paddingVertical: px(24), gap: px(10) }}>
+          <Text style={{ fontSize: px(13), color: colors.grey, textAlign: 'center' }}>
+            {getApiErrorMessage(error, 'Unable to load notifications')}
           </Text>
-          {groups.today.map(item => (
-            <NotificationCard key={item.id} item={item} px={px} />
-          ))}
-        </>
-      ) : null}
-
-      {groups.yesterday.length > 0 ? (
+          <Pressable onPress={() => void refetch()}>
+            <Text style={{ fontSize: px(13), fontWeight: typography.weights.bold, color: colors.primary }}>
+              Try again
+            </Text>
+          </Pressable>
+        </View>
+      ) : items.length === 0 ? (
+        <View style={{ alignItems: 'center', paddingVertical: px(40) }}>
+          <Bell size={px(36)} color={colors.primary} strokeWidth={1.8} />
+          <Text style={{ marginTop: px(10), fontSize: px(14), color: colors.grey }}>No notifications yet</Text>
+        </View>
+      ) : (
         <>
-          <Text
-            style={{
-              fontSize: px(11),
-              fontWeight: typography.weights.bold,
-              color: colors.grey,
-              letterSpacing: 0.8,
-              marginTop: px(4),
-              marginBottom: px(8),
-            }}>
-            YESTERDAY
-          </Text>
-          {groups.yesterday.map(item => (
-            <NotificationCard key={item.id} item={item} px={px} />
-          ))}
-        </>
-      ) : null}
+          {groups.today.length > 0 ? (
+            <>
+              <Text
+                style={{
+                  fontSize: px(11),
+                  fontWeight: typography.weights.bold,
+                  color: colors.grey,
+                  letterSpacing: 0.8,
+                  marginBottom: px(8),
+                }}>
+                TODAY
+              </Text>
+              {groups.today.map(item => (
+                <NotificationCard key={item.id} item={item} px={px} />
+              ))}
+            </>
+          ) : null}
 
-      <View style={{ alignItems: 'center', paddingTop: px(16), paddingBottom: px(8) }}>
-        <Bell size={px(36)} color={colors.primary} strokeWidth={1.8} />
-        <Text style={{ marginTop: px(8), fontSize: px(13), color: colors.grey }}>
-          You're all caught up!
-        </Text>
-      </View>
+          {groups.earlier.length > 0 ? (
+            <>
+              <Text
+                style={{
+                  fontSize: px(11),
+                  fontWeight: typography.weights.bold,
+                  color: colors.grey,
+                  letterSpacing: 0.8,
+                  marginTop: px(4),
+                  marginBottom: px(8),
+                }}>
+                EARLIER
+              </Text>
+              {groups.earlier.map(item => (
+                <NotificationCard key={item.id} item={item} px={px} />
+              ))}
+            </>
+          ) : null}
+
+          {data?.unreadCount === 0 ? (
+            <View style={{ alignItems: 'center', paddingTop: px(16), paddingBottom: px(8) }}>
+              <CheckCircle size={px(28)} color={colors.success} />
+              <Text style={{ marginTop: px(8), fontSize: px(13), color: colors.grey }}>
+                You're all caught up!
+              </Text>
+            </View>
+          ) : null}
+        </>
+      )}
     </ProfileSubScreenLayout>
   );
 }

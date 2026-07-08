@@ -395,15 +395,26 @@ export interface VendorOption {
 // ─── Booking Management ────────────────────────────────────────────────────
 
 export type BookingStatus =
+  | 'PENDING'
+  | 'CONFIRMED'
+  | 'DRIVER_ASSIGNED'
+  | 'DRIVER_EN_ROUTE'
+  | 'DRIVER_ARRIVED'
   | 'CREATED'
   | 'ASSIGNED'
   | 'EN_ROUTE'
   | 'IN_PROGRESS'
   | 'COMPLETED'
-  | 'CANCELLED';
+  | 'RATED'
+  | 'CANCELLED'
+  | 'REFUNDED'
+  | 'PAID';
+
+export type BookingType = 'legacy' | 'towing' | 'driver';
 
 export interface BookingListItem {
   id: string;
+  bookingType?: BookingType;
   bookingNumber: string;
   customerId: string;
   customerName: string;
@@ -411,18 +422,23 @@ export interface BookingListItem {
   vendorName: string;
   driverId?: string;
   driverName?: string;
+  driverAssignment?: 'Assigned' | 'Unassigned';
   service: string;
   serviceType: string;
   amount: number;
   status: BookingStatus;
   date: string;
   city: string;
+  fareBreakdown?: Record<string, unknown>;
+  vehicleCategory?: string;
+  packageHours?: number;
 }
 
 export interface BookingListFilters {
   search?: string;
   status?: BookingStatus | 'ALL';
   serviceType?: string;
+  type?: 'towing' | 'driver' | 'all' | 'legacy';
   dateFrom?: string;
   dateTo?: string;
   page?: number;
@@ -464,6 +480,28 @@ export interface BookingDetail extends BookingListItem {
   location: BookingLocation;
   payment: BookingPaymentInfo;
   timeline: BookingTimelineEvent[];
+  statusHistory?: Array<{ id: string; status: string; timestamp: string; note?: string }>;
+  paymentTransactions?: Array<{
+    id: string;
+    paymentType: string;
+    amount: number;
+    status: string;
+    note?: string;
+    createdAt: string;
+  }>;
+  customer?: { name: string; mobile: string; email?: string };
+  driver?: { name: string; mobile: string; currentLocation?: { latitude?: number; longitude?: number; updatedAt?: string } | null };
+  vehicle?: { brand?: string; model?: string; vehicleNumber?: string };
+  fareBreakdown?: Record<string, unknown>;
+  packageHours?: number;
+  vehicleCategory?: string;
+  cancellationInfo?: {
+    cancelledAt?: string;
+    cancelledBy?: string;
+    cancellationReason?: string;
+    refundAmount?: number;
+    refundStatus?: string;
+  };
   notes?: string;
 }
 

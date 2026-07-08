@@ -30,6 +30,8 @@ interface TowingBookingLayoutProps {
   footerNoteBelow?: ReactNode;
   scrollable?: boolean;
   hideFooter?: boolean;
+  continueDisabled?: boolean;
+  showStep?: boolean;
   headerVariant?: 'centered' | 'inline';
   accentColor?: string;
 }
@@ -48,6 +50,8 @@ export default function TowingBookingLayout({
   footerNoteBelow,
   scrollable = false,
   hideFooter = false,
+  continueDisabled = false,
+  showStep = true,
   headerVariant = 'centered',
   accentColor = colors.primary,
 }: TowingBookingLayoutProps) {
@@ -71,6 +75,7 @@ export default function TowingBookingLayout({
             height={t.buttonHeight}
             borderRadius={t.cardRadius}
             labelSize={t.buttonLabel}
+            disabled={continueDisabled}
           />
         ) : (
           <Pressable
@@ -137,7 +142,8 @@ export default function TowingBookingLayout({
             theme={t}
             footer={footer}
             headerVariant={headerVariant}
-            accentColor={accentColor}>
+            accentColor={accentColor}
+            showStep={showStep}>
             {body}
           </BookingScreenShell>
         </View>

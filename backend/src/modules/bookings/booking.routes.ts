@@ -3,17 +3,13 @@ import { Router } from 'express';
 import { authMiddleware } from '../../middleware/auth.middleware';
 import { validate } from '../../middleware/validation.middleware';
 import { bookingController } from './booking.controller';
-import { createBookingSchema, submitRatingSchema } from './booking.validator';
+import { combinedBookingListQuerySchema } from './combined-booking.validator';
 
 const router = Router();
 
 router.use(authMiddleware);
 
-router.post('/', validate(createBookingSchema), bookingController.create);
-router.get('/', bookingController.list);
-router.get('/:id', bookingController.getById);
-router.get('/:id/tracking', bookingController.getTracking);
-router.post('/:id/rating', validate(submitRatingSchema), bookingController.submitRating);
-router.post('/:id/advance', bookingController.advanceDemo);
+/** Combined list of towing + driver bookings for the authenticated customer. */
+router.get('/', validate(combinedBookingListQuerySchema, 'query'), bookingController.list);
 
 export default router;

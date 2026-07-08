@@ -1,7 +1,10 @@
 import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import type { BookingDetail } from '@race/types';
 import { Permission } from '@race/types';
+import { assignServiceBookingDriver, getAvailableDrivers, updateBookingStatus } from '@race/api';
 import { formatCurrency, formatDateTime } from '@race/utils';
 import {
   Card,
@@ -127,9 +130,47 @@ function PaymentCard({ booking }: { booking: BookingDetail }) {
   );
 }
 
-export function BookingDetailContent({ bookingId }: { bookingId: string }) {
+export function BookingDetailContent({
+  bookingId,
+  bookingType,
+}: {
+  bookingId: string;
+  bookingType?: 'towing' | 'driver' | 'legacy';
+}) {
   const user = useAuthStore((s) => s.user);
-  const { data: booking, isLoading, isError, refetch } = useBookingDetail(bookingId);
+  const { data: booking, isLoading, isError, refetch } = useBookingDetail(bookingId, bookingType);
+  const qc = useQueryClient();
+  const [selectedDriverId, setSelectedDriverId] = useState('');
+  const [nextStatus, setNextStatus] = useState('');
+
+  const availableDriversQuery = useQuery({
+    queryKey: ['available-drivers', bookingType],
+    queryFn: () =>
+      getAvailableDrivers(
+        bookingType === 'towing' || bookingType === 'driver' ? { bookingType } : undefined,
+      ),
+    enabled: bookingType === 'towing' || bookingType === 'driver',
+  });
+
+  const assignDriverMutation = useMutation({
+    mutationFn: (driverId: string) =>
+      assignServiceBookingDriver(bookingId, { driverId, bookingType: bookingType as 'towing' | 'driver' }),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ['booking', bookingId] });
+      await qc.invalidateQueries({ queryKey: ['bookings'] });
+    },
+  });
+
+  const updateStatusMutation = useMutation({
+    mutationFn: (status: string) =>
+      updateBookingStatus(bookingId, status, {
+        bookingType: bookingType as 'towing' | 'driver' | 'legacy' | undefined,
+      }),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ['booking', bookingId] });
+      await qc.invalidateQueries({ queryKey: ['bookings'] });
+    },
+  });
 
   if (isLoading) return <LoadingState message="Loading booking..." />;
   if (isError || !booking) {
@@ -154,6 +195,28 @@ export function BookingDetailContent({ bookingId }: { bookingId: string }) {
 
       <div className="space-y-6">
         <SummaryCard booking={booking} />
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Booking Meta</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-3">
+              <div>
+                <p className="text-xs text-[#9CA3AF]">Booking Type</p>
+                <p className="text-sm font-semibold text-[#1A1A2E]">{booking.bookingType ?? 'legacy'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-[#9CA3AF]">Vehicle Category</p>
+                <p className="text-sm font-semibold text-[#1A1A2E]">{booking.vehicleCategory ?? '—'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-[#9CA3AF]">Package Hours</p>
+                <p className="text-sm font-semibold text-[#1A1A2E]">{booking.packageHours ?? '—'}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           <EntityCard
@@ -181,6 +244,90 @@ export function BookingDetailContent({ bookingId }: { bookingId: string }) {
           <LocationMap location={booking.location} />
           <PaymentCard booking={booking} />
         </div>
+
+        {booking.fareBreakdown ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Fare Breakdown</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <pre className="overflow-auto rounded-md bg-[#F8F8F8] p-3 text-xs">
+                {JSON.stringify(booking.fareBreakdown, null, 2)}
+              </pre>
+            </CardContent>
+          </Card>
+        ) : null}
+
+        {bookingType === 'towing' || bookingType === 'driver' ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Driver Assignment</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                <select
+                  className="rounded-md border border-border px-3 py-2 text-sm"
+                  value={selectedDriverId}
+                  onChange={(e) => setSelectedDriverId(e.target.value)}
+                >
+                  <option value="">Select available driver</option>
+                  {(availableDriversQuery.data ?? []).map((d) => (
+                    <option key={d._id} value={d._id}>
+                      {d.fullName} ({d.mobileNumber})
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  className="rounded-md bg-[#F5A623] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                  disabled={!selectedDriverId || assignDriverMutation.isPending}
+                  onClick={() => assignDriverMutation.mutate(selectedDriverId)}
+                >
+                  {assignDriverMutation.isPending ? 'Assigning...' : 'Assign Driver'}
+                </button>
+              </div>
+            </CardContent>
+          </Card>
+        ) : null}
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Status Controls</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col gap-3 md:flex-row md:items-center">
+              <select
+                className="rounded-md border border-border px-3 py-2 text-sm"
+                value={nextStatus}
+                onChange={(e) => setNextStatus(e.target.value)}
+              >
+                <option value="">Select status</option>
+                {[
+                  'PENDING',
+                  'CONFIRMED',
+                  'DRIVER_ASSIGNED',
+                  'DRIVER_EN_ROUTE',
+                  'DRIVER_ARRIVED',
+                  'IN_PROGRESS',
+                  'COMPLETED',
+                  'CANCELLED',
+                ].map((status) => (
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className="rounded-md bg-[#1A1A2E] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                disabled={!nextStatus || updateStatusMutation.isPending}
+                onClick={() => updateStatusMutation.mutate(nextStatus)}
+              >
+                {updateStatusMutation.isPending ? 'Updating...' : 'Update Status'}
+              </button>
+            </div>
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>

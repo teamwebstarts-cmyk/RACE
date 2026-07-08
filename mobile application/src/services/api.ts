@@ -3,6 +3,7 @@ import * as SecureStore from 'expo-secure-store';
 
 import { API_BASE_URL, TOKEN_KEYS } from '../config/env';
 import type { ApiErrorResponse, ApiSuccessResponse } from '../types/auth';
+import { notifyUnauthorized } from './authSession';
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -61,6 +62,7 @@ api.interceptors.response.use(
     const refreshToken = await getRefreshToken();
     if (!refreshToken) {
       await clearTokens();
+      notifyUnauthorized();
       return Promise.reject(error);
     }
 
@@ -98,6 +100,7 @@ api.interceptors.response.use(
     } catch (refreshError) {
       processQueue(null);
       await clearTokens();
+      notifyUnauthorized();
       return Promise.reject(refreshError);
     } finally {
       isRefreshing = false;

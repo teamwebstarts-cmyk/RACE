@@ -7,6 +7,7 @@ import type {
   TowingTypeId,
   TowingVehicleTypeId,
 } from '../types/towingBooking';
+import { formatReadableAddress } from '../utils/readableAddress';
 
 export const TOWING_BOOKING_STEPS = 10;
 
@@ -97,7 +98,6 @@ export const TOWING_TIME_OPTIONS: Array<{
   label: string;
   Icon: LucideIcon;
 }> = [
-  { id: 'asap', label: 'ASAP', Icon: Zap },
   { id: '30-60', label: '30–60 min', Icon: Clock },
   { id: '60-90', label: '60–90 min', Icon: Timer },
   { id: 'custom', label: 'Custom Time', Icon: CalendarClock },
@@ -127,9 +127,17 @@ export function getDateLabel(dateId: string): string {
 }
 
 export function getTimeLabel(timeId: TowingTimeId): string {
-  return TOWING_TIME_OPTIONS.find(t => t.id === timeId)?.label ?? 'ASAP';
+  return TOWING_TIME_OPTIONS.find(t => t.id === timeId)?.label ?? '30–60 min';
 }
 
 export function getShortLocation(address: string): string {
-  return address.split(',')[0]?.trim() || address;
+  return formatReadableAddress(address);
+}
+
+export function getServiceLocationLabel(
+  serviceLocation: import('../types/towingBooking').ServiceLocationData | null,
+): string {
+  if (!serviceLocation) return '—';
+  if (serviceLocation.vehicleLabel) return serviceLocation.vehicleLabel;
+  return serviceLocation.address;
 }

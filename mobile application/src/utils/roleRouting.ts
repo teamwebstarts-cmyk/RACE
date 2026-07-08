@@ -1,6 +1,6 @@
 import type { AuthUser } from '../types/auth';
 
-export type UserRole = 'customer' | 'vendor' | 'admin';
+export type UserRole = 'customer' | 'vendor' | 'driver';
 
 export function isVendorRole(user: AuthUser | null | undefined): boolean {
   return user?.role === 'vendor';

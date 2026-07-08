@@ -31,7 +31,10 @@ export async function sendOtp(payload: SendOtpRequest): Promise<SendOtpResponse>
 }
 
 export async function verifyOtp(payload: VerifyOtpRequest): Promise<VerifyOtpResponse> {
-  return authService.verifyOtp(payload.mobileNumber, payload.otp);
+  return authService.verifyOtp({
+    mobileNumber: payload.mobileNumber,
+    otp: payload.otp,
+  });
 }
 
 export async function completeProfile(payload: CompleteProfileRequest): Promise<AuthUser> {

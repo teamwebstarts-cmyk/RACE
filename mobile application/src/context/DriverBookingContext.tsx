@@ -1,4 +1,11 @@
-import React, { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
 
 import { DEFAULT_DRIVER_BOOKING, type DriverBookingState } from '../types/driverBooking';
 
@@ -13,15 +20,21 @@ const DriverBookingContext = createContext<DriverBookingContextValue | null>(nul
 export function DriverBookingProvider({ children }: { children: ReactNode }) {
   const [booking, setBooking] = useState<DriverBookingState>(DEFAULT_DRIVER_BOOKING);
 
+  const updateBooking = useCallback((patch: Partial<DriverBookingState>) => {
+    setBooking(prev => ({ ...prev, ...patch }));
+  }, []);
+
+  const resetBooking = useCallback(() => {
+    setBooking(DEFAULT_DRIVER_BOOKING);
+  }, []);
+
   const value = useMemo(
     () => ({
       booking,
-      updateBooking: (patch: Partial<DriverBookingState>) => {
-        setBooking(prev => ({ ...prev, ...patch }));
-      },
-      resetBooking: () => setBooking(DEFAULT_DRIVER_BOOKING),
+      updateBooking,
+      resetBooking,
     }),
-    [booking],
+    [booking, updateBooking, resetBooking],
   );
 
   return (

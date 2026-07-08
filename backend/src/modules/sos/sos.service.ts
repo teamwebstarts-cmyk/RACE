@@ -1,21 +1,19 @@
 import { randomUUID } from 'crypto';
 
+import { env } from '../../config/env';
 import { userRepository } from '../users/user.repository';
 import { vehicleRepository } from '../vehicles/vehicle.repository';
 import { notificationService } from '../notifications/notification.service';
 import type { AppConfigDto, SosAlertDto, SosResponseDto } from './sos.validator';
 
-const EMERGENCY_PHONE = '+911080808080';
-const SUPPORT_PHONE = '+911800123456';
-
 export class SosService {
   getAppConfig(): AppConfigDto {
     return {
-      supportPhone: SUPPORT_PHONE,
-      emergencyPhone: EMERGENCY_PHONE,
-      avgArrivalMinutes: 25,
+      supportPhone: env.SOS_SUPPORT_PHONE,
+      emergencyPhone: env.SOS_EMERGENCY_PHONE,
+      avgArrivalMinutes: env.SOS_AVG_ARRIVAL_MINUTES,
       trustIndicators: [
-        { label: 'Avg. Arrival', value: '25 min' },
+        { label: 'Avg. Arrival', value: `${env.SOS_AVG_ARRIVAL_MINUTES} min` },
         { label: 'Live Support', value: '24/7' },
         { label: 'Trusted Professionals', value: 'Verified' },
       ],
@@ -60,7 +58,7 @@ export class SosService {
       alertId,
       action: dto.action,
       message: actionMessages[dto.action],
-      emergencyNumber: EMERGENCY_PHONE,
+      emergencyNumber: env.SOS_EMERGENCY_PHONE,
       notifiedContacts: notifiedContacts.length > 0 ? notifiedContacts : undefined,
     };
   }
@@ -94,7 +92,7 @@ export class SosService {
             fuelType: vehicle.fuelType,
           }
         : null,
-      emergencyNumber: EMERGENCY_PHONE,
+      emergencyNumber: env.SOS_EMERGENCY_PHONE,
     };
   }
 }

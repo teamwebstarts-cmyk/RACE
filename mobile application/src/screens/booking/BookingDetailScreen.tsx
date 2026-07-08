@@ -1,5 +1,5 @@
 import React from 'react';
-import { Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import StatusChip from '../../components/ui/StatusChip';
 import PrimaryButton from '../../components/ui/PrimaryButton';
 import Screen, { Card, ScreenContent } from '../../components/ui/Screen';
+import { useFinalPayment } from '../../hooks/useFinalPayment';
 import { useBookingQuery } from '../../services/bookings/useBookingQueries';
 import type { BookingsStackParamList } from '../../types/navigation';
 import { colors, spacing, typography } from '../../theme';
@@ -15,6 +16,7 @@ type Props = NativeStackScreenProps<BookingsStackParamList, 'BookingDetail'>;
 
 export default function BookingDetailScreen({ navigation, route }: Props) {
   const booking = useBookingQuery(route.params.bookingId);
+  const { payRemaining, isPaying } = useFinalPayment();
 
   if (!booking) {
     return (
@@ -29,7 +31,22 @@ export default function BookingDetailScreen({ navigation, route }: Props) {
   const isTrackable = ['ASSIGNED', 'ACCEPTED', 'EN_ROUTE', 'ARRIVED', 'SERVICE_STARTED'].includes(
     booking.status,
   );
-  const canRate = booking.status === 'SERVICE_COMPLETED' || booking.status === 'PAYMENT_PENDING';
+  const canRate =
+    (booking.status === 'SERVICE_COMPLETED' || booking.unifiedStatus === 'COMPLETED') &&
+    !booking.rating;
+  const needsFinalPayment =
+    booking.advancePaid &&
+    !booking.remainingPaid &&
+    (booking.remainingAmount ?? 0) > 0 &&
+    (booking.status === 'SERVICE_COMPLETED' ||
+      booking.unifiedStatus === 'COMPLETED' ||
+      booking.unifiedStatus === 'RATED');
+
+  const handlePayRemaining = async () => {
+    const bookingType = booking.bookingType ?? 'towing';
+    const ok = await payRemaining(booking.id, bookingType);
+    if (ok) Alert.alert('Payment successful', 'Remaining balance has been paid.');
+  };
 
   return (
     <Screen>
@@ -110,19 +127,38 @@ export default function BookingDetailScreen({ navigation, route }: Props) {
             {canRate && !booking.rating ? (
               <PrimaryButton
                 label="Rate Experience"
-                onPress={() => navigation.navigate('RatingReview', { bookingId: booking.id })}
+                onPress={() =>
+                  navigation.navigate('RatingReview', {
+                    bookingId: booking.id,
+                    bookingType: booking.bookingType ?? 'towing',
+                  })
+                }
+              />
+            ) : null}
+            {needsFinalPayment ? (
+              <PrimaryButton
+                label={
+                  isPaying
+                    ? 'Processing payment...'
+                    : `Pay remaining ₹${booking.remainingAmount?.toLocaleString('en-IN') ?? ''}`
+                }
+                onPress={() => void handlePayRemaining()}
+                disabled={isPaying}
               />
             ) : null}
             <PrimaryButton
               label="Book Again"
-              onPress={() =>
-                navigation.navigate('BookingFlow', {
-                  categoryId: booking.categoryId,
-                  serviceId: booking.serviceId,
-                  serviceLabel: booking.serviceLabel,
-                  serviceDescription: booking.serviceDescription,
-                })
-              }
+              onPress={() => {
+                const bookingType = booking.bookingType ?? 'towing';
+                const categoryId = booking.categoryId ?? bookingType;
+                const targetScreen =
+                  bookingType === 'driver' || categoryId === 'driver'
+                    ? 'DriverService'
+                    : categoryId === 'roadside'
+                      ? 'RoadsideAssistance'
+                      : 'TowingService';
+                navigation.getParent()?.navigate('Home', { screen: targetScreen });
+              }}
               variant="outline"
             />
           </ScreenContent>

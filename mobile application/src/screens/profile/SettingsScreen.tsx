@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Alert, Pressable, Switch, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, Switch, Text, View } from 'react-native';
 import { ChevronRight, Lock } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -9,6 +9,11 @@ import {
   SETTINGS_SECTIONS,
   type SettingsToggleId,
 } from '../../constants/profileSubScreens';
+import { getApiErrorMessage } from '../../services/api';
+import {
+  useNotificationPrefsQuery,
+  useUpdateNotificationPrefMutation,
+} from '../../services/profile/useProfileQueries';
 import type { ProfileStackParamList } from '../../types/navigation';
 import { colors, shadows, typography } from '../../theme';
 
@@ -20,6 +25,8 @@ const SETTINGS_ROUTES: Partial<Record<string, keyof ProfileStackParamList>> = {
 export default function SettingsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const px = useProfilePx();
+  const { data: serverPrefs, isLoading: prefsLoading } = useNotificationPrefsQuery();
+  const updatePref = useUpdateNotificationPrefMutation();
 
   const initialToggles = useMemo(() => {
     const map: Record<SettingsToggleId, boolean> = {
@@ -28,20 +35,46 @@ export default function SettingsScreen() {
       sms: true,
       emergency: true,
     };
+    if (serverPrefs) {
+      serverPrefs.forEach(pref => {
+        if (pref.id === 'booking_updates') map.push = pref.enabled;
+        if (pref.id === 'offers') map.email = pref.enabled;
+        if (pref.id === 'subscription') map.sms = pref.enabled;
+        if (pref.id === 'push') map.push = pref.enabled;
+      });
+    }
     SETTINGS_SECTIONS.forEach(section => {
       section.items.forEach(item => {
-        if (item.kind === 'toggle') {
+        if (item.kind === 'toggle' && !serverPrefs) {
           map[item.id] = item.defaultOn;
         }
       });
     });
     return map;
-  }, []);
+  }, [serverPrefs]);
 
   const [toggles, setToggles] = useState(initialToggles);
 
+  React.useEffect(() => {
+    setToggles(initialToggles);
+  }, [initialToggles]);
+
   const setToggle = (id: SettingsToggleId, value: boolean) => {
     setToggles(prev => ({ ...prev, [id]: value }));
+    if (id === 'emergency') return;
+
+    const prefId =
+      id === 'push' ? 'push' : id === 'email' ? 'offers' : id === 'sms' ? 'subscription' : id;
+
+    updatePref.mutate(
+      { prefId, enabled: value },
+      {
+        onError: err => {
+          setToggles(prev => ({ ...prev, [id]: !value }));
+          Alert.alert('Update failed', getApiErrorMessage(err));
+        },
+      },
+    );
   };
 
   const handleNavPress = (id: string, title: string, danger?: boolean) => {
@@ -51,7 +84,7 @@ export default function SettingsScreen() {
     }
     const route = SETTINGS_ROUTES[id];
     if (route) {
-      navigation.navigate(route);
+      navigation.navigate(route as never);
       return;
     }
     Alert.alert(title, 'Coming soon.');
@@ -59,6 +92,11 @@ export default function SettingsScreen() {
 
   return (
     <ProfileSubScreenLayout title="Settings" subtitle="App settings and privacy">
+      {prefsLoading ? (
+        <View style={{ alignItems: 'center', paddingVertical: px(20) }}>
+          <ActivityIndicator color={colors.primary} />
+        </View>
+      ) : null}
       {SETTINGS_SECTIONS.map(section => (
         <View key={section.title} style={{ marginBottom: px(16) }}>
           <Text

@@ -1,7 +1,9 @@
 import { createApp } from './app';
+import { createServer } from 'http';
 import { connectDatabase, disconnectDatabase } from './config/database';
 import { connectCache, disconnectCache } from './config/cache';
 import { env } from './config/env';
+import { initializeSocket } from './shared/socket.service';
 import { logger } from './shared/utils/logger';
 
 async function bootstrap(): Promise<void> {
@@ -11,8 +13,10 @@ async function bootstrap(): Promise<void> {
   await connectCache();
 
   const app = createApp();
+  const httpServer = createServer(app);
+  initializeSocket(httpServer);
 
-  const server = app.listen(env.PORT, '0.0.0.0', () => {
+  const server = httpServer.listen(env.PORT, '0.0.0.0', () => {
     logger.info(`RACE API running on port ${env.PORT}`, {
       env: env.NODE_ENV,
       apiPrefix: env.API_PREFIX,

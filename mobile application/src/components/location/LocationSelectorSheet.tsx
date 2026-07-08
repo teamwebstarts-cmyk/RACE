@@ -1,0 +1,329 @@
+import React, { useCallback, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import * as Location from 'expo-location';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Crosshair, Map as MapIcon, MapPin, Search } from 'lucide-react-native';
+
+import { images } from '../../assets';
+import LocationPickerMap from '../booking/LocationPickerMap';
+import { SERVICEABLE_AREAS } from '../../config/serviceableAreas';
+import { useLocationStore } from '../../store/locationStore';
+import { reverseGeocode } from '../../utils/googleMaps';
+import { colors, shadows, typography } from '../../theme';
+
+interface LocationSelectorSheetProps {
+  visible: boolean;
+  onLocationSelected: () => void;
+  /** When false, sheet can be dismissed (returning user changing location). */
+  dismissible?: boolean;
+  onRequestClose?: () => void;
+}
+
+export default function LocationSelectorSheet({
+  visible,
+  onLocationSelected,
+  dismissible = false,
+  onRequestClose,
+}: LocationSelectorSheetProps) {
+  const setLocation = useLocationStore(state => state.setLocation);
+  const selectedLocation = useLocationStore(state => state.selectedLocation);
+
+  const [showMapPicker, setShowMapPicker] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
+
+  const applyLocation = useCallback(
+    (location: { address: string; latitude: number; longitude: number }) => {
+      setLocation(location);
+      setShowMapPicker(false);
+      onLocationSelected();
+    },
+    [onLocationSelected, setLocation],
+  );
+
+  const handleUseCurrentLocation = useCallback(async () => {
+    setIsLocating(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission needed',
+          'Allow location access to use your current location, or search on the map.',
+        );
+        return;
+      }
+
+      const position = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      const { latitude, longitude } = position.coords;
+      const address = await reverseGeocode(latitude, longitude);
+      applyLocation({ address, latitude, longitude });
+    } catch {
+      Alert.alert('Location error', 'Unable to get your current location. Try the map picker.');
+    } finally {
+      setIsLocating(false);
+    }
+  }, [applyLocation]);
+
+  const handleCityChip = useCallback(
+    (cityName: string) => {
+      const city = SERVICEABLE_AREAS.find(area => area.name === cityName);
+      if (!city) return;
+
+      if (city.comingSoon) {
+        Alert.alert(
+          'Coming soon',
+          `${city.displayName} is coming soon! We'll notify you when we launch there.`,
+        );
+        return;
+      }
+
+      applyLocation({
+        address: `${city.displayName}, ${city.state}`,
+        latitude: city.centerLat,
+        longitude: city.centerLng,
+      });
+    },
+    [applyLocation],
+  );
+
+  return (
+    <>
+      <Modal
+        visible={visible && !showMapPicker}
+        animationType="slide"
+        transparent
+        onRequestClose={() => {
+          if (dismissible) onRequestClose?.();
+        }}>
+        <View style={styles.backdrop}>
+          {dismissible ? (
+            <Pressable style={StyleSheet.absoluteFill} onPress={onRequestClose} />
+          ) : null}
+          <SafeAreaView edges={['bottom']} style={styles.sheet}>
+            <View style={styles.handle} />
+
+            <Image
+              source={images.logo}
+              style={styles.logo}
+              resizeMode="contain"
+              accessibilityLabel="RACE"
+            />
+
+            <Text style={styles.title}>Set your location</Text>
+            <Text style={styles.subtitle}>
+              Choose where you need help so we can show nearby services
+            </Text>
+
+            <Pressable style={styles.searchBar} onPress={() => setShowMapPicker(true)}>
+              <Search size={18} color={colors.grey} strokeWidth={2} />
+              <Text style={styles.searchPlaceholder}>Search your location...</Text>
+            </Pressable>
+
+            <View style={styles.dividerRow}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>or</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            <Pressable
+              style={[styles.actionRow, shadows.card]}
+              onPress={() => void handleUseCurrentLocation()}
+              disabled={isLocating}>
+              {isLocating ? (
+                <ActivityIndicator size="small" color={colors.dark} />
+              ) : (
+                <Crosshair size={20} color={colors.dark} strokeWidth={2.2} />
+              )}
+              <Text style={styles.actionText}>
+                {isLocating ? 'Getting your location...' : 'Use my current location'}
+              </Text>
+            </Pressable>
+
+            <View style={styles.dividerRow}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>Select on map</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            <Pressable
+              style={[styles.actionRow, shadows.card]}
+              onPress={() => setShowMapPicker(true)}>
+              <MapIcon size={20} color={colors.dark} strokeWidth={2} />
+              <Text style={styles.actionText}>Open Map Picker</Text>
+            </Pressable>
+
+            <Text style={styles.popularLabel}>Popular cities</Text>
+            <View style={styles.chipsRow}>
+              {SERVICEABLE_AREAS.map(city => (
+                <Pressable
+                  key={city.name}
+                  style={[styles.chip, city.comingSoon && styles.chipSoon]}
+                  onPress={() => handleCityChip(city.name)}>
+                  <MapPin
+                    size={14}
+                    color={city.comingSoon ? colors.grey : colors.dark}
+                    strokeWidth={2.2}
+                  />
+                  <Text
+                    style={[
+                      styles.chipText,
+                      city.comingSoon && { color: colors.grey },
+                    ]}>
+                    {city.displayName}
+                    {city.comingSoon ? ' · Soon' : ''}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </SafeAreaView>
+        </View>
+      </Modal>
+
+      <LocationPickerMap
+        visible={showMapPicker}
+        title="Select Your Location"
+        initialLocation={
+          selectedLocation
+            ? {
+                latitude: selectedLocation.latitude,
+                longitude: selectedLocation.longitude,
+              }
+            : undefined
+        }
+        onClose={() => setShowMapPicker(false)}
+        onLocationSelected={location => applyLocation(location)}
+      />
+    </>
+  );
+}
+
+const styles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  sheet: {
+    backgroundColor: colors.background,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 16,
+  },
+  handle: {
+    alignSelf: 'center',
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.border,
+    marginBottom: 16,
+  },
+  logo: {
+    width: 64,
+    height: 64,
+    marginBottom: 14,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: typography.weights.extrabold,
+    color: colors.dark,
+  },
+  subtitle: {
+    marginTop: 6,
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.grey,
+    marginBottom: 20,
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    backgroundColor: colors.lightGrey,
+  },
+  searchPlaceholder: {
+    flex: 1,
+    fontSize: 15,
+    color: colors.grey,
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginVertical: 16,
+  },
+  dividerLine: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.border,
+  },
+  dividerText: {
+    fontSize: 12,
+    color: colors.grey,
+    fontWeight: typography.weights.semibold,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    backgroundColor: colors.background,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  actionText: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: typography.weights.semibold,
+    color: colors.dark,
+  },
+  popularLabel: {
+    marginTop: 20,
+    marginBottom: 10,
+    fontSize: 13,
+    fontWeight: typography.weights.bold,
+    color: colors.dark,
+  },
+  chipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    backgroundColor: colors.background,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  chipSoon: {
+    backgroundColor: colors.lightGrey,
+  },
+  chipText: {
+    fontSize: 13,
+    fontWeight: typography.weights.semibold,
+    color: colors.dark,
+  },
+});

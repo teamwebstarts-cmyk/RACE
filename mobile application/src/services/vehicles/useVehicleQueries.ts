@@ -47,8 +47,8 @@ export function useVehicleQuery(id: string) {
   };
 }
 
-function useVehicleMutation<TVariables>(
-  fn: (variables: TVariables) => Promise<unknown>,
+function useVehicleMutation<TVariables, TResult = unknown>(
+  fn: (variables: TVariables) => Promise<TResult>,
   onSuccess?: () => void,
 ) {
   const [isPending, setIsPending] = useState(false);
@@ -57,8 +57,9 @@ function useVehicleMutation<TVariables>(
     async (variables: TVariables) => {
       setIsPending(true);
       try {
-        await fn(variables);
+        const result = await fn(variables);
         onSuccess?.();
+        return result;
       } finally {
         setIsPending(false);
       }
@@ -72,7 +73,9 @@ function useVehicleMutation<TVariables>(
 export function useCreateVehicleMutation() {
   const addVehicle = useVehicleStore(state => state.addVehicle);
 
-  return useVehicleMutation<CreateVehicleRequest>(payload => addVehicle(payload));
+  return useVehicleMutation<CreateVehicleRequest, Awaited<ReturnType<typeof addVehicle>>>(
+    payload => addVehicle(payload),
+  );
 }
 
 export function useUpdateVehicleMutation(id: string) {

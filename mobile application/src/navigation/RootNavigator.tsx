@@ -9,6 +9,7 @@ import MainNavigator from './MainNavigator';
 import PartnerNavigator from './PartnerNavigator';
 import { useAuthSessionSync } from '../hooks/useAuthSessionSync';
 import { useAppSelector } from '../redux/hooks';
+import { useAuthStore } from '../store/authStore';
 import { shouldUsePartnerExperience } from '../utils/roleRouting';
 import type { RootStackParamList } from '../types/navigation';
 import { colors } from '../theme';
@@ -34,16 +35,19 @@ export default function RootNavigator() {
 
   const user = useAppSelector((state) => state.auth.user);
   const useCustomerExperience = useAppSelector((state) => state.auth.useCustomerExperience);
-  const isAuthenticated = useAppSelector(
-    (state) => state.auth.isAuthenticated && Boolean(state.auth.accessToken),
+  const accessToken = useAppSelector((state) => state.auth.accessToken);
+  const isAuthenticated = useAuthStore(
+    (state) => state.isAuthenticated && Boolean(accessToken),
   );
+  const onboardingRequired = useAuthStore((state) => state.onboardingRequired);
+  const canEnterApp = isAuthenticated && !onboardingRequired;
 
-  const showPartner = isAuthenticated && shouldUsePartnerExperience(user, useCustomerExperience);
+  const showPartner = canEnterApp && shouldUsePartnerExperience(user, useCustomerExperience);
 
   return (
     <NavigationContainer theme={navigationTheme}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {isAuthenticated ? (
+        {canEnterApp ? (
           showPartner ? (
             <Stack.Screen name="Partner" component={PartnerNavigator} />
           ) : (

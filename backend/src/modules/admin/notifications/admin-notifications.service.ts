@@ -1,11 +1,11 @@
-import { AdminNotificationModel } from '../models/admin-notification.model';
+import { NotificationModel } from '../../notifications/notification.model';
 import { paginate } from '../shared/pagination';
 
 export const adminNotificationsService = {
   async list(filters: { page?: number; pageSize?: number; unreadOnly?: boolean }) {
-    const query: Record<string, unknown> = {};
+    const query: Record<string, unknown> = { 'recipient.audience': 'admin' };
     if (filters.unreadOnly) query.isRead = false;
-    return paginate(AdminNotificationModel, query, filters, (doc) => ({
+    return paginate(NotificationModel, query, filters, (doc) => ({
       id: doc._id.toString(),
       title: doc.title,
       message: doc.message,
@@ -17,14 +17,17 @@ export const adminNotificationsService = {
   },
 
   async getUnreadCount() {
-    return AdminNotificationModel.countDocuments({ isRead: false });
+    return NotificationModel.countDocuments({ 'recipient.audience': 'admin', isRead: false });
   },
 
   async markRead(id: string) {
-    await AdminNotificationModel.findByIdAndUpdate(id, { isRead: true });
+    await NotificationModel.findByIdAndUpdate(id, { isRead: true });
   },
 
   async markAllRead() {
-    await AdminNotificationModel.updateMany({ isRead: false }, { isRead: true });
+    await NotificationModel.updateMany(
+      { 'recipient.audience': 'admin', isRead: false },
+      { isRead: true },
+    );
   },
 };

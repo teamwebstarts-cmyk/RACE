@@ -5,6 +5,7 @@ export interface Vehicle {
   id: string;
   customerId: string;
   vehicleType: VehicleType;
+  vehicleSubtype?: string;
   vehicleNumber: string;
   brand: string;
   model: string;
@@ -20,6 +21,7 @@ export type VehicleInput = CreateVehicleRequest;
 
 export interface CreateVehicleRequest {
   vehicleType: VehicleType;
+  vehicleSubtype?: string;
   vehicleNumber: string;
   brand: string;
   model: string;
@@ -29,3 +31,26 @@ export interface CreateVehicleRequest {
 }
 
 export type UpdateVehicleRequest = Partial<CreateVehicleRequest>;
+
+export interface VehicleVerifyInvalidResponse {
+  valid: false;
+  vehicleId: string;
+}
+
+export interface VehicleVerifyValidResponse {
+  valid: true;
+  vehicleId: string;
+  vehicleNumber: string;
+  brand: string;
+  model: string;
+  vehicleType: string;
+  fuelType?: string;
+  color?: string;
+  ownerName?: string;
+  ownerMobile?: string;
+  emergencyName?: string;
+  emergencyMobile?: string;
+  emergencyRelationship?: string;
+}
+
+export type VehicleVerifyResponse = VehicleVerifyInvalidResponse | VehicleVerifyValidResponse;
