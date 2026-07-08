@@ -167,7 +167,7 @@ export default function PartnerHomeScreen() {
       {isDriver ? (
         <View style={styles.approvedBanner}>
           <ShieldCheck size={20} color={colors.success} strokeWidth={2.2} />
-          <Text style={styles.approvedText}>Demo driver ready — bookings auto-assign nearby</Text>
+          <Text style={styles.approvedText}>Driver account ready — stay online to get jobs</Text>
         </View>
       ) : null}
     </AppScreenLayout>

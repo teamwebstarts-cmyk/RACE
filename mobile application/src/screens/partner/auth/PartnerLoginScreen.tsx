@@ -13,7 +13,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import AuthToast, { AuthLoadingOverlay } from '../../../components/auth/AuthToast';
 import GoogleIcon from '../../../components/auth/GoogleIcon';
 import PartnerScreenLayout from '../../../components/partner/PartnerScreenLayout';
-import { DEMO_OTP, PARTNER_DEMO_DRIVERS, PARTNER_DEMO_PHONE } from '../../../constants/auth';
+import { DEMO_OTP } from '../../../constants/auth';
 import { useAppSelector } from '../../../redux/hooks';
 import {
   getApiErrorMessage,
@@ -32,7 +32,7 @@ export default function PartnerLoginScreen({ navigation, route }: Props) {
   const signupAccountType = useAppSelector((state) => state.onboarding.signupAccountType);
   const setSelectedRole = usePartnerOnboardingStore((state) => state.setSelectedRole);
 
-  const [mobileNumber, setMobileNumber] = useState(__DEV__ ? PARTNER_DEMO_PHONE : '');
+  const [mobileNumber, setMobileNumber] = useState('');
   const [error, setError] = useState('');
 
   const sendOtpMutation = useSendOtpMutation();
@@ -89,26 +89,13 @@ export default function PartnerLoginScreen({ navigation, route }: Props) {
         }>
         {__DEV__ ? (
           <View style={styles.demoCard}>
-            <Text style={styles.demoTitle}>Demo drivers (OTP {DEMO_OTP})</Text>
-            {PARTNER_DEMO_DRIVERS.map(driver => (
-              <Pressable
-                key={driver.phone}
-                onPress={() => {
-                  setMobileNumber(driver.phone);
-                  setError('');
-                }}
-                style={styles.demoRow}>
-                <Text style={styles.demoText}>
-                  <Text style={styles.demoValue}>{driver.name}</Text>
-                  {' · '}
-                  {driver.phone}
-                  {' · '}
-                  {driver.type}
-                </Text>
-              </Pressable>
-            ))}
+            <Text style={styles.demoTitle}>Dev OTP</Text>
+            <Text style={styles.demoText}>
+              Use any fresh 10-digit number. OTP after Send OTP:{' '}
+              <Text style={styles.demoValue}>{DEMO_OTP}</Text>
+            </Text>
             <Text style={[styles.demoText, { marginTop: spacing.xs }]}>
-              Prefill: <Text style={styles.demoValue}>{PARTNER_DEMO_PHONE}</Text> (tap a row to switch)
+              Register as Driver/Vendor first — seeded demo drivers were removed for real testing.
             </Text>
           </View>
         ) : null}

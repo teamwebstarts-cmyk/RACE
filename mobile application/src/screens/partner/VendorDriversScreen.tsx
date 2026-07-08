@@ -15,10 +15,8 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import AppScreenLayout from '../../components/ui/AppScreenLayout';
 import PrimaryButton from '../../components/ui/PrimaryButton';
 import GlassCard from '../../components/ui/GlassCard';
-import { PARTNER_DEMO_DRIVERS } from '../../constants/auth';
 import { getApiErrorMessage } from '../../services/auth/useAuthMutations';
 import {
-  useClaimVendorDriverMutation,
   useCreateVendorDriverMutation,
   useRemoveVendorDriverMutation,
   useVendorDriversQuery,
@@ -33,7 +31,6 @@ const DRIVER_TYPES = ['Tow Driver', 'Full-Time', 'Part-Time'] as const;
 export default function VendorDriversScreen({}: Props) {
   const { data: drivers = [], isLoading, isRefetching, refetch } = useVendorDriversQuery(true);
   const createMutation = useCreateVendorDriverMutation();
-  const claimMutation = useClaimVendorDriverMutation();
   const removeMutation = useRemoveVendorDriverMutation();
 
   const [name, setName] = useState('');
@@ -46,20 +43,6 @@ export default function VendorDriversScreen({}: Props) {
     () => name.trim().length >= 2 && /^[6-9]\d{9}$/.test(phone) && licenseNo.trim().length >= 4,
     [licenseNo, name, phone],
   );
-
-  const prefillDemo = (demo: (typeof PARTNER_DEMO_DRIVERS)[number]) => {
-    setName(demo.name);
-    setPhone(demo.phone);
-    setLicenseNo(`OD-LIC-${demo.phone.slice(-4)}`);
-    setDriverType(
-      demo.type.includes('Tow')
-        ? 'Tow Driver'
-        : demo.type.includes('Full')
-          ? 'Full-Time'
-          : 'Part-Time',
-    );
-    setShowForm(true);
-  };
 
   const submitCreate = async () => {
     try {
@@ -76,14 +59,7 @@ export default function VendorDriversScreen({}: Props) {
       setLicenseNo('');
       setShowForm(false);
     } catch (error) {
-      // If already exists as seeded driver, try claim
-      try {
-        await claimMutation.mutateAsync(phone);
-        Alert.alert('Driver linked', 'Existing demo driver was added to your fleet.');
-        setShowForm(false);
-      } catch {
-        Alert.alert('Could not add', getApiErrorMessage(error, 'Add driver failed'));
-      }
+      Alert.alert('Could not add', getApiErrorMessage(error, 'Add driver failed'));
     }
   };
 
@@ -124,14 +100,9 @@ export default function VendorDriversScreen({}: Props) {
 
         {showForm ? (
           <View style={styles.form}>
-            <Text style={styles.formHint}>Quick-add demo drivers (Om / Ramesh / Vaibhav)</Text>
-            <View style={styles.demoRow}>
-              {PARTNER_DEMO_DRIVERS.map(d => (
-                <Pressable key={d.phone} onPress={() => prefillDemo(d)} style={styles.demoChip}>
-                  <Text style={styles.demoChipText}>{d.name}</Text>
-                </Pressable>
-              ))}
-            </View>
+            <Text style={styles.formHint}>
+              Enter a real driver mobile. They log in on Partner app with OTP {`247392`} (dev).
+            </Text>
 
             <Text style={styles.label}>Full name</Text>
             <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Driver name" placeholderTextColor={colors.grey} />
@@ -141,7 +112,7 @@ export default function VendorDriversScreen({}: Props) {
               value={phone}
               onChangeText={t => setPhone(t.replace(/\D/g, '').slice(0, 10))}
               keyboardType="number-pad"
-              placeholder="8888880001"
+              placeholder="9XXXXXXXXX"
               placeholderTextColor={colors.grey}
             />
             <Text style={styles.label}>License no</Text>
@@ -170,7 +141,7 @@ export default function VendorDriversScreen({}: Props) {
         {isLoading ? (
           <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.xl }} />
         ) : drivers.length === 0 ? (
-          <Text style={styles.empty}>No drivers yet. Add Om / Ramesh / Vaibhav for the demo.</Text>
+          <Text style={styles.empty}>No drivers yet. Add a driver with a fresh mobile number.</Text>
         ) : (
           drivers.map(driver => (
             <GlassCard key={driver.id} style={styles.card}>
