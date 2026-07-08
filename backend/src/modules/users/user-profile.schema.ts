@@ -81,10 +81,14 @@ export interface IVendorProfile {
   approvedAt?: Date;
 }
 
+export type DriverFleetSource = 'vendor' | 'admin';
+
 export interface IDriverProfile {
   driverCode: string;
   licenseNo: string;
   vendorUserId?: Types.ObjectId;
+  /** vendor = onboarded by vendor via Partner app; admin = assigned by admin portal */
+  fleetSource?: DriverFleetSource;
   driverType: string;
   city: string;
   state?: string;
@@ -200,6 +204,7 @@ export const DriverProfileSchema = new Schema<IDriverProfile>(
     driverCode: { type: String, required: true },
     licenseNo: { type: String, required: true },
     vendorUserId: { type: Schema.Types.ObjectId, ref: 'User' },
+    fleetSource: { type: String, enum: ['vendor', 'admin'] },
     driverType: { type: String, required: true },
     city: { type: String, required: true },
     state: { type: String, default: 'Odisha' },

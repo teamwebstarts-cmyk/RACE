@@ -296,6 +296,8 @@ export interface VendorDetail extends VendorListItem {
   recentBookings: VendorBookingRow[];
   documents: VendorDocument[];
   assignedDrivers: VendorAssignedDriver[];
+  /** Vendor self-onboarded fleet (Partner app → My Drivers) */
+  myDrivers?: VendorAssignedDriver[];
   activities: ActivityItem[];
   quickStats: VendorQuickStat[];
   verificationStage?: string;

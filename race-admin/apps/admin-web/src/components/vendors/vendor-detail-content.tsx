@@ -10,7 +10,8 @@ import {
   Truck,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 
 import type {
   VendorAssignedDriver,
@@ -36,14 +37,15 @@ import { ActivityTimeline } from '@/components/shared/activity-timeline';
 import { DataTable } from '@/components/shared/data-table';
 import { EntityFormModal } from '@/components/shared/entity-form-modal';
 import { ConfirmDialog } from '@/components/shared/modal';
+import { Modal } from '@/components/shared/modal';
 import { RowActionsMenu } from '@/components/shared/row-actions-menu';
 import { VerificationDocumentsCard } from '@/components/shared/verification-documents-card';
 import { VendorAvatar } from '@/components/shared/user-avatar';
 import { downloadDocument, openDocument } from '@/lib/document-actions';
-import { getApiErrorMessage } from '@race/api';
+import { getApiErrorMessage, getDrivers } from '@race/api';
 import { PermissionGuard } from '@/components/guards/permission-guard';
 import { PageHeader } from '@/components/layout/page-header';
-import { useVendorActions, useVendorDetail, useVendorDocumentReview, useVendorVehicleMutations } from '@/hooks/use-vendor-detail';
+import { useVendorActions, useVendorDetail, useVendorDocumentReview, useVendorDriverAssignmentMutations, useVendorVehicleMutations } from '@/hooks/use-vendor-detail';
 import { useAuthStore } from '@/stores/auth.store';
 
 const STAT_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -245,45 +247,106 @@ function VendorInfoCard({ vendor }: { vendor: VendorDetail }) {
   );
 }
 
-function AssignedDriversCard({ drivers }: { drivers: VendorAssignedDriver[] }) {
+function DriverListCard({
+  title,
+  description,
+  drivers,
+  actionLabel,
+  onAction,
+  onRemove,
+  removingId,
+  readOnly = false,
+}: {
+  title: string;
+  description?: string;
+  drivers: VendorAssignedDriver[];
+  actionLabel?: string;
+  onAction?: () => void;
+  onRemove?: (driverId: string, driverName: string) => void;
+  removingId?: string | null;
+  readOnly?: boolean;
+}) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Assigned Drivers</CardTitle>
-        <button type="button" className="text-sm font-medium text-[#F5A623] hover:underline">
-          Manage
-        </button>
+        <div>
+          <CardTitle>{title}</CardTitle>
+          {description ? <p className="mt-1 text-xs text-[#9CA3AF]">{description}</p> : null}
+        </div>
+        {actionLabel && onAction ? (
+          <button
+            type="button"
+            onClick={onAction}
+            className="text-sm font-medium text-[#F5A623] hover:underline">
+            {actionLabel}
+          </button>
+        ) : null}
       </CardHeader>
       <CardContent>
-        <ul className="space-y-3">
-          {drivers.map((driver) => (
-            <li key={driver.id} className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#DBEAFE] text-xs font-semibold text-[#2563EB]">
-                  {driver.initials}
+        {drivers.length === 0 ? (
+          <p className="text-sm text-[#9CA3AF]">
+            {readOnly
+              ? 'No vendor fleet drivers yet. Vendor adds them in Partner app → My Drivers.'
+              : 'No admin-assigned drivers yet.'}
+          </p>
+        ) : (
+          <ul className="space-y-3">
+            {drivers.map((driver) => (
+              <li key={driver.id} className="flex items-center justify-between gap-3">
+                <Link to={`/drivers/${driver.id}`} className="flex min-w-0 flex-1 items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#DBEAFE] text-xs font-semibold text-[#2563EB]">
+                    {driver.initials}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-[#1A1A2E]">{driver.name}</p>
+                    <p className="text-xs text-[#9CA3AF]">{driver.phone}</p>
+                  </div>
+                </Link>
+                <div className="flex items-center gap-2">
+                  <StatusBadge status={driver.status} />
+                  {onRemove ? (
+                    <button
+                      type="button"
+                      onClick={() => onRemove(driver.id, driver.name)}
+                      disabled={removingId === driver.id}
+                      className="text-xs font-medium text-[#DC2626] hover:underline disabled:opacity-50">
+                      {removingId === driver.id ? '…' : 'Remove'}
+                    </button>
+                  ) : null}
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-[#1A1A2E]">{driver.name}</p>
-                  <p className="text-xs text-[#9CA3AF]">{driver.phone}</p>
-                </div>
-              </div>
-              <StatusBadge status={driver.status} />
-            </li>
-          ))}
-        </ul>
+              </li>
+            ))}
+          </ul>
+        )}
       </CardContent>
     </Card>
   );
 }
 
 export function VendorDetailContent({ vendorId }: { vendorId: string }) {
+  const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const { data: vendor, isLoading, isError, refetch } = useVendorDetail(vendorId);
   const { approve, reject } = useVendorActions(vendorId);
   const reviewDocument = useVendorDocumentReview(vendorId);
   const { createVehicle, updateVehicle, removeVehicle } = useVendorVehicleMutations(vendorId);
+  const { assignDrivers, unassignDriver } = useVendorDriverAssignmentMutations(vendorId);
   const [reviewingDocId, setReviewingDocId] = useState<string | null>(null);
   const [documentActionError, setDocumentActionError] = useState<string | null>(null);
+  const [assignDriverOpen, setAssignDriverOpen] = useState(false);
+  const [selectedDriverId, setSelectedDriverId] = useState('');
+  const [removingDriverId, setRemovingDriverId] = useState<string | null>(null);
+
+  const platformDriversQuery = useQuery({
+    queryKey: ['platform-drivers-for-assign'],
+    queryFn: () => getDrivers({ page: 1, pageSize: 500, status: 'APPROVED' }),
+    enabled: assignDriverOpen,
+  });
+
+  const assignableDrivers = useMemo(() => {
+    const assignedIds = new Set((vendor?.assignedDrivers ?? []).map((d) => d.id));
+    return (platformDriversQuery.data?.items ?? []).filter((d) => !assignedIds.has(d.id));
+  }, [platformDriversQuery.data?.items, vendor?.assignedDrivers]);
 
   const getVendorDocKey = (doc: VendorDocument) => {
     if (doc.key) return doc.key;
@@ -384,8 +447,16 @@ export function VendorDetailContent({ vendorId }: { vendorId: string }) {
       <div className="space-y-6">
         <VendorProfileCard
           vendor={vendor}
-          onApprove={() => approve.mutate()}
-          onReject={() => reject.mutate()}
+          onApprove={() =>
+            approve.mutate(undefined, {
+              onSuccess: () => navigate('/vendors?status=APPROVED'),
+            })
+          }
+          onReject={() =>
+            reject.mutate(undefined, {
+              onSuccess: () => navigate('/vendors?status=REJECTED'),
+            })
+          }
           isApproving={approve.isPending}
           isRejecting={reject.isPending}
         />
@@ -425,7 +496,7 @@ export function VendorDetailContent({ vendorId }: { vendorId: string }) {
               <CardContent className="p-0 pb-2">
                 <DataTable
                   columns={vehicleColumns}
-                  data={vendor.vehicles}
+                  data={vendor.vehicles ?? []}
                   emptyMessage="No vehicles"
                 />
               </CardContent>
@@ -441,7 +512,7 @@ export function VendorDetailContent({ vendorId }: { vendorId: string }) {
               <CardContent className="p-0 pb-2">
                 <DataTable
                   columns={bookingColumns}
-                  data={vendor.recentBookings}
+                  data={vendor.recentBookings ?? []}
                   emptyMessage="No bookings"
                 />
               </CardContent>
@@ -450,7 +521,25 @@ export function VendorDetailContent({ vendorId }: { vendorId: string }) {
 
           <div className="space-y-6">
             <VendorInfoCard vendor={vendor} />
-            <AssignedDriversCard drivers={vendor.assignedDrivers} />
+            <DriverListCard
+              title="Assigned Drivers"
+              description="Admin assigns existing platform drivers to this vendor."
+              drivers={vendor.assignedDrivers ?? []}
+              actionLabel="Manage"
+              onAction={() => setAssignDriverOpen(true)}
+              onRemove={(driverId, driverName) => {
+                if (!window.confirm(`Unassign ${driverName} from this vendor?`)) return;
+                setRemovingDriverId(driverId);
+                void unassignDriver.mutateAsync(driverId).finally(() => setRemovingDriverId(null));
+              }}
+              removingId={removingDriverId}
+            />
+            <DriverListCard
+              title="My Drivers"
+              description="Vendor onboarded via Partner app. Synced automatically."
+              drivers={vendor.myDrivers ?? []}
+              readOnly
+            />
           </div>
         </div>
 
@@ -459,10 +548,65 @@ export function VendorDetailContent({ vendorId }: { vendorId: string }) {
             <CardTitle>Activity Log</CardTitle>
           </CardHeader>
           <CardContent>
-            <ActivityTimeline items={vendor.activities} />
+            <ActivityTimeline items={vendor.activities ?? []} />
           </CardContent>
         </Card>
       </div>
+
+      <Modal
+        open={assignDriverOpen}
+        onClose={() => {
+          setAssignDriverOpen(false);
+          setSelectedDriverId('');
+        }}
+        title="Assign driver"
+        description="Pick an approved platform driver to assign to this vendor."
+        footer={
+          <>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setAssignDriverOpen(false);
+                setSelectedDriverId('');
+              }}>
+              Cancel
+            </Button>
+            <Button
+              disabled={!selectedDriverId || assignDrivers.isPending}
+              onClick={() => {
+                void assignDrivers
+                  .mutateAsync([selectedDriverId])
+                  .then(() => {
+                    setAssignDriverOpen(false);
+                    setSelectedDriverId('');
+                  });
+              }}>
+              {assignDrivers.isPending ? 'Assigning...' : 'Assign'}
+            </Button>
+          </>
+        }>
+        {platformDriversQuery.isLoading ? (
+          <p className="text-sm text-[#9CA3AF]">Loading drivers...</p>
+        ) : assignableDrivers.length === 0 ? (
+          <p className="text-sm text-[#9CA3AF]">No approved drivers available to assign.</p>
+        ) : (
+          <label className="block space-y-2">
+            <span className="text-sm font-medium text-[#1A1A2E]">Driver</span>
+            <select
+              value={selectedDriverId}
+              onChange={(e) => setSelectedDriverId(e.target.value)}
+              className="w-full rounded-lg border border-[#E5E7EB] px-3 py-2 text-sm">
+              <option value="">Select driver</option>
+              {assignableDrivers.map((driver) => (
+                <option key={driver.id} value={driver.id}>
+                  {driver.name} · {driver.phone}
+                  {driver.vendorId ? ` (currently: ${driver.vendorName})` : ''}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+      </Modal>
 
       <EntityFormModal
         open={vehicleFormOpen}

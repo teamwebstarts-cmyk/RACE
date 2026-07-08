@@ -23,6 +23,9 @@ import {
   mapVendorFilterToUserQuery,
   toVendorRecord,
 } from '../../users/user-profile.mappers';
+import { vendorDriversService } from '../../vendors/vendor-drivers.service';
+import type { CreateVendorDriverDto } from '../../vendors/vendor-drivers.validator';
+import { notificationService } from '../../../shared/services/notification.service';
 import { BadRequestError, ConflictError, NotFoundError } from '../../../shared/utils/errors';
 import type { IUser } from '../../users/user.model';
 
@@ -42,6 +45,25 @@ function mapAdminVendorStatus(status?: string): string {
 function mapAssignedDriverStatus(status: string): 'ACTIVE' | 'ON_LEAVE' {
   if (status === 'SUSPENDED') return 'ON_LEAVE';
   return 'ACTIVE';
+}
+
+function mapDriverCard(d: { _id: { toString(): string }; fullName?: string; mobileNumber: string; driverProfile?: { status?: string; fleetSource?: string } }) {
+  return {
+    id: d._id.toString(),
+    name: d.fullName ?? 'Driver',
+    phone: d.mobileNumber,
+    status: mapAssignedDriverStatus(d.driverProfile?.status ?? 'PENDING'),
+    initials: driverInitials(d.fullName ?? 'Driver'),
+  };
+}
+
+function isAdminAssignedDriver(driver: { driverProfile?: { fleetSource?: string } }): boolean {
+  return driver.driverProfile?.fleetSource === 'admin';
+}
+
+function isVendorFleetDriver(driver: { driverProfile?: { fleetSource?: string } }): boolean {
+  const source = driver.driverProfile?.fleetSource;
+  return !source || source === 'vendor';
 }
 
 function mapVendorStatus(status: string): string {
@@ -190,13 +212,8 @@ export const adminVendorsService = {
       reviewNotes: vendor.reviewNotes ?? '',
       documentsStatus: deriveDocumentsStatus(documents),
       documents,
-      assignedDrivers: driverUsers.map((d) => ({
-        id: d._id.toString(),
-        name: d.fullName ?? 'Driver',
-        phone: d.mobileNumber,
-        status: mapAssignedDriverStatus(d.driverProfile?.status ?? 'PENDING'),
-        initials: driverInitials(d.fullName ?? 'Driver'),
-      })),
+      assignedDrivers: driverUsers.filter(isAdminAssignedDriver).map(mapDriverCard),
+      myDrivers: driverUsers.filter(isVendorFleetDriver).map(mapDriverCard),
       vehicles: vehicles.map((v) => ({
         id: v._id.toString(),
         registrationNo: v.registrationNo,
@@ -395,6 +412,15 @@ export const adminVendorsService = {
       entityType: 'vendor',
       entityId: id,
     });
+    try {
+      await notificationService.notifyVendorApproved(
+        id,
+        user.vendorProfile.mobileNumber || user.mobileNumber,
+        id,
+      );
+    } catch {
+      // Approval already saved — partner push/SMS must not block admin UI.
+    }
     return mapVendorFromUser(user);
   },
 
@@ -423,6 +449,16 @@ export const adminVendorsService = {
       entityType: 'vendor',
       entityId: id,
     });
+    try {
+      await notificationService.notifyVendorRejected(
+        id,
+        user.vendorProfile.mobileNumber || user.mobileNumber,
+        id,
+        note,
+      );
+    } catch {
+      // Rejection already saved — partner push/SMS must not block admin UI.
+    }
     return mapVendorFromUser(user);
   },
 
@@ -473,8 +509,26 @@ export const adminVendorsService = {
   async assignDrivers(id: string, driverIds: string[], actor: { id: string; name: string }) {
     const user = await UserModel.findOne({ _id: id, role: 'vendor' });
     if (!user?.vendorProfile) throw new NotFoundError('Vendor not found');
+    if (!driverIds.length) throw new BadRequestError('Select at least one driver');
 
-    await driverRepository.updateManyVendor(driverIds, user._id);
+    const drivers = await UserModel.find({ _id: { $in: driverIds }, role: 'driver' }).exec();
+    if (drivers.length !== driverIds.length) {
+      throw new NotFoundError('One or more drivers were not found');
+    }
+
+    for (const driver of drivers) {
+      const currentVendor = driver.driverProfile?.vendorUserId?.toString();
+      if (currentVendor && currentVendor !== id) {
+        throw new ConflictError(`${driver.fullName ?? 'Driver'} already belongs to another vendor`);
+      }
+      if (driver.driverProfile?.fleetSource === 'vendor' && currentVendor === id) {
+        throw new ConflictError(
+          `${driver.fullName ?? 'Driver'} is a vendor fleet driver. Manage them in Partner app → My Drivers.`,
+        );
+      }
+    }
+
+    await driverRepository.updateManyVendor(driverIds, user._id, 'admin');
 
     await logActivity({
       actorId: actor.id,
@@ -486,6 +540,72 @@ export const adminVendorsService = {
     });
 
     return { assigned: driverIds.length };
+  },
+
+  async unassignDriver(
+    vendorUserId: string,
+    driverId: string,
+    actor: { id: string; name: string },
+  ) {
+    const driver = await UserModel.findOne({ _id: driverId, role: 'driver' }).exec();
+    if (!driver?.driverProfile) throw new NotFoundError('Driver not found');
+    if (driver.driverProfile.vendorUserId?.toString() !== vendorUserId) {
+      throw new BadRequestError('Driver is not assigned to this vendor');
+    }
+    if (driver.driverProfile.fleetSource !== 'admin') {
+      throw new BadRequestError('Only admin-assigned drivers can be removed here');
+    }
+
+    await driverRepository.updateManyVendor([driverId], null);
+
+    await logActivity({
+      actorId: actor.id,
+      actorName: actor.name,
+      action: 'VENDOR_DRIVER_UNASSIGNED',
+      entityType: 'vendor',
+      entityId: vendorUserId,
+      title: `Driver ${driver.fullName ?? driverId} unassigned from vendor`,
+    });
+
+    return { unassigned: true, driverId };
+  },
+
+  async listFleetDrivers(vendorUserId: string) {
+    return vendorDriversService.list(vendorUserId);
+  },
+
+  async createFleetDriver(
+    vendorUserId: string,
+    dto: CreateVendorDriverDto,
+    actor: { id: string; name: string },
+  ) {
+    const driver = await vendorDriversService.create(vendorUserId, dto);
+    await logActivity({
+      actorId: actor.id,
+      actorName: actor.name,
+      action: 'VENDOR_DRIVER_CREATED',
+      entityType: 'vendor',
+      entityId: vendorUserId,
+      title: `Driver ${dto.name} added to vendor fleet`,
+    });
+    return driver;
+  },
+
+  async removeFleetDriver(
+    vendorUserId: string,
+    driverId: string,
+    actor: { id: string; name: string },
+  ) {
+    const result = await vendorDriversService.remove(vendorUserId, driverId);
+    await logActivity({
+      actorId: actor.id,
+      actorName: actor.name,
+      action: 'VENDOR_DRIVER_REMOVED',
+      entityType: 'vendor',
+      entityId: vendorUserId,
+      title: `Driver removed from vendor fleet`,
+    });
+    return result;
   },
 
   async remove(id: string, actor: { id: string; name: string }) {

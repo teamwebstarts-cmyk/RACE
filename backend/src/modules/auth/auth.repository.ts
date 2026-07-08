@@ -38,6 +38,22 @@ export class AuthRepository {
       .sort({ createdAt: -1 })
       .exec();
   }
+
+  async findRecentlyVerifiedOtpLog(
+    mobileNumber: string,
+    otp: string,
+    withinMs: number,
+  ): Promise<IOtpLog | null> {
+    const since = new Date(Date.now() - withinMs);
+    return OtpLogModel.findOne({
+      mobileNumber,
+      mobileOtp: otp,
+      mobileVerified: true,
+      createdAt: { $gte: since },
+    })
+      .sort({ createdAt: -1 })
+      .exec();
+  }
 }
 
 export const authRepository = new AuthRepository();

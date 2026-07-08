@@ -81,10 +81,8 @@ export default function PartnerOtpVerificationScreen({ navigation, route }: Prop
     (role: PartnerRole) => {
       const rootNavigation =
         navigation.getParent<NativeStackScreenProps<PartnerRootStackParamList>['navigation']>();
-      rootNavigation?.reset({
-        index: 0,
-        routes: [{ name: 'PartnerRegistration', params: { role, mobileNumber } }],
-      });
+      // Keep auth under registration so Back works (reset caused unhandled GO_BACK).
+      rootNavigation?.navigate('PartnerRegistration', { role, mobileNumber });
     },
     [mobileNumber, navigation],
   );

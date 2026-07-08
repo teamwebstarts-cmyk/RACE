@@ -29,6 +29,7 @@ export const API_ENDPOINTS = {
   vendorUpdate: '/api/v1/vendor/update',
   vendorProfile: '/api/v1/vendor/profile',
   vendorStatus: '/api/v1/vendor/status',
+  vendorDashboard: '/api/v1/vendor/dashboard',
   vendorUploadDocument: '/api/v1/vendor/upload-document',
   vendorSelfie: '/api/v1/vendor/selfie',
   bookings: '/api/v1/bookings',

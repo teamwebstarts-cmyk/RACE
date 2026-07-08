@@ -16,12 +16,15 @@ const STAGES: Array<{ key: VerificationStage; label: string }> = [
 interface VerificationTimelineProps {
   currentStage: VerificationStage;
   statusHistory?: Array<{ status: string; note?: string; changedAt: string }>;
+  theme?: 'light' | 'dark';
 }
 
 export default function VerificationTimeline({
   currentStage,
   statusHistory = [],
+  theme = 'dark',
 }: VerificationTimelineProps) {
+  const isLight = theme === 'light';
   const currentIndex = STAGES.findIndex((s) => s.key === currentStage);
   const isRejected = currentStage === 'rejected';
 
@@ -38,6 +41,7 @@ export default function VerificationTimeline({
               <View
                 style={[
                   styles.dot,
+                  isLight && styles.dotLight,
                   done && styles.dotDone,
                   active && styles.dotActive,
                   isRejected && index === 0 && styles.dotRejected,
@@ -47,13 +51,20 @@ export default function VerificationTimeline({
                 ) : null}
               </View>
               {index < STAGES.length - 1 ? (
-                <View style={[styles.line, done && styles.lineDone]} />
+                <View style={[styles.line, isLight && styles.lineLight, done && styles.lineDone]} />
               ) : null}
             </View>
             <View style={styles.content}>
-              <Text style={[styles.label, active && styles.labelActive]}>{stage.label}</Text>
+              <Text
+                style={[
+                  styles.label,
+                  isLight && styles.labelLight,
+                  active && (isLight ? styles.labelActiveLight : styles.labelActive),
+                ]}>
+                {stage.label}
+              </Text>
               {historyItem?.note ? (
-                <Text style={styles.note}>{historyItem.note}</Text>
+                <Text style={[styles.note, isLight && styles.noteLight]}>{historyItem.note}</Text>
               ) : null}
             </View>
           </View>
@@ -83,15 +94,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.card,
   },
+  dotLight: {
+    borderColor: colors.border,
+    backgroundColor: colors.background,
+  },
   dotDone: { backgroundColor: colors.secondary, borderColor: colors.secondary },
   dotActive: { borderColor: colors.primary, backgroundColor: colors.primary },
   dotRejected: { borderColor: colors.accentRed, backgroundColor: colors.accentRed },
   line: { flex: 1, width: 2, backgroundColor: colors.glass.border, minHeight: 28 },
+  lineLight: { backgroundColor: colors.border },
   lineDone: { backgroundColor: colors.secondary },
   content: { flex: 1, paddingBottom: spacing.md },
   label: { color: colors.subtext, fontWeight: typography.weights.semibold },
+  labelLight: { color: colors.grey },
   labelActive: { color: colors.textLight },
+  labelActiveLight: { color: colors.dark },
   note: { color: colors.textMuted, fontSize: typography.sizes.sm, marginTop: 2 },
+  noteLight: { color: colors.grey },
   rejectedBanner: {
     flexDirection: 'row',
     alignItems: 'center',

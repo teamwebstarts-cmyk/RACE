@@ -25,6 +25,7 @@ router.post('/register', validate(registerVendorSchema), vendorController.regist
 router.put('/update', validate(updateVendorSchema), vendorController.update);
 router.get('/profile', vendorController.getProfile);
 router.get('/status', vendorController.getStatus);
+router.get('/dashboard', requireRole('vendor'), vendorController.getDashboard);
 
 router.post(
   '/upload-document',

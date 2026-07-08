@@ -16,10 +16,10 @@ export const DRIVER_REGISTRATION_STEPS = [
 ] as const;
 
 export const VENDOR_REGISTRATION_STEPS = [
-  'Registration',
+  'Business',
+  'Address',
   'Documents',
   'Review',
-  'Submit',
 ] as const;
 
 export const VEHICLE_TYPE_OPTIONS = [

@@ -17,6 +17,7 @@ import type {
   PartnerRootStackParamList,
 } from '../../../../types/partnerNavigation';
 import type { VendorType } from '../../../../types/vendor';
+import { partnerRegistrationGoBack } from '../../../../utils/partnerRegistration';
 import { colors, radius, spacing, typography } from '../../../../theme';
 
 type Props = NativeStackScreenProps<PartnerRegistrationStackParamList, 'VendorReview'>;
@@ -39,11 +40,12 @@ function mapBusinessType(value: string): VendorType {
   return 'towing_company';
 }
 
-export default function VendorReviewScreen({ navigation }: Props) {
+export default function VendorReviewScreen({ navigation, route }: Props) {
   const dispatch = useAppDispatch();
   const authUser = useAppSelector(state => state.auth.user);
   const { vendorBusiness, vendorAddress, vendorDocuments } = usePartnerRegistrationStore();
   const [submitting, setSubmitting] = useState(false);
+  const handleBack = () => partnerRegistrationGoBack(navigation, 'VendorReview', route.params);
 
   const submit = async () => {
     setSubmitting(true);
@@ -102,11 +104,11 @@ export default function VendorReviewScreen({ navigation }: Props) {
       stepLabel="Step 4 of 4"
       steps={VENDOR_REGISTRATION_STEPS}
       activeStep={4}
-      onBack={() => navigation.goBack()}
+      onBack={handleBack}
       footer={
         <PartnerRegistrationFooter
           showBack
-          onBack={() => navigation.goBack()}
+          onBack={handleBack}
           continueLabel={submitting ? 'Submitting…' : 'Submit Application'}
           onContinue={() => {
             if (!submitting) void submit();
@@ -118,7 +120,7 @@ export default function VendorReviewScreen({ navigation }: Props) {
         <CheckCircle2 size={28} color={colors.partnerRed} strokeWidth={2} />
         <Text style={styles.successTitle}>Review your application</Text>
         <Text style={styles.successSubtitle}>
-          Submitted to admin. In demo, you can open dashboard and add drivers immediately.
+          Submitted to admin for review. You can track status from your dashboard.
         </Text>
       </View>
 

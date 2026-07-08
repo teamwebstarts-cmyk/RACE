@@ -19,6 +19,7 @@ export default function PartnerOtpInput({
   onComplete,
 }: PartnerOtpInputProps) {
   const inputRef = useRef<TextInput>(null);
+  const completedRef = useRef('');
   const activeIndex = Math.min(value.length, OTP_LENGTH - 1);
 
   useEffect(() => {
@@ -27,8 +28,13 @@ export default function PartnerOtpInput({
   }, []);
 
   useEffect(() => {
-    if (value.length === OTP_LENGTH) {
+    if (value.length === OTP_LENGTH && value !== completedRef.current) {
+      completedRef.current = value;
       onComplete?.(value);
+      return;
+    }
+    if (value.length < OTP_LENGTH) {
+      completedRef.current = '';
     }
   }, [onComplete, value]);
 

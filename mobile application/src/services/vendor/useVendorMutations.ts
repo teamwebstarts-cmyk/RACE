@@ -2,6 +2,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 
 import {
+  getVendorDashboard,
   getVendorProfile,
   getVendorStatus,
   registerVendor,
@@ -27,6 +28,23 @@ export function useVendorStatusQuery(enabled = true) {
     },
     enabled,
     retry: false,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    // While waiting on admin review, poll so dashboard updates after approve.
+    refetchInterval: query => {
+      const status = query.state.data?.status;
+      if (!status || status === 'approved' || status === 'rejected') return false;
+      return 15_000;
+    },
+  });
+}
+
+export function useVendorDashboardQuery(enabled = true) {
+  return useQuery({
+    queryKey: ['vendor', 'dashboard'],
+    queryFn: getVendorDashboard,
+    enabled,
+    refetchInterval: 30_000,
   });
 }
 

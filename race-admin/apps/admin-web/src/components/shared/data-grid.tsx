@@ -93,7 +93,7 @@ function DataGridInner<TData>({
 
   const selectedCount = Object.keys(rowSelection).length;
 
-  if (!data.length) {
+  if (!data?.length) {
     return <EmptyState title={emptyMessage} />;
   }
 

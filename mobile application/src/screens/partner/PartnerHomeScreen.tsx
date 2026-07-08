@@ -1,6 +1,13 @@
 import React, { useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Briefcase, ShieldCheck, Wallet } from 'lucide-react-native';
+import {
+  Briefcase,
+  Clock3,
+  RefreshCw,
+  ShieldAlert,
+  ShieldCheck,
+  Wallet,
+} from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 
@@ -13,11 +20,105 @@ import {
   useDriverAvailabilityMutation,
   useDriverJobsQuery,
 } from '../../services/driver/useDriverQueries';
-import { useVendorStatusQuery } from '../../services/vendor/useVendorMutations';
+import { useVendorDashboardQuery, useVendorStatusQuery } from '../../services/vendor/useVendorMutations';
 import { getVendorConfig } from '../../data/vendorWizardConfig';
 import type { PartnerTabParamList } from '../../types/partnerNavigation';
+import type { VendorStatus } from '../../types/vendor';
 import { formatReadableAddress } from '../../utils/readableAddress';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
+
+const VENDOR_STATUS_META: Record<
+  string,
+  {
+    label: string;
+    hint: string;
+    pillBg: string;
+    pillText: string;
+    border: string;
+    cardBg: string;
+    Icon: typeof ShieldCheck;
+  }
+> = {
+  pending: {
+    label: 'Pending review',
+    hint: 'Submitted — waiting for admin approval on the portal',
+    pillBg: 'rgba(244, 161, 21, 0.16)',
+    pillText: colors.warning,
+    border: 'rgba(244, 161, 21, 0.35)',
+    cardBg: 'rgba(244, 161, 21, 0.06)',
+    Icon: Clock3,
+  },
+  under_review: {
+    label: 'Under review',
+    hint: 'Admin is reviewing your application',
+    pillBg: 'rgba(244, 161, 21, 0.16)',
+    pillText: colors.warning,
+    border: 'rgba(244, 161, 21, 0.35)',
+    cardBg: 'rgba(244, 161, 21, 0.06)',
+    Icon: Clock3,
+  },
+  approved: {
+    label: 'Approved',
+    hint: 'Your partner account is active — you can manage drivers & jobs',
+    pillBg: 'rgba(34, 197, 94, 0.14)',
+    pillText: colors.success,
+    border: 'rgba(34, 197, 94, 0.35)',
+    cardBg: 'rgba(34, 197, 94, 0.06)',
+    Icon: ShieldCheck,
+  },
+  rejected: {
+    label: 'Rejected',
+    hint: 'Application was not approved. Contact RACE support if needed',
+    pillBg: 'rgba(239, 68, 68, 0.12)',
+    pillText: colors.error,
+    border: 'rgba(239, 68, 68, 0.3)',
+    cardBg: 'rgba(239, 68, 68, 0.05)',
+    Icon: ShieldAlert,
+  },
+  changes_requested: {
+    label: 'Changes requested',
+    hint: 'Admin asked for updates — check verification details in Account',
+    pillBg: 'rgba(244, 161, 21, 0.16)',
+    pillText: colors.warning,
+    border: 'rgba(244, 161, 21, 0.35)',
+    cardBg: 'rgba(244, 161, 21, 0.06)',
+    Icon: ShieldAlert,
+  },
+  draft: {
+    label: 'Draft',
+    hint: 'Finish registration to submit for review',
+    pillBg: colors.lightGrey,
+    pillText: colors.grey,
+    border: colors.border,
+    cardBg: colors.cardBg,
+    Icon: Clock3,
+  },
+};
+
+function getVendorStatusMeta(status?: VendorStatus | string) {
+  if (!status) {
+    return {
+      label: 'Loading…',
+      hint: 'Fetching latest verification status',
+      pillBg: colors.lightGrey,
+      pillText: colors.grey,
+      border: colors.border,
+      cardBg: colors.cardBg,
+      Icon: Clock3,
+    };
+  }
+  return (
+    VENDOR_STATUS_META[status] ?? {
+      label: status.replace(/_/g, ' '),
+      hint: 'Current verification status from admin review',
+      pillBg: colors.lightGrey,
+      pillText: colors.grey,
+      border: colors.border,
+      cardBg: colors.cardBg,
+      Icon: Clock3,
+    }
+  );
+}
 
 export default function PartnerHomeScreen() {
   const navigation = useNavigation<BottomTabNavigationProp<PartnerTabParamList>>();
@@ -25,13 +126,22 @@ export default function PartnerHomeScreen() {
   const isDriver = user?.role === 'driver';
   const isVendor = user?.role === 'vendor';
 
-  const { data: vendor, isLoading: vendorLoading } = useVendorStatusQuery(isVendor);
-  const { data: jobs = [] } = useDriverJobsQuery(isDriver);
+  const {
+    data: vendor,
+    isLoading: vendorLoading,
+    isRefetching: vendorRefetching,
+    refetch: refetchVendor,
+  } = useVendorStatusQuery(isVendor);
+  const { data: vendorDashboard } = useVendorDashboardQuery(isVendor);
+  const { data: jobs = [], refetch: refetchDriverJobs } = useDriverJobsQuery(isDriver);
   const { data: activeJob } = useDriverActiveJobQuery(isDriver);
   const availabilityMutation = useDriverAvailabilityMutation();
 
   const [isOnline, setIsOnline] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const config = vendor ? getVendorConfig(vendor.vendorType) : undefined;
+  const vendorMeta = getVendorStatusMeta(vendorLoading ? undefined : vendor?.status);
+  const VendorStatusIcon = vendorMeta.Icon;
 
   const todayJobs = useMemo(() => {
     const start = new Date();
@@ -39,11 +149,32 @@ export default function PartnerHomeScreen() {
     return jobs.filter(job => new Date(job.createdAt) >= start);
   }, [jobs]);
 
+  const earningsToday = useMemo(() => {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    if (isVendor) {
+      return vendorDashboard?.earningsToday ?? 0;
+    }
+    return jobs
+      .filter(
+        job =>
+          new Date(job.createdAt) >= start &&
+          job.status === 'COMPLETED' &&
+          typeof job.estimatedFare === 'number',
+      )
+      .reduce((sum, job) => sum + (job.estimatedFare ?? 0), 0);
+  }, [isVendor, jobs, vendorDashboard?.earningsToday]);
+
+  const jobsTodayCount = isVendor ? (vendorDashboard?.jobsToday ?? 0) : todayJobs.length;
+
+  const formatInr = (amount: number) =>
+    `₹${Math.round(amount).toLocaleString('en-IN')}`;
+
   const statusLabel = isDriver
     ? isOnline
       ? 'Online'
       : 'Offline'
-    : vendor?.status?.replace(/_/g, ' ') ?? (vendorLoading ? 'loading...' : 'partner');
+    : vendorMeta.label;
 
   const toggleAvailability = async () => {
     if (!isDriver) {
@@ -63,8 +194,20 @@ export default function PartnerHomeScreen() {
     }
   };
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      if (isVendor) await refetchVendor();
+      if (isDriver) await refetchDriverJobs();
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   return (
     <AppScreenLayout
+      refreshing={refreshing || vendorRefetching}
+      onRefresh={isVendor || isDriver ? () => void onRefresh() : undefined}
       header={
         <View style={styles.headerPad}>
           <Text style={styles.badge}>RACE PARTNER</Text>
@@ -96,10 +239,38 @@ export default function PartnerHomeScreen() {
           </View>
         </Pressable>
       ) : (
-        <View style={styles.onlineCard}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.onlineLabel}>Vendor status</Text>
-            <Text style={styles.onlineValue}>{statusLabel}</Text>
+        <View
+          style={[
+            styles.statusCard,
+            { backgroundColor: vendorMeta.cardBg, borderColor: vendorMeta.border },
+          ]}>
+          <View style={styles.statusTopRow}>
+            <View style={[styles.statusIconWrap, { backgroundColor: vendorMeta.pillBg }]}>
+              <VendorStatusIcon size={20} color={vendorMeta.pillText} strokeWidth={2.2} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.onlineLabel}>Vendor status</Text>
+              <Text style={styles.statusHint}>{vendorMeta.hint}</Text>
+            </View>
+            <Pressable
+              onPress={() => void refetchVendor()}
+              hitSlop={10}
+              style={styles.refreshBtn}
+              accessibilityRole="button"
+              accessibilityLabel="Refresh status">
+              <RefreshCw
+                size={16}
+                color={colors.grey}
+                strokeWidth={2.4}
+                style={vendorRefetching ? styles.spinHint : undefined}
+              />
+            </Pressable>
+          </View>
+          <View style={[styles.statusBadge, { backgroundColor: vendorMeta.pillBg }]}>
+            <View style={[styles.statusDot, { backgroundColor: vendorMeta.pillText }]} />
+            <Text style={[styles.statusBadgeText, { color: vendorMeta.pillText }]}>
+              {vendorMeta.label}
+            </Text>
           </View>
         </View>
       )}
@@ -107,12 +278,12 @@ export default function PartnerHomeScreen() {
       <View style={styles.statsRow}>
         <GlassCard style={styles.statCard}>
           <Briefcase size={22} color={colors.primary} strokeWidth={2.2} />
-          <Text style={styles.statValue}>{isDriver ? String(todayJobs.length) : '0'}</Text>
+          <Text style={styles.statValue}>{String(jobsTodayCount)}</Text>
           <Text style={styles.statLabel}>Jobs today</Text>
         </GlassCard>
         <GlassCard style={styles.statCard}>
           <Wallet size={22} color={colors.secondary} strokeWidth={2.2} />
-          <Text style={styles.statValue}>₹0</Text>
+          <Text style={styles.statValue}>{formatInr(earningsToday)}</Text>
           <Text style={styles.statLabel}>Earnings</Text>
         </GlassCard>
       </View>
@@ -157,13 +328,6 @@ export default function PartnerHomeScreen() {
         </GlassCard>
       )}
 
-      {!vendorLoading && vendor?.status === 'approved' ? (
-        <View style={styles.approvedBanner}>
-          <ShieldCheck size={20} color={colors.success} strokeWidth={2.2} />
-          <Text style={styles.approvedText}>Your partner account is active</Text>
-        </View>
-      ) : null}
-
       {isDriver ? (
         <View style={styles.approvedBanner}>
           <ShieldCheck size={20} color={colors.success} strokeWidth={2.2} />
@@ -197,7 +361,6 @@ const styles = StyleSheet.create({
   subtitle: {
     color: colors.grey,
     marginTop: spacing.xs,
-    textTransform: 'capitalize',
     fontSize: typography.sizes.sm,
   },
   onlineCard: {
@@ -220,6 +383,7 @@ const styles = StyleSheet.create({
   onlineLabel: {
     color: colors.dark,
     fontWeight: typography.weights.bold,
+    fontSize: typography.sizes.md,
   },
   onlineValue: {
     color: colors.grey,
@@ -253,6 +417,62 @@ const styles = StyleSheet.create({
   },
   onlinePillTextActive: {
     color: colors.textLight,
+  },
+  statusCard: {
+    borderRadius: radius.card,
+    borderWidth: 1,
+    padding: spacing.lg,
+    marginTop: spacing.lg,
+    marginBottom: spacing.lg,
+    gap: spacing.md,
+    ...shadows.card,
+  },
+  statusTopRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+  },
+  statusIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statusHint: {
+    color: colors.grey,
+    marginTop: 4,
+    fontSize: typography.sizes.sm,
+    lineHeight: typography.lineHeights.normal,
+  },
+  refreshBtn: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.pill,
+    backgroundColor: colors.lightGrey,
+  },
+  spinHint: {
+    opacity: 0.45,
+  },
+  statusBadge: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.pill,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  statusBadgeText: {
+    fontWeight: typography.weights.bold,
+    fontSize: typography.sizes.sm,
   },
   statsRow: {
     flexDirection: 'row',

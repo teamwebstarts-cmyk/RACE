@@ -16,7 +16,7 @@ import {
 } from '../../../../constants/partnerRegistration';
 import { usePartnerRegistrationStore } from '../../../../store/partnerRegistrationStore';
 import type { PartnerRegistrationStackParamList } from '../../../../types/partnerNavigation';
-import { showSelectOptions } from '../../../../utils/partnerRegistration';
+import { partnerRegistrationGoBack, showSelectOptions } from '../../../../utils/partnerRegistration';
 import { colors } from '../../../../theme';
 
 type Props = NativeStackScreenProps<PartnerRegistrationStackParamList, 'DriverVehicleInfo'>;
@@ -25,6 +25,8 @@ export default function DriverVehicleInfoScreen({ navigation, route }: Props) {
   const driverVehicle = usePartnerRegistrationStore((s) => s.driverVehicle);
   const setDriverVehicle = usePartnerRegistrationStore((s) => s.setDriverVehicle);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const handleBack = () =>
+    partnerRegistrationGoBack(navigation, 'DriverVehicleInfo', route.params);
 
   const validate = () => {
     const next: Record<string, string> = {};
@@ -45,11 +47,11 @@ export default function DriverVehicleInfoScreen({ navigation, route }: Props) {
       stepLabel="Step 2 of 4"
       steps={DRIVER_REGISTRATION_STEPS}
       activeStep={2}
-      onBack={() => navigation.goBack()}
+      onBack={handleBack}
       footer={
         <PartnerRegistrationFooter
           showBack
-          onBack={() => navigation.goBack()}
+          onBack={handleBack}
           onContinue={() => {
             if (!validate()) return;
             navigation.navigate('DriverDocuments', route.params);

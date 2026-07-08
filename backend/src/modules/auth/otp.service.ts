@@ -10,6 +10,10 @@ export class OtpService {
   }
 
   private async assertResendAllowed(mobileNumber: string): Promise<void> {
+    if (env.NODE_ENV !== 'production') {
+      return;
+    }
+
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
     const resendCount = await authRepository.countRecentOtpSends(mobileNumber, oneHourAgo);
 
@@ -47,11 +51,24 @@ export class OtpService {
   async verifyOtp(mobileNumber: string, otp: string): Promise<void> {
     const log = await authRepository.findLatestValidOtpLog(mobileNumber);
 
-    if (!log || !log.mobileOtpExpiry || log.mobileOtpExpiry <= new Date()) {
-      throw new AppError('OTP expired', 400);
+    if (!log) {
+      const alreadyUsed = await authRepository.findRecentlyVerifiedOtpLog(
+        mobileNumber,
+        otp,
+        env.OTP_EXPIRY_SECONDS * 1000,
+      );
+      if (alreadyUsed) {
+        return;
+      }
+
+      throw new AppError('OTP expired or already used. Tap Resend OTP for a new code.', 400);
     }
 
-    if (log.mobileAttempts >= env.OTP_MAX_VERIFY_ATTEMPTS) {
+    if (!log.mobileOtpExpiry || log.mobileOtpExpiry <= new Date()) {
+      throw new AppError('OTP expired. Tap Resend OTP for a new code.', 400);
+    }
+
+    if (env.NODE_ENV === 'production' && log.mobileAttempts >= env.OTP_MAX_VERIFY_ATTEMPTS) {
       throw new TooManyRequestsError('Maximum OTP verification attempts exceeded');
     }
 

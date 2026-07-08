@@ -15,7 +15,11 @@ import {
 } from '../../../../constants/partnerRegistration';
 import { usePartnerRegistrationStore } from '../../../../store/partnerRegistrationStore';
 import type { PartnerRegistrationStackParamList } from '../../../../types/partnerNavigation';
-import { isValidEmail, showSelectOptions } from '../../../../utils/partnerRegistration';
+import {
+  isValidEmail,
+  partnerRegistrationGoBack,
+  showSelectOptions,
+} from '../../../../utils/partnerRegistration';
 import { colors, spacing, typography } from '../../../../theme';
 
 type Props = NativeStackScreenProps<PartnerRegistrationStackParamList, 'VendorBusinessInfo'>;
@@ -24,6 +28,9 @@ export default function VendorBusinessInfoScreen({ navigation, route }: Props) {
   const vendorBusiness = usePartnerRegistrationStore((s) => s.vendorBusiness);
   const setVendorBusiness = usePartnerRegistrationStore((s) => s.setVendorBusiness);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const handleBack = () =>
+    partnerRegistrationGoBack(navigation, 'VendorBusinessInfo', route.params);
 
   const validate = () => {
     const next: Record<string, string> = {};
@@ -46,11 +53,11 @@ export default function VendorBusinessInfoScreen({ navigation, route }: Props) {
       stepLabel="Step 1 of 4"
       steps={VENDOR_REGISTRATION_STEPS}
       activeStep={1}
-      onBack={() => navigation.goBack()}
+      onBack={handleBack}
       footer={
         <PartnerRegistrationFooter
           showBack
-          onBack={() => navigation.goBack()}
+          onBack={handleBack}
           onContinue={() => {
             if (!validate()) return;
             navigation.navigate('VendorBusinessAddress', route.params);

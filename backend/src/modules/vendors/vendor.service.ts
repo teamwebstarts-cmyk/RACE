@@ -1,6 +1,9 @@
 import { AppError, ConflictError, NotFoundError } from '../../shared/utils/errors';
 import { notificationService } from '../../shared/services/notification.service';
 import { storageService } from '../../shared/services/storage.service';
+import { BookingModel } from '../bookings/booking.model';
+import { TransactionModel } from '../admin/models/transaction.model';
+import { UserModel } from '../users/user.model';
 import { userRepository } from '../users/user.repository';
 import { vendorRepository } from './vendor.repository';
 import type { IVendor } from './vendor.model';
@@ -404,6 +407,62 @@ export class VendorService {
     }
 
     return mapVendor(vendor);
+  }
+
+  async getDashboardStats(userId: string): Promise<{
+    jobsToday: number;
+    earningsToday: number;
+    earningsTotal: number;
+  }> {
+    const user = await UserModel.findById(userId);
+    if (!user?.vendorProfile) throw new NotFoundError('Vendor not found');
+
+    const driverUsers = await UserModel.find({
+      role: 'driver',
+      'driverProfile.vendorUserId': user._id,
+    })
+      .select('_id')
+      .lean();
+    const driverIds = driverUsers.map((driver) => driver._id.toString());
+
+    const bookingQuery =
+      driverIds.length > 0
+        ? { $or: [{ vendorId: user._id }, { 'driver.id': { $in: driverIds } }] }
+        : { vendorId: user._id };
+
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const [jobsToday, earningsTodayAgg, earningsTotalAgg] = await Promise.all([
+      BookingModel.countDocuments({ ...bookingQuery, createdAt: { $gte: startOfDay } }),
+      TransactionModel.aggregate([
+        {
+          $match: {
+            vendorId: user._id,
+            type: 'PAYMENT',
+            status: 'COMPLETED',
+            createdAt: { $gte: startOfDay },
+          },
+        },
+        { $group: { _id: null, total: { $sum: '$amount' } } },
+      ]),
+      TransactionModel.aggregate([
+        {
+          $match: {
+            vendorId: user._id,
+            type: 'PAYMENT',
+            status: 'COMPLETED',
+          },
+        },
+        { $group: { _id: null, total: { $sum: '$amount' } } },
+      ]),
+    ]);
+
+    return {
+      jobsToday,
+      earningsToday: earningsTodayAgg[0]?.total ?? 0,
+      earningsTotal: earningsTotalAgg[0]?.total ?? 0,
+    };
   }
 }
 

@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text } from 'react-native';
-import { ChevronDown, MapPin } from 'lucide-react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ChevronDown, ChevronRight, MapPin } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import FormField from '../../../../components/auth/FormField';
+import LocationPickerModal from '../../../../components/common/LocationPickerModal';
 import PartnerRegistrationLayout from '../../../../components/partner/PartnerRegistrationLayout';
 import {
   PartnerInfoBox,
@@ -12,8 +13,14 @@ import {
 } from '../../../../components/partner/PartnerRegistrationSections';
 import { INDIAN_STATE_OPTIONS, VENDOR_REGISTRATION_STEPS } from '../../../../constants/partnerRegistration';
 import { usePartnerRegistrationStore } from '../../../../store/partnerRegistrationStore';
+import type { LocationResult } from '../../../../types/location';
 import type { PartnerRegistrationStackParamList } from '../../../../types/partnerNavigation';
-import { isValidIndianPin, showSelectOptions } from '../../../../utils/partnerRegistration';
+import { toAddressFormValues } from '../../../../utils/googlePlaces';
+import {
+  isValidIndianPin,
+  partnerRegistrationGoBack,
+  showSelectOptions,
+} from '../../../../utils/partnerRegistration';
 import { colors, spacing, typography } from '../../../../theme';
 
 type Props = NativeStackScreenProps<PartnerRegistrationStackParamList, 'VendorBusinessAddress'>;
@@ -22,6 +29,32 @@ export default function VendorBusinessAddressScreen({ navigation, route }: Props
   const vendorAddress = usePartnerRegistrationStore((s) => s.vendorAddress);
   const setVendorAddress = usePartnerRegistrationStore((s) => s.setVendorAddress);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
+
+  const handleBack = () =>
+    partnerRegistrationGoBack(navigation, 'VendorBusinessAddress', route.params);
+
+  const searchDisplayValue = [
+    vendorAddress.addressLine1,
+    vendorAddress.addressLine2,
+    vendorAddress.city,
+    vendorAddress.state,
+    vendorAddress.pinCode,
+  ]
+    .filter(Boolean)
+    .join(', ');
+
+  const handleLocationSelect = (location: LocationResult) => {
+    const mapped = toAddressFormValues(location);
+    setVendorAddress({
+      addressLine1: mapped.line1,
+      addressLine2: mapped.line2,
+      city: mapped.city,
+      state: mapped.state,
+      pinCode: mapped.pincode,
+    });
+    setErrors({});
+  };
 
   const validate = () => {
     const next: Record<string, string> = {};
@@ -36,14 +69,14 @@ export default function VendorBusinessAddressScreen({ navigation, route }: Props
   return (
     <PartnerRegistrationLayout
       title="Vendor Registration"
-      stepLabel="Step 1 of 4"
+      stepLabel="Step 2 of 4"
       steps={VENDOR_REGISTRATION_STEPS}
-      activeStep={1}
-      onBack={() => navigation.goBack()}
+      activeStep={2}
+      onBack={handleBack}
       footer={
         <PartnerRegistrationFooter
           showBack
-          onBack={() => navigation.goBack()}
+          onBack={handleBack}
           onContinue={() => {
             if (!validate()) return;
             navigation.navigate('VendorDocuments', route.params);
@@ -57,6 +90,19 @@ export default function VendorBusinessAddressScreen({ navigation, route }: Props
         title="Business Address"
         subtitle="Provide the address used for verification and service operations"
       />
+
+      <Text style={styles.selectLabel}>Select Address</Text>
+      <Pressable onPress={() => setShowLocationPicker(true)} style={styles.selectButton}>
+        <View style={styles.selectRow}>
+          <MapPin size={18} color={colors.primary} />
+          <Text
+            style={[styles.selectText, searchDisplayValue ? styles.selectTextFilled : null]}
+            numberOfLines={2}>
+            {searchDisplayValue || 'Select your address'}
+          </Text>
+          <ChevronRight size={18} color={colors.grey} />
+        </View>
+      </Pressable>
 
       <FormField
         label="Address Line 1"
@@ -125,6 +171,14 @@ export default function VendorBusinessAddressScreen({ navigation, route }: Props
           operations.
         </Text>
       </PartnerInfoBox>
+
+      <LocationPickerModal
+        visible={showLocationPicker}
+        title="Select your address"
+        confirmLabel="Confirm address"
+        onClose={() => setShowLocationPicker(false)}
+        onLocationSelected={handleLocationSelect}
+      />
     </PartnerRegistrationLayout>
   );
 }
@@ -135,6 +189,36 @@ const styles = StyleSheet.create({
     color: colors.grey,
     fontSize: typography.sizes.md,
     textAlign: 'center',
+  },
+  selectLabel: {
+    marginBottom: spacing.sm,
+    color: colors.dark,
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold,
+  },
+  selectButton: {
+    marginBottom: spacing.md,
+  },
+  selectRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderRadius: 12,
+    backgroundColor: colors.background,
+    paddingHorizontal: 12,
+    minHeight: 52,
+    gap: 10,
+  },
+  selectText: {
+    flex: 1,
+    fontSize: typography.sizes.md,
+    color: colors.grey,
+    fontWeight: typography.weights.regular,
+  },
+  selectTextFilled: {
+    color: colors.dark,
+    fontWeight: typography.weights.semibold,
   },
   noteText: {
     color: colors.dark,

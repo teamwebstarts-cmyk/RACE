@@ -13,7 +13,7 @@ import {
 import { DRIVER_REGISTRATION_STEPS } from '../../../../constants/partnerRegistration';
 import { usePartnerRegistrationStore } from '../../../../store/partnerRegistrationStore';
 import type { PartnerRegistrationStackParamList } from '../../../../types/partnerNavigation';
-import { isValidEmail } from '../../../../utils/partnerRegistration';
+import { isValidEmail, partnerRegistrationGoBack } from '../../../../utils/partnerRegistration';
 
 type Props = NativeStackScreenProps<PartnerRegistrationStackParamList, 'DriverPersonalInfo'>;
 
@@ -21,6 +21,8 @@ export default function DriverPersonalInfoScreen({ navigation, route }: Props) {
   const driverPersonal = usePartnerRegistrationStore((s) => s.driverPersonal);
   const setDriverPersonal = usePartnerRegistrationStore((s) => s.setDriverPersonal);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const handleBack = () =>
+    partnerRegistrationGoBack(navigation, 'DriverPersonalInfo', route.params);
 
   const validate = () => {
     const next: Record<string, string> = {};
@@ -48,11 +50,11 @@ export default function DriverPersonalInfoScreen({ navigation, route }: Props) {
       stepLabel="Step 1 of 4"
       steps={DRIVER_REGISTRATION_STEPS}
       activeStep={1}
-      onBack={() => navigation.goBack()}
+      onBack={handleBack}
       footer={
         <PartnerRegistrationFooter
           showBack
-          onBack={() => navigation.goBack()}
+          onBack={handleBack}
           onContinue={handleContinue}
         />
       }>

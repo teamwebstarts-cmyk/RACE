@@ -99,7 +99,7 @@ export default function PartnerLoginScreen({ navigation, route }: Props) {
               if (error) setError('');
             }}
             keyboardType="number-pad"
-            placeholder="Enter mobile number"
+            placeholder="e.g. 9876543210"
             placeholderTextColor={colors.grey}
             maxLength={10}
             style={styles.phoneInput}

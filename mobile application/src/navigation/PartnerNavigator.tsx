@@ -8,8 +8,8 @@ import PartnerTabBar from '../components/partner/PartnerTabBar';
 import PartnerHomeScreen from '../screens/partner/PartnerHomeScreen';
 import PartnerJobsScreen from '../screens/partner/PartnerJobsScreen';
 import PartnerAccountScreen from '../screens/partner/PartnerAccountScreen';
+import PartnerVerificationStatusScreen from '../screens/partner/PartnerVerificationStatusScreen';
 import VendorDriversScreen from '../screens/partner/VendorDriversScreen';
-import VerificationStatusScreen from '../screens/vendor/VerificationStatusScreen';
 import type {
   PartnerAccountStackParamList,
   PartnerTabParamList,
@@ -54,10 +54,8 @@ function PartnerAccountStackNavigator() {
       />
       <AccountStack.Screen
         name="VendorVerificationStatus"
-        component={VerificationStatusScreen}
-        options={{
-          headerTitle: 'Verification Status',
-        }}
+        component={PartnerVerificationStatusScreen}
+        options={{ headerShown: false }}
       />
     </AccountStack.Navigator>
   );

@@ -1,6 +1,14 @@
 import twilio from 'twilio';
 
 import { AppError } from '../shared/utils/errors';
+import { logger } from '../shared/utils/logger';
+
+function logDevOtp(to: string, otp: string): void {
+  const toNumber = formatIndianMobile(to);
+  const banner = `══════ DEV OTP ══════  ${toNumber}  →  ${otp}  ══════════════════`;
+  console.log(`\n${banner}\n`);
+  logger.info('DEV OTP (use in app — SMS not sent)', { to: toNumber, otp });
+}
 
 /**
  * Sends OTP via Twilio SMS.
@@ -15,16 +23,22 @@ export async function sendSms(to: string, otp: string): Promise<void> {
   const twilioConfigured = Boolean(accountSid && authToken && twilioPhone);
 
   if (!twilioConfigured) {
+    if (process.env.NODE_ENV !== 'production') {
+      logDevOtp(to, otp);
+      return;
+    }
+
     throw new AppError(
       'SMS service is not configured. Set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER.',
       503,
     );
   }
 
+  const toNumber = formatIndianMobile(to);
+
   try {
     const client = twilio(accountSid, authToken);
     const from = formatE164(twilioPhone ?? '');
-    const toNumber = formatIndianMobile(to);
 
     await client.messages.create({
       body: message,
@@ -34,7 +48,14 @@ export async function sendSms(to: string, otp: string): Promise<void> {
 
     console.log(`[SMS SENT] To: ${toNumber}`);
   } catch (error) {
-    console.error(`[SMS ERROR] Failed to send to ${to}:`, error);
+    console.error(`[SMS ERROR] Failed to send to ${toNumber}:`, error);
+
+    // Dev fallback: Twilio trial only texts verified numbers — still allow login via terminal OTP.
+    if (process.env.NODE_ENV !== 'production') {
+      logDevOtp(toNumber, otp);
+      return;
+    }
+
     throw new AppError('Failed to send OTP SMS. Please try again.', 502);
   }
 }

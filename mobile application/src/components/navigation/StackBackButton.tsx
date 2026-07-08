@@ -16,7 +16,11 @@ export default function StackBackButton({ canGoBack }: NativeStackHeaderLeftProp
 
   return (
     <Pressable
-      onPress={() => navigation.goBack()}
+      onPress={() => {
+        if (navigation.canGoBack()) {
+          navigation.goBack();
+        }
+      }}
       hitSlop={12}
       style={{ marginLeft: 4, padding: 6, minWidth: 40, minHeight: 40, justifyContent: 'center' }}
       accessibilityRole="button"

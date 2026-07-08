@@ -1,7 +1,7 @@
 import type { ColumnDef } from '@tanstack/react-table';
 import { Star } from 'lucide-react';
-import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import type { VendorListItem } from '@race/types';
 import { cn } from '@race/utils';
@@ -44,6 +44,7 @@ const TABS = [
 
 export function VendorList() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const {
     data,
     counts,
@@ -68,6 +69,16 @@ export function VendorList() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<VendorListItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<VendorListItem | null>(null);
+
+  useEffect(() => {
+    const status = searchParams.get('status');
+    if (status && TABS.some((tab) => tab.key === status)) {
+      setActiveTab(status);
+      const next = new URLSearchParams(searchParams);
+      next.delete('status');
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, setActiveTab, setSearchParams]);
 
   const columns = useMemo<ColumnDef<VendorListItem, unknown>[]>(
     () => [

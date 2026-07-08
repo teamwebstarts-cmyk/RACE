@@ -94,3 +94,46 @@ export async function updateVendorVehicle(
 export async function deleteVendorVehicle(vehicleId: string) {
   await apiDelete(`/vehicles/${vehicleId}`);
 }
+
+export async function assignVendorDrivers(vendorId: string, driverIds: string[]) {
+  return apiPost<{ assigned: number }>(`/vendors/${vendorId}/assign-drivers`, { driverIds });
+}
+
+export async function unassignVendorDriver(vendorId: string, driverId: string) {
+  return apiPost<{ unassigned: boolean; driverId: string }>(
+    `/vendors/${vendorId}/unassign-drivers/${driverId}`,
+    {},
+  );
+}
+
+export type VendorFleetDriver = {
+  id: string;
+  name: string;
+  phone: string;
+  driverType: string;
+  licenseNo: string;
+  status: string;
+  isAvailable: boolean;
+  isBusy: boolean;
+};
+
+export async function listVendorFleetDrivers(vendorId: string): Promise<VendorFleetDriver[]> {
+  return apiGet<VendorFleetDriver[]>(`/vendors/${vendorId}/drivers`);
+}
+
+export async function createVendorFleetDriver(
+  vendorId: string,
+  input: {
+    name: string;
+    phone: string;
+    licenseNo: string;
+    driverType: string;
+    city?: string;
+  },
+): Promise<VendorFleetDriver> {
+  return apiPost<VendorFleetDriver>(`/vendors/${vendorId}/drivers`, input);
+}
+
+export async function removeVendorFleetDriver(vendorId: string, driverId: string): Promise<void> {
+  await apiDelete(`/vendors/${vendorId}/drivers/${driverId}`);
+}

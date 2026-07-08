@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import BrandLogo from '../../components/ui/BrandLogo';
@@ -8,10 +8,9 @@ import PrimaryButton from '../../components/ui/PrimaryButton';
 import AppScreenLayout from '../../components/ui/AppScreenLayout';
 import DocumentStatusChip from '../../components/vendor/DocumentStatusChip';
 import { getVendorConfig } from '../../data/vendorWizardConfig';
+import { useAuthActions } from '../../hooks/useAuth';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
-import { logout, setUseCustomerExperience } from '../../redux/auth/authSlice';
-import { resetOnboarding } from '../../redux/onboarding/onboardingSlice';
-import { resetVendorWizard } from '../../redux/vendor/vendorOnboardingSlice';
+import { setUseCustomerExperience } from '../../redux/auth/authSlice';
 import { useVendorStatusQuery } from '../../services/vendor/useVendorMutations';
 import type { PartnerAccountStackParamList } from '../../types/partnerNavigation';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
@@ -19,17 +18,24 @@ import { colors, radius, shadows, spacing, typography } from '../../theme';
 type Props = NativeStackScreenProps<PartnerAccountStackParamList, 'PartnerAccountMain'>;
 
 export default function PartnerAccountScreen({ navigation }: Props) {
-  const dispatch = useAppDispatch();
+  const { logout } = useAuthActions();
   const user = useAppSelector(state => state.auth.user);
+  const dispatch = useAppDispatch();
   const isVendor = user?.role === 'vendor';
   const isDriver = user?.role === 'driver';
   const { data: vendor } = useVendorStatusQuery(isVendor);
   const config = vendor ? getVendorConfig(vendor.vendorType) : undefined;
 
   const handleLogout = () => {
-    dispatch(logout());
-    dispatch(resetOnboarding());
-    dispatch(resetVendorWizard());
+    Alert.alert('Logout', 'Are you sure you want to logout?', [
+      { text: 'No', style: 'cancel' },
+      {
+        text: 'Yes',
+        onPress: () => {
+          void logout();
+        },
+      },
+    ]);
   };
 
   const switchToCustomer = () => {
@@ -49,7 +55,6 @@ export default function PartnerAccountScreen({ navigation }: Props) {
         <Text style={styles.badge}>{isDriver ? 'DRIVER ACCOUNT' : 'PARTNER ACCOUNT'}</Text>
         <Text style={styles.name}>{user?.fullName ?? 'RACE Partner'}</Text>
         <Text style={styles.meta}>{user?.mobileNumber}</Text>
-        {isDriver ? <Text style={styles.meta}>RACE demo driver</Text> : null}
         {config ? <Text style={styles.meta}>{config.title}</Text> : null}
         {vendor ? (
           <Text style={styles.status}>
@@ -57,7 +62,7 @@ export default function PartnerAccountScreen({ navigation }: Props) {
             {vendor.verificationStage.replace(/_/g, ' ')}
           </Text>
         ) : null}
-        {isDriver ? <Text style={styles.status}>Status: approved · ready for jobs</Text> : null}
+        {isDriver ? <Text style={styles.status}>Status: ready for jobs</Text> : null}
       </View>
 
       {vendor?.documents?.length ? (

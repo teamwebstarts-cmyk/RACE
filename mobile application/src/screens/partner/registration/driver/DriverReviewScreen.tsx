@@ -18,6 +18,7 @@ import type {
   PartnerRootStackParamList,
 } from '../../../../types/partnerNavigation';
 import type { ApiSuccessResponse } from '../../../../types/auth';
+import { partnerRegistrationGoBack } from '../../../../utils/partnerRegistration';
 import { colors, radius, spacing, typography } from '../../../../theme';
 
 type Props = NativeStackScreenProps<PartnerRegistrationStackParamList, 'DriverReview'>;
@@ -38,11 +39,12 @@ function mapVehicleToDriverType(vehicleType: string): 'Tow Driver' | 'Full-Time'
   return 'Full-Time';
 }
 
-export default function DriverReviewScreen({ navigation }: Props) {
+export default function DriverReviewScreen({ navigation, route }: Props) {
   const dispatch = useAppDispatch();
   const authUser = useAppSelector(state => state.auth.user);
   const { driverPersonal, driverVehicle, driverDocuments } = usePartnerRegistrationStore();
   const [submitting, setSubmitting] = useState(false);
+  const handleBack = () => partnerRegistrationGoBack(navigation, 'DriverReview', route.params);
 
   const submit = async () => {
     setSubmitting(true);
@@ -100,11 +102,11 @@ export default function DriverReviewScreen({ navigation }: Props) {
       stepLabel="Step 4 of 4"
       steps={DRIVER_REGISTRATION_STEPS}
       activeStep={4}
-      onBack={() => navigation.goBack()}
+      onBack={handleBack}
       footer={
         <PartnerRegistrationFooter
           showBack
-          onBack={() => navigation.goBack()}
+          onBack={handleBack}
           continueLabel={submitting ? 'Submitting…' : 'Submit Application'}
           onContinue={() => {
             if (!submitting) void submit();
@@ -116,7 +118,7 @@ export default function DriverReviewScreen({ navigation }: Props) {
         <CheckCircle2 size={28} color={colors.partnerRed} strokeWidth={2} />
         <Text style={styles.successTitle}>Review your application</Text>
         <Text style={styles.successSubtitle}>
-          In demo builds you become an approved driver after submit and can accept jobs.
+          We will notify you once your application is reviewed.
         </Text>
       </View>
 

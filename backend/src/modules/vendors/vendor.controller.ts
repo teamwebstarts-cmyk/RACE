@@ -38,6 +38,12 @@ export class VendorController {
     return sendSuccess(res, vendor);
   });
 
+  getDashboard = asyncHandler(async (req: Request, res: Response) => {
+    const user = getAuthUser(req);
+    const stats = await vendorService.getDashboardStats(user.id);
+    return sendSuccess(res, stats);
+  });
+
   uploadDocument = asyncHandler(async (req: Request, res: Response) => {
     const user = getAuthUser(req);
     const file = req.file;

@@ -73,6 +73,12 @@ router.post(
   requireAdminPermission(AdminPermission.VENDORS_MANAGE),
   adminVendorsController.assignDrivers,
 );
+router.post(
+  '/vendors/:id/unassign-drivers/:driverId',
+  adminAuthMiddleware,
+  requireAdminPermission(AdminPermission.VENDORS_MANAGE),
+  adminVendorsController.unassignDriver,
+);
 router.get(
   '/vendors/:id/vehicles',
   adminAuthMiddleware,
@@ -84,6 +90,24 @@ router.post(
   adminAuthMiddleware,
   requireAdminPermission(AdminPermission.VENDORS_MANAGE),
   adminVendorsController.createVehicle,
+);
+router.get(
+  '/vendors/:id/drivers',
+  adminAuthMiddleware,
+  requireAdminPermission(AdminPermission.VENDORS_VIEW),
+  adminVendorsController.listFleetDrivers,
+);
+router.post(
+  '/vendors/:id/drivers',
+  adminAuthMiddleware,
+  requireAdminPermission(AdminPermission.VENDORS_MANAGE),
+  adminVendorsController.createFleetDriver,
+);
+router.delete(
+  '/vendors/:id/drivers/:driverId',
+  adminAuthMiddleware,
+  requireAdminPermission(AdminPermission.VENDORS_MANAGE),
+  adminVendorsController.removeFleetDriver,
 );
 
 export default router;

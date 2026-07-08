@@ -58,6 +58,7 @@ export class VendorDriversService {
       }
 
       existing.driverProfile.vendorUserId = new Types.ObjectId(vendorUserId);
+      existing.driverProfile.fleetSource = 'vendor';
       if (dto.licenseNo) existing.driverProfile.licenseNo = dto.licenseNo;
       if (dto.driverType) existing.driverProfile.driverType = dto.driverType;
       if (dto.city) existing.driverProfile.city = dto.city;
@@ -84,6 +85,7 @@ export class VendorDriversService {
       licenseNo: dto.licenseNo,
       driverType: dto.driverType,
       vendorUserId,
+      fleetSource: 'vendor',
       city: dto.city ?? 'Bhubaneswar',
       state: 'Odisha',
       vehicleRegistration: dto.vehicleRegistration,
@@ -119,6 +121,7 @@ export class VendorDriversService {
       throw new ConflictError('Driver already belongs to another vendor');
     }
     driver.driverProfile.vendorUserId = new Types.ObjectId(vendorUserId);
+    driver.driverProfile.fleetSource = 'vendor';
     await driver.save();
     return mapFleetDriver(driver);
   }
@@ -134,6 +137,7 @@ export class VendorDriversService {
       throw new BadRequestError('Cannot remove a driver with an active booking');
     }
     driver.driverProfile.vendorUserId = undefined;
+    driver.driverProfile.fleetSource = undefined;
     await driver.save();
     return { removed: true, driverId };
   }
