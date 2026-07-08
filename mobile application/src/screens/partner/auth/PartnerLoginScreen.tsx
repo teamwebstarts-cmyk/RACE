@@ -13,7 +13,6 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import AuthToast, { AuthLoadingOverlay } from '../../../components/auth/AuthToast';
 import GoogleIcon from '../../../components/auth/GoogleIcon';
 import PartnerScreenLayout from '../../../components/partner/PartnerScreenLayout';
-import { DEMO_OTP } from '../../../constants/auth';
 import { useAppSelector } from '../../../redux/hooks';
 import {
   getApiErrorMessage,
@@ -87,19 +86,6 @@ export default function PartnerLoginScreen({ navigation, route }: Props) {
             <Text style={styles.legalLink}>Privacy Policy</Text>
           </Text>
         }>
-        {__DEV__ ? (
-          <View style={styles.demoCard}>
-            <Text style={styles.demoTitle}>Dev OTP</Text>
-            <Text style={styles.demoText}>
-              Use any fresh 10-digit number. OTP after Send OTP:{' '}
-              <Text style={styles.demoValue}>{DEMO_OTP}</Text>
-            </Text>
-            <Text style={[styles.demoText, { marginTop: spacing.xs }]}>
-              Register as Driver/Vendor first — seeded demo drivers were removed for real testing.
-            </Text>
-          </View>
-        ) : null}
-
         <View style={styles.phoneField}>
           <View style={styles.countryPicker}>
             <Text style={styles.flag}>🇮🇳</Text>
@@ -168,34 +154,6 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.semibold,
     textAlign: 'center',
-  },
-  demoCard: {
-    marginBottom: spacing.lg,
-    padding: spacing.md,
-    borderRadius: radius.md,
-    backgroundColor: colors.partnerRedLight,
-    borderWidth: 1,
-    borderColor: '#F5D98A',
-  },
-  demoTitle: {
-    color: colors.primary,
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.bold,
-    marginBottom: spacing.xs,
-    textAlign: 'center',
-  },
-  demoRow: {
-    paddingVertical: 4,
-  },
-  demoText: {
-    color: colors.dark,
-    fontSize: typography.sizes.sm,
-    textAlign: 'center',
-    lineHeight: typography.lineHeights.normal,
-  },
-  demoValue: {
-    fontWeight: typography.weights.bold,
-    color: colors.primary,
   },
   phoneField: {
     flexDirection: 'row',
