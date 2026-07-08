@@ -71,6 +71,11 @@ function resolveFolder(vendorType: string, documentType: string): string {
   return `vendors/${vendorFolder}/${docFolder}`;
 }
 
+function resolveDriverFolder(driverId: string, documentType: string): string {
+  const docFolder = DOCUMENT_FOLDER[documentType] ?? 'documents/other';
+  return `drivers/${driverId}/${docFolder}`;
+}
+
 function getLocalUploadsRoot(): string {
   return path.join(process.cwd(), 'uploads');
 }
@@ -139,6 +144,43 @@ export class StorageService {
     }
 
     return uploadToLocal(input, storagePath, fileName);
+  }
+
+  async uploadDriverDocument(input: Omit<UploadFileInput, 'vendorType'> & { driverId: string }): Promise<UploadResult> {
+    this.validateFile(input.buffer, input.mimeType);
+    const storagePath = resolveDriverFolder(input.driverId, input.documentType);
+    const fileName = buildFileName(input.originalName);
+
+    if (gcsConfig.isConfigured) {
+      try {
+        return await uploadToGcs(
+          {
+            buffer: input.buffer,
+            mimeType: input.mimeType,
+            originalName: input.originalName,
+            // Unused by uploadToGcs; present to satisfy UploadFileInput shape.
+            vendorType: 'driver',
+            documentType: input.documentType,
+          },
+          storagePath,
+          fileName,
+        );
+      } catch (error) {
+        logger.warn('GCS upload failed, falling back to local storage', { error });
+      }
+    }
+
+    return uploadToLocal(
+      {
+        buffer: input.buffer,
+        mimeType: input.mimeType,
+        originalName: input.originalName,
+        vendorType: 'driver',
+        documentType: input.documentType,
+      },
+      storagePath,
+      fileName,
+    );
   }
 
   getLocalFileStream(relativePath: string) {

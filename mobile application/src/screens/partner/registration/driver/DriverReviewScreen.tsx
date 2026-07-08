@@ -19,6 +19,7 @@ import type {
 } from '../../../../types/partnerNavigation';
 import type { ApiSuccessResponse } from '../../../../types/auth';
 import { partnerRegistrationGoBack } from '../../../../utils/partnerRegistration';
+import { PARTNER_WAITING_ADMIN_APPROVAL } from '../../../../constants/partnerCopy';
 import { colors, radius, spacing, typography } from '../../../../theme';
 
 type Props = NativeStackScreenProps<PartnerRegistrationStackParamList, 'DriverReview'>;
@@ -117,9 +118,7 @@ export default function DriverReviewScreen({ navigation, route }: Props) {
       <View style={styles.successCard}>
         <CheckCircle2 size={28} color={colors.partnerRed} strokeWidth={2} />
         <Text style={styles.successTitle}>Review your application</Text>
-        <Text style={styles.successSubtitle}>
-          We will notify you once your application is reviewed.
-        </Text>
+        <Text style={styles.successSubtitle}>{PARTNER_WAITING_ADMIN_APPROVAL}</Text>
       </View>
 
       <Text style={styles.sectionTitle}>Personal Information</Text>

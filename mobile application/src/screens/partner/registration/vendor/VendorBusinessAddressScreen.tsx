@@ -83,8 +83,6 @@ export default function VendorBusinessAddressScreen({ navigation, route }: Props
           }}
         />
       }>
-      <Text style={styles.subtitle}>Enter your business address details.</Text>
-
       <PartnerSectionHeader
         Icon={MapPin}
         title="Business Address"
@@ -184,12 +182,6 @@ export default function VendorBusinessAddressScreen({ navigation, route }: Props
 }
 
 const styles = StyleSheet.create({
-  subtitle: {
-    marginBottom: spacing.lg,
-    color: colors.grey,
-    fontSize: typography.sizes.md,
-    textAlign: 'center',
-  },
   selectLabel: {
     marginBottom: spacing.sm,
     color: colors.dark,

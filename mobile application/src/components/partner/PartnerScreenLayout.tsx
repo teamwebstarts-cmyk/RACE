@@ -173,6 +173,10 @@ const styles = StyleSheet.create({
     height: HEADER_SIDE,
     alignItems: 'center',
     justifyContent: 'center',
+    borderRadius: HEADER_SIDE / 2,
+    backgroundColor: colors.lightGrey,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   titleBlock: {
     flex: 1,
@@ -221,6 +225,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   pressed: {
-    opacity: 0.9,
+    opacity: 0.85,
+    transform: [{ scale: 0.97 }],
   },
 });

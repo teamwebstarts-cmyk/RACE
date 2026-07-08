@@ -19,6 +19,10 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
   onboardingRequired: boolean;
+  /** After logout, partner app opens this auth screen instead of splash. */
+  partnerAuthEntry: 'PartnerSplash' | 'PartnerRoleSelection' | 'PartnerLogin';
+  /** Bumps on logout so navigation remounts reliably. */
+  authSessionVersion: number;
   sendOtp: (payload: SendOtpPayload) => Promise<authService.SendOtpResult>;
   verifyOtp: (payload: VerifyOtpPayload) => Promise<void>;
   logout: () => Promise<void>;
@@ -30,6 +34,7 @@ interface AuthState {
   setAuthenticated: (value: boolean) => void;
   setOnboardingRequired: (value: boolean) => void;
   setLoading: (value: boolean) => void;
+  clearPartnerAuthEntry: () => void;
 }
 
 async function completeAuthSession(
@@ -77,6 +82,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isLoading: false,
   error: null,
   onboardingRequired: false,
+  partnerAuthEntry: 'PartnerSplash',
+  authSessionVersion: 0,
 
   setAuth: payload =>
     set({
@@ -95,12 +102,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     })),
 
   clearAuth: () =>
-    set({
+    set(state => ({
       user: null,
       isAuthenticated: false,
       onboardingRequired: false,
       error: null,
-    }),
+      partnerAuthEntry: state.partnerAuthEntry,
+      authSessionVersion: state.authSessionVersion,
+    })),
+
+  clearPartnerAuthEntry: () => set({ partnerAuthEntry: 'PartnerSplash' }),
 
   sendOtp: async payload => {
     set({ isLoading: true, error: null });
@@ -147,10 +158,24 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
+    const nextSessionVersion = get().authSessionVersion + 1;
+    set({
+      partnerAuthEntry: 'PartnerRoleSelection',
+      authSessionVersion: nextSessionVersion,
+    });
+
     await authService.logout();
     clearSessionStores();
     await syncReduxLogout();
-    get().clearAuth();
+
+    set({
+      partnerAuthEntry: 'PartnerRoleSelection',
+      authSessionVersion: nextSessionVersion,
+      user: null,
+      isAuthenticated: false,
+      onboardingRequired: false,
+      error: null,
+    });
   },
 
   clearError: () => set({ error: null }),

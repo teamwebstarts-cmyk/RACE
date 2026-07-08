@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import {
   Animated,
   StatusBar,
@@ -12,6 +12,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import PartnerBrandLogo from '../../../components/partner/PartnerBrandLogo';
 import PartnerPageDots from '../../../components/partner/PartnerPageDots';
+import PrimaryButton from '../../../components/ui/PrimaryButton';
 import { useAuthStore } from '../../../store/authStore';
 import { shouldUsePartnerExperience } from '../../../utils/roleRouting';
 import type {
@@ -20,7 +21,6 @@ import type {
 } from '../../../types/partnerNavigation';
 import { colors, spacing, typography } from '../../../theme';
 
-const SPLASH_MIN_MS = 2200;
 const FADE_IN_MS = 900;
 
 type PartnerSplashNav = NativeStackNavigationProp<PartnerAuthStackParamList, 'PartnerSplash'>;
@@ -35,6 +35,18 @@ export default function PartnerSplashScreen() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const user = useAuthStore((state) => state.user);
 
+  const handleContinue = useCallback(() => {
+    if (isAuthenticated && shouldUsePartnerExperience(user, false)) {
+      rootNavigation?.reset({
+        index: 0,
+        routes: [{ name: 'PartnerMain' }],
+      });
+      return;
+    }
+
+    navigation.replace('PartnerWelcome');
+  }, [isAuthenticated, navigation, rootNavigation, user]);
+
   useEffect(() => {
     const fadeIn = Animated.timing(fadeAnim, {
       toValue: 1,
@@ -44,23 +56,10 @@ export default function PartnerSplashScreen() {
 
     fadeIn.start();
 
-    const timer = setTimeout(() => {
-      if (isAuthenticated && shouldUsePartnerExperience(user, false)) {
-        rootNavigation?.reset({
-          index: 0,
-          routes: [{ name: 'PartnerMain' }],
-        });
-        return;
-      }
-
-      navigation.replace('PartnerWelcome');
-    }, SPLASH_MIN_MS);
-
     return () => {
-      clearTimeout(timer);
       fadeAnim.stopAnimation();
     };
-  }, [fadeAnim, isAuthenticated, navigation, rootNavigation, user]);
+  }, [fadeAnim]);
 
   return (
     <View style={styles.root}>
@@ -80,7 +79,10 @@ export default function PartnerSplashScreen() {
           <Text style={styles.appName}>RACE Service</Text>
         </View>
 
-        <PartnerPageDots total={4} activeIndex={0} />
+        <View style={styles.footer}>
+          <PartnerPageDots total={4} activeIndex={0} />
+          <PrimaryButton label="Continue" onPress={handleContinue} />
+        </View>
       </Animated.View>
     </View>
   );
@@ -109,5 +111,9 @@ const styles = StyleSheet.create({
     color: colors.dark,
     letterSpacing: 0.2,
     textAlign: 'center',
+  },
+  footer: {
+    gap: spacing.lg,
+    width: '100%',
   },
 });

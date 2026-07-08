@@ -56,7 +56,6 @@ function resetToLogin(navigation: Props['navigation']) {
 
 export default function ProfileWizardScreen({ navigation }: Props) {
   const dispatch = useAppDispatch();
-  const loading = useAppSelector((state) => state.auth.loading);
   const accessToken = useAppSelector((state) => state.auth.accessToken);
   const partnerSignupRequired = useAppSelector((state) => state.onboarding.partnerSignupRequired);
   const signupVendorType = useAppSelector((state) => state.onboarding.signupVendorType);
@@ -66,6 +65,7 @@ export default function ProfileWizardScreen({ navigation }: Props) {
 
   const [error, setError] = useState('');
   const completeProfileMutation = useCompleteProfileMutation();
+  const saving = completeProfileMutation.isPending;
 
   useEffect(() => {
     if (!accessToken) {
@@ -272,11 +272,15 @@ export default function ProfileWizardScreen({ navigation }: Props) {
             {currentStep < 5 ? (
               <PrimaryButton label="Continue" onPress={goNext} />
             ) : (
-              <PrimaryButton label={loading ? 'Saving...' : 'Continue'} onPress={() => void handleSubmit()} disabled={loading} />
+              <PrimaryButton
+                label={saving ? 'Saving...' : 'Save & Continue'}
+                onPress={() => void handleSubmit()}
+                disabled={saving}
+              />
             )}
           </GlassCard>
         </ScrollView>
-        <AuthLoadingOverlay visible={loading} label="Saving profile..." />
+        <AuthLoadingOverlay visible={saving} label="Saving profile..." />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

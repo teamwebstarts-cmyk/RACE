@@ -5,6 +5,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import { useAuth } from '../hooks/useAuth';
 import { useAppSelector } from '../redux/hooks';
+import { useAuthStore } from '../store/authStore';
 import PartnerAuthNavigator from './PartnerAuthNavigator';
 import PartnerRegistrationNavigator from './PartnerRegistrationNavigator';
 import PartnerSelectSheet from '../components/partner/PartnerSelectSheet';
@@ -31,8 +32,11 @@ const navigationTheme = {
 
 export default function PartnerAppNavigator() {
   const { isLoading, isAuthenticated, onboardingRequired } = useAuth();
+  const accessToken = useAppSelector(state => state.auth.accessToken);
   const user = useAppSelector(state => state.auth.user);
+  const authSessionVersion = useAuthStore(state => state.authSessionVersion);
   const enterMain =
+    Boolean(accessToken) &&
     isAuthenticated &&
     !onboardingRequired &&
     (user?.role === 'driver' || user?.role === 'vendor');
@@ -45,11 +49,15 @@ export default function PartnerAppNavigator() {
     );
   }
 
+  const navigatorKey = enterMain
+    ? `partner-main-${authSessionVersion}`
+    : `partner-auth-${authSessionVersion}`;
+
   return (
     <NavigationContainer theme={navigationTheme}>
       <PartnerSelectSheet />
       <RootStack.Navigator
-        key={enterMain ? 'partner-main' : 'partner-auth'}
+        key={navigatorKey}
         initialRouteName={enterMain ? 'PartnerMain' : 'PartnerBootstrap'}
         screenOptions={{ headerShown: false }}>
         <RootStack.Screen name="PartnerBootstrap" component={PartnerAuthNavigator} />

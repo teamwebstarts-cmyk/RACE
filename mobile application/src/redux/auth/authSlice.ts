@@ -107,6 +107,9 @@ const authSlice = createSlice({
       state.useCustomerExperience = action.payload;
     },
     logout(state) {
+      const preservedEntry = useAuthStore.getState().partnerAuthEntry;
+      const preservedVersion = useAuthStore.getState().authSessionVersion;
+
       state.user = null;
       state.accessToken = null;
       state.refreshToken = null;
@@ -117,6 +120,10 @@ const authSlice = createSlice({
       state.useCustomerExperience = false;
 
       useAuthStore.getState().clearAuth();
+      useAuthStore.setState({
+        partnerAuthEntry: preservedEntry,
+        authSessionVersion: preservedVersion,
+      });
     },
     rehydrateAuth(state, action: PayloadAction<PersistedAuthPayload>) {
       const { user, accessToken, refreshToken, onboardingRequired } = action.payload;

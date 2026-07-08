@@ -8,6 +8,7 @@ import VerificationTimeline from '../../components/vendor/VerificationTimeline';
 import GlassCard from '../../components/ui/GlassCard';
 import PrimaryButton from '../../components/ui/PrimaryButton';
 import PartnerScreenLayout from '../../components/partner/PartnerScreenLayout';
+import { PARTNER_WAITING_ADMIN_APPROVAL } from '../../constants/partnerCopy';
 import { getVendorConfig } from '../../data/vendorWizardConfig';
 import { useVendorStatusQuery } from '../../services/vendor/useVendorMutations';
 import type { PartnerAccountStackParamList } from '../../types/partnerNavigation';
@@ -22,14 +23,14 @@ const STATUS_META: Record<
 > = {
   pending: {
     label: 'Pending verification',
-    hint: 'Your application is with the admin team for review.',
+    hint: PARTNER_WAITING_ADMIN_APPROVAL,
     color: colors.warning,
     bg: 'rgba(244, 161, 21, 0.12)',
     Icon: Clock3,
   },
   under_review: {
     label: 'Under review',
-    hint: 'Documents and business details are being checked.',
+    hint: PARTNER_WAITING_ADMIN_APPROVAL,
     color: colors.warning,
     bg: 'rgba(244, 161, 21, 0.12)',
     Icon: Clock3,

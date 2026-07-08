@@ -30,6 +30,16 @@ function assertDriverRole(role: string): void {
   }
 }
 
+async function assertDriverApproved(driverId: string): Promise<void> {
+  const driver = await userRepository.findById(driverId);
+  if (!driver?.driverProfile) {
+    throw new NotFoundError('Driver not found');
+  }
+  if (driver.driverProfile.status !== 'APPROVED') {
+    throw new ForbiddenError('Driver account pending admin approval');
+  }
+}
+
 export class DriverService {
   async updateAvailability(
     driverId: string,
@@ -80,6 +90,7 @@ export class DriverService {
 
   async listBookings(driverId: string, role: string, query: DriverBookingsQueryDto) {
     assertDriverRole(role);
+    await assertDriverApproved(driverId);
 
     const status = query.status;
     const includeTowing = !query.type || query.type === 'towing';
@@ -119,6 +130,7 @@ export class DriverService {
 
   async getActiveBooking(driverId: string, role: string) {
     assertDriverRole(role);
+    await assertDriverApproved(driverId);
 
     const driver = await userRepository.findById(driverId);
     if (!driver) {
@@ -132,19 +144,41 @@ export class DriverService {
     const bookingType = driver.activeBookingType;
     const bookingId = driver.activeBookingId.toString();
 
+    const mapBooking = (
+      type: 'towing' | 'driver',
+      booking: {
+        id?: string;
+        bookingNumber: string;
+        status: string;
+        pickup?: unknown;
+        dropoff?: unknown | null;
+        estimatedFare?: number;
+        createdAt: Date;
+      },
+    ) => ({
+      bookingType: type,
+      id: booking.id ?? bookingId,
+      bookingNumber: booking.bookingNumber,
+      status: booking.status,
+      pickup: booking.pickup,
+      dropoff: booking.dropoff,
+      estimatedFare: booking.estimatedFare,
+      createdAt: booking.createdAt.toISOString(),
+    });
+
     if (bookingType === 'towing') {
       const booking = await towingBookingRepository.findById(bookingId);
       if (!booking) {
         return { active: false as const };
       }
-      return { active: true as const, bookingType, booking };
+      return { active: true as const, booking: mapBooking('towing', booking) };
     }
 
     const booking = await driverBookingRepository.findById(bookingId);
     if (!booking) {
       return { active: false as const };
     }
-    return { active: true as const, bookingType, booking };
+    return { active: true as const, booking: mapBooking('driver', booking) };
   }
 
   async updateBookingStatus(
@@ -154,6 +188,7 @@ export class DriverService {
     dto: UpdateDriverBookingStatusDto,
   ) {
     assertDriverRole(role);
+    await assertDriverApproved(driverId);
 
     if (!DRIVER_PROGRESS_STATUSES.includes(dto.status)) {
       throw new BadRequestError('Status not allowed for driver updates');
@@ -211,6 +246,7 @@ export class DriverService {
   /** Reject allotted job: free driver and return booking to CONFIRMED for reassignment. */
   async rejectBooking(driverId: string, role: string, bookingId: string, bookingType: 'towing' | 'driver') {
     assertDriverRole(role);
+    await assertDriverApproved(driverId);
 
     const Model = bookingType === 'towing' ? towingBookingRepository : driverBookingRepository;
     const booking = await Model.findById(bookingId);

@@ -226,6 +226,13 @@ export class VendorService {
 
     vendor = (await vendorRepository.updateById(vendor.id, payload))!;
 
+    await userRepository.updateById(userId, {
+      role: 'vendor',
+      isProfileCompleted: true,
+      fullName: dto.ownerName ?? user.fullName,
+      email: dto.email ?? user.email,
+    });
+
     if (dto.documents?.length) {
       await vendorRepository.replaceDocuments(vendor.id, dto.documents);
     }

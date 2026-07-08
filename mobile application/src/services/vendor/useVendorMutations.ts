@@ -1,6 +1,11 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import axios from 'axios';
+import { useEffect, useRef } from 'react';
 
+import { useAppDispatch, useAppSelector } from '../../redux/hooks';
+import { updateTokens, updateUser } from '../../redux/auth/authSlice';
+import { refreshAuthSession } from '../authService';
+import { useAuthStore } from '../../store/authStore';
 import {
   getVendorDashboard,
   getVendorProfile,
@@ -14,7 +19,12 @@ import {
 import type { VendorRegistrationRequest } from '../../types/vendor';
 
 export function useVendorStatusQuery(enabled = true) {
-  return useQuery({
+  const dispatch = useAppDispatch();
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const accessToken = useAppSelector(state => state.auth.accessToken);
+  const lastSyncedStatusRef = useRef<string | null>(null);
+
+  const query = useQuery({
     queryKey: ['vendor', 'status'],
     queryFn: async () => {
       try {
@@ -37,6 +47,31 @@ export function useVendorStatusQuery(enabled = true) {
       return 15_000;
     },
   });
+
+  useEffect(() => {
+    if (!enabled || !query.data || !isAuthenticated || !accessToken) return;
+
+    const status = query.data.status;
+    if (lastSyncedStatusRef.current === status) return;
+    lastSyncedStatusRef.current = status;
+
+    void refreshAuthSession()
+      .then(session => {
+        if (!useAuthStore.getState().isAuthenticated) return;
+        dispatch(
+          updateTokens({
+            accessToken: session.accessToken,
+            refreshToken: session.refreshToken,
+          }),
+        );
+        dispatch(updateUser(session.user));
+      })
+      .catch(() => {
+        // Backend role middleware falls back to DB role if refresh fails.
+      });
+  }, [accessToken, dispatch, enabled, isAuthenticated, query.data]);
+
+  return query;
 }
 
 export function useVendorDashboardQuery(enabled = true) {

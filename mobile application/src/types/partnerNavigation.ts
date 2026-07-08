@@ -34,6 +34,14 @@ export type PartnerTabParamList = {
   PartnerAccount: undefined;
 };
 
+export type PartnerJobsStackParamList = {
+  PartnerJobsList: undefined;
+  PartnerActiveJob: {
+    bookingId?: string;
+    bookingType?: 'towing' | 'driver';
+  };
+};
+
 export type PartnerAccountStackParamList = {
   PartnerAccountMain: undefined;
   VendorVerificationStatus: undefined;

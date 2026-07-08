@@ -223,7 +223,7 @@ function VendorInfoCard({ vendor }: { vendor: VendorDetail }) {
     { label: 'Bank Name', value: vendor.bankName },
     { label: 'Account Number', value: vendor.accountNumber },
     { label: 'IFSC Code', value: vendor.ifscCode },
-    { label: 'Service Areas', value: (vendor.serviceAreas ?? [vendor.city]).filter(Boolean).join(', ') || '—' },
+    { label: 'Service Areas', value: (vendor.serviceAreas ?? []).filter(Boolean).join(', ') || 'Bhubaneswar, Odisha' },
     { label: 'Working Hours', value: vendor.workingHours },
     { label: 'Drivers Assigned', value: String(vendor.driverCount) },
   ];
@@ -284,11 +284,7 @@ function DriverListCard({
       </CardHeader>
       <CardContent>
         {drivers.length === 0 ? (
-          <p className="text-sm text-[#9CA3AF]">
-            {readOnly
-              ? 'No vendor fleet drivers yet. Vendor adds them in Partner app → My Drivers.'
-              : 'No admin-assigned drivers yet.'}
-          </p>
+          <p className="text-sm text-[#9CA3AF]">—</p>
         ) : (
           <ul className="space-y-3">
             {drivers.map((driver) => (
@@ -523,7 +519,6 @@ export function VendorDetailContent({ vendorId }: { vendorId: string }) {
             <VendorInfoCard vendor={vendor} />
             <DriverListCard
               title="Assigned Drivers"
-              description="Admin assigns existing platform drivers to this vendor."
               drivers={vendor.assignedDrivers ?? []}
               actionLabel="Manage"
               onAction={() => setAssignDriverOpen(true)}
@@ -536,7 +531,6 @@ export function VendorDetailContent({ vendorId }: { vendorId: string }) {
             />
             <DriverListCard
               title="My Drivers"
-              description="Vendor onboarded via Partner app. Synced automatically."
               drivers={vendor.myDrivers ?? []}
               readOnly
             />

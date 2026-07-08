@@ -8,6 +8,7 @@ import { vendorController } from './vendor.controller';
 import {
   claimVendorDriverSchema,
   createVendorDriverSchema,
+  uploadVendorDriverDocumentSchema,
 } from './vendor-drivers.validator';
 import {
   registerVendorSchema,
@@ -42,6 +43,13 @@ router.post(
   requireRole('vendor'),
   validate(createVendorDriverSchema),
   vendorController.createDriver,
+);
+router.post(
+  '/drivers/:id/upload-document',
+  requireRole('vendor'),
+  vendorDocumentUpload.single('file'),
+  validate(uploadVendorDriverDocumentSchema),
+  vendorController.uploadDriverDocument,
 );
 router.post(
   '/drivers/claim',

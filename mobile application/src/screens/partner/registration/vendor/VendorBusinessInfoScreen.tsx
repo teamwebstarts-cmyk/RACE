@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text } from 'react-native';
 import { ChevronDown, Mail, Phone, Store, User } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -20,7 +19,7 @@ import {
   partnerRegistrationGoBack,
   showSelectOptions,
 } from '../../../../utils/partnerRegistration';
-import { colors, spacing, typography } from '../../../../theme';
+import { colors } from '../../../../theme';
 
 type Props = NativeStackScreenProps<PartnerRegistrationStackParamList, 'VendorBusinessInfo'>;
 
@@ -64,8 +63,6 @@ export default function VendorBusinessInfoScreen({ navigation, route }: Props) {
           }}
         />
       }>
-      <Text style={styles.subtitle}>Fill in your business details to continue.</Text>
-
       <PartnerSectionHeader
         Icon={Store}
         title="Business Information"
@@ -108,8 +105,10 @@ export default function VendorBusinessInfoScreen({ navigation, route }: Props) {
         Icon={Mail}
         keyboardType="email-address"
         autoCapitalize="none"
+        autoComplete="email"
+        textContentType="emailAddress"
         value={vendorBusiness.email}
-        onChangeText={(email) => setVendorBusiness({ email })}
+        onChangeText={(email) => setVendorBusiness({ email: email.trimStart() })}
         placeholder="Enter email address (optional)"
         error={errors.email}
       />
@@ -134,12 +133,3 @@ export default function VendorBusinessInfoScreen({ navigation, route }: Props) {
     </PartnerRegistrationLayout>
   );
 }
-
-const styles = StyleSheet.create({
-  subtitle: {
-    marginBottom: spacing.lg,
-    color: colors.grey,
-    fontSize: typography.sizes.md,
-    textAlign: 'center',
-  },
-});

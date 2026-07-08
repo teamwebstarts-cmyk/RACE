@@ -45,15 +45,37 @@ export async function listDriverJobs(params?: {
 }
 
 export async function getDriverActiveJob(): Promise<DriverJobBooking | null> {
-  const { data } = await api.get<ApiSuccessResponse<{ active: boolean; booking?: DriverJobBooking } | DriverJobBooking | null>>(
-    API_ENDPOINTS.driverActiveBooking,
-  );
+  const { data } = await api.get<
+    ApiSuccessResponse<{ active: boolean; booking?: DriverJobBooking } | DriverJobBooking | null>
+  >(API_ENDPOINTS.driverActiveBooking);
   const payload = data.data;
   if (!payload) return null;
   if (typeof payload === 'object' && 'active' in payload) {
     return payload.active && payload.booking ? payload.booking : null;
   }
   return payload as DriverJobBooking;
+}
+
+export async function updateDriverLocation(
+  latitude: number,
+  longitude: number,
+): Promise<{ location: { latitude: number; longitude: number }; updatedAt: string }> {
+  const { data } = await api.patch<
+    ApiSuccessResponse<{ location: { latitude: number; longitude: number }; updatedAt: string }>
+  >(API_ENDPOINTS.driverLocation, { latitude, longitude });
+  return data.data;
+}
+
+export async function updateDriverBookingStatus(
+  bookingId: string,
+  bookingType: 'towing' | 'driver',
+  status: string,
+): Promise<unknown> {
+  const { data } = await api.patch(API_ENDPOINTS.driverBookingStatus(bookingId), {
+    bookingType,
+    status,
+  });
+  return data.data;
 }
 
 export async function acceptDriverJob(

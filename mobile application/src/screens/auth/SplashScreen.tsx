@@ -12,7 +12,7 @@ import { Asset } from 'expo-asset';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { AuthStackParamList } from '../../types/navigation';
+import type { RootStackParamList } from '../../types/navigation';
 import { useAuthStore } from '../../store/authStore';
 import { images } from '../../assets';
 
@@ -24,7 +24,7 @@ const BTN_SIDE = 67;
 const BTN1_BOTTOM = 90;
 const BTN2_BOTTOM = 22;
 
-type SplashNav = NativeStackNavigationProp<AuthStackParamList, 'Splash'>;
+type SplashNav = NativeStackNavigationProp<RootStackParamList, 'Splash'>;
 
 type SplashScreenProps = {
   onGetStarted?: () => void;
@@ -72,11 +72,9 @@ function SplashScreen({ onGetStarted, onLogin }: SplashScreenProps) {
       onGetStarted();
       return;
     }
-    if (resumeOnboarding) {
-      navigation.navigate('ProfileSetup');
-      return;
-    }
-    navigation.navigate('Onboarding');
+    // Splash is mounted at the Root navigator level (not inside Auth stack).
+    // Navigate to Root.Auth; AuthNavigator will route to the right screen.
+    navigation.navigate('Auth');
   };
 
   const handleLogin = () => {
@@ -84,11 +82,8 @@ function SplashScreen({ onGetStarted, onLogin }: SplashScreenProps) {
       onLogin();
       return;
     }
-    if (resumeOnboarding) {
-      navigation.navigate('ProfileSetup');
-      return;
-    }
-    navigation.navigate('Login');
+    // Same as Get Started — go to Root.Auth and let the auth stack handle it.
+    navigation.navigate('Auth');
   };
 
   return (

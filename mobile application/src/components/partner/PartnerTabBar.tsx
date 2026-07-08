@@ -32,8 +32,10 @@ export default function PartnerTabBar({
       {state.routes.map((route, index) => {
         const routeName = route.name as TabRouteName;
         const { options } = descriptors[route.key];
+        const tabConfig = TAB_CONFIG[routeName];
+        if (!tabConfig) return null;
         const isFocused = state.index === index;
-        const { label, Icon } = TAB_CONFIG[routeName];
+        const { label, Icon } = tabConfig;
         const tint = isFocused ? colors.primary : colors.grey;
 
         const onPress = () => {

@@ -84,10 +84,10 @@ export function buildVendorDocuments(vendor: {
   const approved = vendor.status === 'approved' && vendor.verificationStage === 'approved';
   const reviewMap = new Map((vendor.documentReviews ?? []).map((review) => [review.key, review.status]));
 
-  const defaultDocStatus = (index: number): 'VERIFIED' | 'PENDING' | 'REJECTED' => {
+  const defaultDocStatus = (): 'VERIFIED' | 'PENDING' | 'REJECTED' => {
     if (rejected) return 'REJECTED';
     if (approved) return 'VERIFIED';
-    return index < 2 ? 'VERIFIED' : 'PENDING';
+    return 'PENDING';
   };
 
   const vendorId = vendor._id.toString();
@@ -95,18 +95,14 @@ export function buildVendorDocuments(vendor: {
     { key: 'business-reg', name: 'Business Registration' },
     { key: 'gst', name: 'GST Certificate' },
     { key: 'pan', name: 'PAN Card' },
-    { key: 'bank', name: 'Bank Statement', available: Boolean(vendor.bankDetails?.accountNumber) },
-    { key: 'rc', name: 'Vehicle RC Copy', available: Boolean(vendor.towVehicle?.registrationNumber) },
+    { key: 'bank', name: 'Bank Statement' },
+    { key: 'rc', name: 'Vehicle RC Copy' },
     { key: 'insurance', name: 'Insurance Certificate' },
   ];
 
-  return definitions.map((doc, index) => {
+  return definitions.map((doc) => {
     const reviewedStatus = reviewMap.get(doc.key);
-    const status = reviewedStatus
-      ? mapDocStatus(reviewedStatus)
-      : doc.available === false && !approved
-        ? 'PENDING'
-        : defaultDocStatus(index);
+    const status = reviewedStatus ? mapDocStatus(reviewedStatus) : defaultDocStatus();
 
     return {
       id: `${vendorId}-${doc.key}`,
@@ -155,10 +151,10 @@ export function buildDriverDocuments(driver: {
   const uploadedAt = (driver.createdAt ?? new Date()).toISOString();
   const rejected = driver.status === 'REJECTED';
   const approved = driver.status === 'APPROVED';
-  const docStatus = (index: number): 'VERIFIED' | 'PENDING' | 'REJECTED' => {
+  const docStatus = (): 'VERIFIED' | 'PENDING' | 'REJECTED' => {
     if (rejected) return 'REJECTED';
-    if (approved) return index < 3 ? 'VERIFIED' : 'PENDING';
-    return index < 2 ? 'VERIFIED' : 'PENDING';
+    if (approved) return 'VERIFIED';
+    return 'PENDING';
   };
 
   const driverId = driver._id.toString();
@@ -167,10 +163,10 @@ export function buildDriverDocuments(driver: {
     { key: 'aadhaar', name: 'Aadhaar Card' },
     { key: 'police', name: 'Police Verification' },
     { key: 'medical', name: 'Medical Fitness Certificate' },
-  ].map((doc, index) => ({
+  ].map((doc) => ({
     id: `${driverId}-${doc.key}`,
     name: doc.name,
-    status: docStatus(index),
+    status: docStatus(),
     url: `/admin/documents/driver/${driverId}/${doc.key}`,
     uploadedAt,
   }));

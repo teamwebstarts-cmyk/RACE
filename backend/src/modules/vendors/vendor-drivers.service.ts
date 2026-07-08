@@ -2,6 +2,7 @@ import { Types } from 'mongoose';
 
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../../shared/utils/errors';
 import { normalizeMobileNumber } from '../../shared/utils/otp';
+import { storageService } from '../../shared/services/storage.service';
 import { UserModel, type IUser } from '../users/user.model';
 import { driverRepository } from '../users/driver.repository';
 import type { CreateVendorDriverDto } from './vendor-drivers.validator';
@@ -34,6 +35,17 @@ export class VendorDriversService {
     return user;
   }
 
+  private async assertVendorApproved(userId: string) {
+    const user = await this.assertVendor(userId);
+    const status = user.vendorProfile?.status;
+    if (status !== 'approved') {
+      throw new ForbiddenError(
+        'Your vendor account must be approved by admin before you can add fleet drivers.',
+      );
+    }
+    return user;
+  }
+
   async list(vendorUserId: string) {
     await this.assertVendor(vendorUserId);
     const drivers = await UserModel.find({
@@ -44,7 +56,7 @@ export class VendorDriversService {
   }
 
   async create(vendorUserId: string, dto: CreateVendorDriverDto) {
-    await this.assertVendor(vendorUserId);
+    await this.assertVendorApproved(vendorUserId);
     const phone = normalizeMobileNumber(dto.phone);
 
     const existing = await UserModel.findOne({ mobileNumber: phone }).exec();
@@ -110,7 +122,7 @@ export class VendorDriversService {
   }
 
   async claimByPhone(vendorUserId: string, phoneRaw: string) {
-    await this.assertVendor(vendorUserId);
+    await this.assertVendorApproved(vendorUserId);
     const phone = normalizeMobileNumber(phoneRaw);
     const driver = await UserModel.findOne({ mobileNumber: phone, role: 'driver' }).exec();
     if (!driver?.driverProfile) {
@@ -140,6 +152,62 @@ export class VendorDriversService {
     driver.driverProfile.fleetSource = undefined;
     await driver.save();
     return { removed: true, driverId };
+  }
+
+  async uploadDocument(
+    vendorUserId: string,
+    driverId: string,
+    documentType: string,
+    file: { buffer: Buffer; mimetype: string; originalname: string },
+  ) {
+    await this.assertVendorApproved(vendorUserId);
+
+    const driver = await UserModel.findOne({ _id: driverId, role: 'driver' }).exec();
+    if (!driver?.driverProfile) throw new NotFoundError('Driver not found');
+    if (driver.driverProfile.vendorUserId?.toString() !== vendorUserId) {
+      throw new ForbiddenError('Driver is not in your fleet');
+    }
+
+    const upload = await storageService.uploadDriverDocument({
+      driverId,
+      buffer: file.buffer,
+      mimeType: file.mimetype,
+      originalName: file.originalname,
+      documentType,
+    });
+
+    const DOC_LABELS: Record<string, string> = {
+      driving_license: 'Driving License',
+      aadhaar: 'Aadhaar Card',
+      police_verification: 'Police Verification',
+      medical_certificate: 'Medical Fitness Certificate',
+      medical: 'Medical Fitness Certificate',
+    };
+    const docLabel = DOC_LABELS[documentType] ?? documentType.replace(/_/g, ' ');
+
+    if (!driver.driverProfile.documents?.length) {
+      driver.driverProfile.documents = [];
+    }
+
+    const existingIndex = driver.driverProfile.documents.findIndex((d) => d.type === docLabel);
+    if (existingIndex >= 0) {
+      driver.driverProfile.documents[existingIndex].url = upload.fileUrl;
+      driver.driverProfile.documents[existingIndex].status = 'PENDING';
+      driver.driverProfile.documents[existingIndex].uploadedAt = new Date();
+    } else {
+      driver.driverProfile.documents.push({
+        type: docLabel,
+        url: upload.fileUrl,
+        status: 'PENDING',
+        uploadedAt: new Date(),
+      });
+    }
+
+    // Keep driver pending until admin approves.
+    driver.driverProfile.status = 'PENDING';
+    await driver.save();
+
+    return mapFleetDriver(driver);
   }
 }
 

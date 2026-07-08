@@ -203,7 +203,7 @@ export const adminVendorsService = {
       bankName: vendor.bankDetails?.bankName ?? '—',
       accountNumber: vendor.bankDetails?.accountNumber ?? '—',
       ifscCode: vendor.bankDetails?.ifsc ?? '—',
-      serviceAreas: city ? [city] : [],
+      serviceAreas: ['Bhubaneswar, Odisha'],
       workingHours: '24/7',
       totalBookings: bookingCount,
       totalRevenue,
@@ -415,7 +415,7 @@ export const adminVendorsService = {
     try {
       await notificationService.notifyVendorApproved(
         id,
-        user.vendorProfile.mobileNumber || user.mobileNumber,
+        user.mobileNumber,
         id,
       );
     } catch {
@@ -452,7 +452,7 @@ export const adminVendorsService = {
     try {
       await notificationService.notifyVendorRejected(
         id,
-        user.vendorProfile.mobileNumber || user.mobileNumber,
+        user.mobileNumber,
         id,
         note,
       );

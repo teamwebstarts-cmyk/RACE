@@ -5,19 +5,23 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import StackBackButton from '../components/navigation/StackBackButton';
 import PartnerTabBar from '../components/partner/PartnerTabBar';
+import { useAppSelector } from '../redux/hooks';
 import PartnerHomeScreen from '../screens/partner/PartnerHomeScreen';
 import PartnerJobsScreen from '../screens/partner/PartnerJobsScreen';
+import PartnerActiveJobScreen from '../screens/partner/PartnerActiveJobScreen';
 import PartnerAccountScreen from '../screens/partner/PartnerAccountScreen';
 import PartnerVerificationStatusScreen from '../screens/partner/PartnerVerificationStatusScreen';
 import VendorDriversScreen from '../screens/partner/VendorDriversScreen';
 import type {
   PartnerAccountStackParamList,
+  PartnerJobsStackParamList,
   PartnerTabParamList,
 } from '../types/partnerNavigation';
 import { colors, typography } from '../theme';
 
 const Tab = createBottomTabNavigator<PartnerTabParamList>();
 const AccountStack = createNativeStackNavigator<PartnerAccountStackParamList>();
+const JobsStack = createNativeStackNavigator<PartnerJobsStackParamList>();
 
 const stackScreenOptions = {
   headerStyle: {
@@ -38,6 +42,23 @@ const stackScreenOptions = {
   headerLeft: (props: Parameters<typeof StackBackButton>[0]) => <StackBackButton {...props} />,
   contentStyle: { backgroundColor: colors.background },
 };
+
+function PartnerJobsStackNavigator() {
+  return (
+    <JobsStack.Navigator screenOptions={stackScreenOptions}>
+      <JobsStack.Screen
+        name="PartnerJobsList"
+        component={PartnerJobsScreen}
+        options={{ headerShown: false }}
+      />
+      <JobsStack.Screen
+        name="PartnerActiveJob"
+        component={PartnerActiveJobScreen}
+        options={{ headerTitle: 'Active job' }}
+      />
+    </JobsStack.Navigator>
+  );
+}
 
 function PartnerAccountStackNavigator() {
   return (
@@ -62,12 +83,21 @@ function PartnerAccountStackNavigator() {
 }
 
 export default function PartnerNavigator() {
+  const user = useAppSelector(state => state.auth.user);
+  const isDriver = user?.role === 'driver';
+
   return (
     <Tab.Navigator
       tabBar={props => <PartnerTabBar {...props} />}
       screenOptions={{ headerShown: false }}>
       <Tab.Screen name="PartnerHome" component={PartnerHomeScreen} options={{ title: 'Dashboard' }} />
-      <Tab.Screen name="PartnerJobs" component={PartnerJobsScreen} options={{ title: 'Jobs' }} />
+      {isDriver ? (
+        <Tab.Screen
+          name="PartnerJobs"
+          component={PartnerJobsStackNavigator}
+          options={{ title: 'Jobs' }}
+        />
+      ) : null}
       <Tab.Screen
         name="PartnerAccount"
         component={PartnerAccountStackNavigator}

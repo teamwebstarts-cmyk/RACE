@@ -10,9 +10,11 @@ import {
   View,
 } from 'react-native';
 import { Navigation } from 'lucide-react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import axios from 'axios';
 
 import GlassCard from '../../components/ui/GlassCard';
-import PrimaryButton from '../../components/ui/PrimaryButton';
 import AppScreenLayout from '../../components/ui/AppScreenLayout';
 import { useAppSelector } from '../../redux/hooks';
 import {
@@ -21,13 +23,27 @@ import {
   useRejectDriverJobMutation,
 } from '../../services/driver/useDriverQueries';
 import { formatReadableAddress } from '../../utils/readableAddress';
+import type { PartnerJobsStackParamList } from '../../types/partnerNavigation';
 import { colors, radius, spacing, typography } from '../../theme';
 import { getApiErrorMessage } from '../../services/auth/useAuthMutations';
 
+const ACTIVE_STATUSES = new Set([
+  'DRIVER_EN_ROUTE',
+  'DRIVER_ARRIVED',
+  'IN_PROGRESS',
+]);
+
 export default function PartnerJobsScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<PartnerJobsStackParamList>>();
   const user = useAppSelector(state => state.auth.user);
   const isDriver = user?.role === 'driver';
-  const { data: jobs = [], isLoading, isRefetching, refetch } = useDriverJobsQuery(isDriver);
+  const { data: jobs = [], isLoading, isRefetching, refetch, error } = useDriverJobsQuery(isDriver);
+  const pendingApproval =
+    axios.isAxiosError(error) &&
+    error.response?.status === 403 &&
+    (error.response?.data as { message?: string } | undefined)?.message
+      ?.toLowerCase()
+      .includes('pending admin approval');
   const acceptMutation = useAcceptDriverJobMutation();
   const rejectMutation = useRejectDriverJobMutation();
   const [actingId, setActingId] = useState<string | null>(null);
@@ -36,7 +52,7 @@ export default function PartnerJobsScreen() {
     setActingId(bookingId);
     try {
       await acceptMutation.mutateAsync({ bookingId, bookingType });
-      Alert.alert('Job accepted', 'Customer can now see you are on the way.');
+      navigation.navigate('PartnerActiveJob', { bookingId, bookingType });
     } catch (error) {
       Alert.alert('Accept failed', getApiErrorMessage(error, 'Could not accept job'));
     } finally {
@@ -87,6 +103,13 @@ export default function PartnerJobsScreen() {
             Log in as a driver (fleet or self-registered) to accept bookings.
           </Text>
         </View>
+      ) : pendingApproval ? (
+        <View style={styles.empty}>
+          <Text style={styles.emptyTitle}>Waiting for approval</Text>
+          <Text style={styles.emptySubtitle}>
+            Your driver account is pending admin approval. Jobs will appear here once approved.
+          </Text>
+        </View>
       ) : isLoading ? (
         <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.xxl }} />
       ) : jobs.length === 0 ? (
@@ -111,6 +134,7 @@ export default function PartnerJobsScreen() {
           }>
           {jobs.map(job => {
             const canDecide = job.status === 'DRIVER_ASSIGNED';
+            const isActive = ACTIVE_STATUSES.has(job.status);
             const busy = actingId === job.id;
             return (
               <GlassCard key={`${job.bookingType}-${job.id}`} style={styles.jobCard}>
@@ -150,6 +174,17 @@ export default function PartnerJobsScreen() {
                       <Text style={styles.rejectLabel}>Reject</Text>
                     </Pressable>
                   </View>
+                ) : isActive ? (
+                  <Pressable
+                    onPress={() =>
+                      navigation.navigate('PartnerActiveJob', {
+                        bookingId: job.id,
+                        bookingType: job.bookingType,
+                      })
+                    }
+                    style={styles.manageBtn}>
+                    <Text style={styles.manageLabel}>Manage active job →</Text>
+                  </Pressable>
                 ) : null}
               </GlassCard>
             );
@@ -245,6 +280,15 @@ const styles = StyleSheet.create({
   },
   rejectLabel: {
     color: colors.error,
+    fontWeight: typography.weights.bold,
+  },
+  manageBtn: {
+    marginTop: spacing.md,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+  },
+  manageLabel: {
+    color: colors.primary,
     fontWeight: typography.weights.bold,
   },
   disabled: { opacity: 0.5 },

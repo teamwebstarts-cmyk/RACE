@@ -137,6 +137,24 @@ export class VendorController {
     const result = await vendorDriversService.remove(user.id, getParamId(req.params.id));
     return sendSuccess(res, result);
   });
+
+  uploadDriverDocument = asyncHandler(async (req: Request, res: Response) => {
+    const user = getAuthUser(req);
+    const file = req.file;
+    if (!file) throw new AppError('No file uploaded', 400);
+
+    const driver = await vendorDriversService.uploadDocument(
+      user.id,
+      getParamId(req.params.id),
+      req.body.documentType,
+      {
+        buffer: file.buffer,
+        mimetype: file.mimetype,
+        originalname: file.originalname,
+      },
+    );
+    return sendSuccess(res, driver, 201);
+  });
 }
 
 export const vendorController = new VendorController();

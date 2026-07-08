@@ -32,7 +32,9 @@ export default function PartnerAccountScreen({ navigation }: Props) {
       {
         text: 'Yes',
         onPress: () => {
-          void logout();
+          void logout().catch(() => {
+            Alert.alert('Logout failed', 'Please try again.');
+          });
         },
       },
     ]);

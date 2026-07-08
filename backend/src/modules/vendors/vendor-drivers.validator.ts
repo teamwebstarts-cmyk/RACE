@@ -14,5 +14,10 @@ export const claimVendorDriverSchema = z.object({
   phone: z.string().min(10).max(15),
 });
 
+export const uploadVendorDriverDocumentSchema = z.object({
+  documentType: z.string().min(2).max(50),
+});
+
 export type CreateVendorDriverDto = z.infer<typeof createVendorDriverSchema>;
 export type ClaimVendorDriverDto = z.infer<typeof claimVendorDriverSchema>;
+export type UploadVendorDriverDocumentDto = z.infer<typeof uploadVendorDriverDocumentSchema>;

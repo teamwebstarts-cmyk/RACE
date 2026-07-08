@@ -20,7 +20,7 @@ export default function DriverAssignedScreen({ navigation, route }: Props) {
   const { booking: draftBooking } = useDriverBooking();
   const bookingId = route.params?.bookingId;
   const booking = useBookingQuery(bookingId ?? '');
-  const { etaMinutes, driverName, driverPhone, driverRating } = useBookingTracking(
+  const { etaMinutes, driverName, driverPhone, driverRating, status } = useBookingTracking(
     bookingId,
     'driver',
   );
@@ -39,6 +39,21 @@ export default function DriverAssignedScreen({ navigation, route }: Props) {
       useNativeDriver: true,
     }).start();
   }, [scaleAnim]);
+
+  useEffect(() => {
+    if (!bookingId) return;
+    const enRouteStatuses = ['DRIVER_EN_ROUTE', 'DRIVER_ARRIVED', 'IN_PROGRESS'];
+    if (enRouteStatuses.includes(status)) {
+      const timer = setTimeout(() => {
+        navigation.replace('DriverTrack', {
+          bookingId,
+          bookingType: 'driver',
+        });
+      }, 1200);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [bookingId, navigation, status]);
 
   if (bookingId && !booking && !hasDriver) {
     return (
@@ -79,7 +94,7 @@ export default function DriverAssignedScreen({ navigation, route }: Props) {
               color: colors.success,
               marginBottom: t.px(20),
             }}>
-            {hasDriver ? 'Driver Assigned!' : 'Finding your driver…'}
+            {hasDriver ? 'Driver Assigned!' : 'Waiting for driver to accept…'}
           </Text>
 
           <View

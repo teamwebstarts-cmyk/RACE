@@ -65,7 +65,10 @@ export class VendorRepository {
   }
 
   async findByUserId(userId: string): Promise<VendorRecord | null> {
-    const user = await UserModel.findOne({ _id: userId, role: 'vendor' }).exec();
+    const user = await UserModel.findOne({
+      _id: userId,
+      vendorProfile: { $exists: true },
+    }).exec();
     return user?.vendorProfile ? toVendorRecord(user) : null;
   }
 
@@ -105,7 +108,7 @@ export class VendorRepository {
   }
 
   async updateById(id: string, data: Partial<VendorRecord>): Promise<VendorRecord | null> {
-    const user = await UserModel.findOne({ _id: id, role: 'vendor' });
+    const user = await UserModel.findById(id);
     if (!user?.vendorProfile) return null;
 
     if (data.mobileNumber) user.mobileNumber = data.mobileNumber;

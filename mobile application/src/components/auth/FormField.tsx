@@ -81,6 +81,9 @@ export default function FormField({
           style,
         ]}
         placeholderTextColor="#9CA3AF"
+        selectionColor={colors.primary}
+        cursorColor={colors.dark}
+        autoCorrect={false}
         editable={editable && !onPress}
         pointerEvents={onPress ? 'none' : 'auto'}
         {...inputProps}
@@ -189,10 +192,13 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
+    minWidth: 0,
+    flexShrink: 1,
     fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semibold,
+    fontWeight: typography.weights.regular,
     color: colors.dark,
     paddingVertical: spacing.md,
+    includeFontPadding: false,
   },
   pressed: {
     opacity: 0.9,

@@ -13,6 +13,7 @@ import {
   usePartnerOnboardingStore,
   type PartnerRole,
 } from '../../../store/partnerOnboardingStore';
+import { PARTNER_WAITING_ADMIN_APPROVAL } from '../../../constants/partnerCopy';
 import type { PartnerAuthStackParamList } from '../../../types/partnerNavigation';
 import { colors, radius, spacing, typography } from '../../../theme';
 
@@ -110,10 +111,7 @@ export default function PartnerRoleSelectionScreen({ navigation }: Props) {
 
       <View style={styles.infoCard}>
         <Info size={20} color={colors.primary} strokeWidth={2.2} />
-        <Text style={styles.infoText}>
-          Your account will be verified by the Admin after registration and document submission
-          before you can start using the Partner App.
-        </Text>
+        <Text style={styles.infoText}>{PARTNER_WAITING_ADMIN_APPROVAL}</Text>
       </View>
 
       <Pressable

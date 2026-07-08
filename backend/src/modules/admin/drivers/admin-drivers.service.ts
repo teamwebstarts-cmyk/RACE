@@ -118,7 +118,8 @@ export const adminDriversService = {
       address: `${driver.city}${driver.state ? `, ${driver.state}` : ''}`,
       joinedAt: driver.createdAt.toISOString(),
       licenseExpiry: '',
-      licenseClass: 'LMV',
+      // Not captured in driver profiles yet; avoid showing incorrect defaults.
+      licenseClass: '—',
       aadhaarMasked: 'XXXX-XXXX-XXXX',
       assignedVehicle: {
         registrationNo: driver.vehicleRegistration ?? fleetVehicle?.registrationNo ?? '—',

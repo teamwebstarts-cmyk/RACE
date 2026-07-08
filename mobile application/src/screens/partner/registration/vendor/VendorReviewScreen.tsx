@@ -7,10 +7,11 @@ import PartnerRegistrationLayout from '../../../../components/partner/PartnerReg
 import { PartnerRegistrationFooter } from '../../../../components/partner/PartnerRegistrationSections';
 import { VENDOR_REGISTRATION_STEPS } from '../../../../constants/partnerRegistration';
 import { useAppDispatch, useAppSelector } from '../../../../redux/hooks';
-import { completeOnboarding } from '../../../../redux/auth/authSlice';
+import { completeOnboarding, updateTokens, updateUser } from '../../../../redux/auth/authSlice';
 import { finishPartnerSignup } from '../../../../redux/onboarding/onboardingSlice';
 import { getApiErrorMessage } from '../../../../services/auth/useAuthMutations';
-import { registerVendor } from '../../../../services/vendor/vendorApi';
+import { refreshAuthSession } from '../../../../services/authService';
+import { registerVendor, uploadVendorDocument } from '../../../../services/vendor/vendorApi';
 import { usePartnerRegistrationStore } from '../../../../store/partnerRegistrationStore';
 import type {
   PartnerRegistrationStackParamList,
@@ -18,6 +19,7 @@ import type {
 } from '../../../../types/partnerNavigation';
 import type { VendorType } from '../../../../types/vendor';
 import { partnerRegistrationGoBack } from '../../../../utils/partnerRegistration';
+import { PARTNER_WAITING_ADMIN_APPROVAL } from '../../../../constants/partnerCopy';
 import { colors, radius, spacing, typography } from '../../../../theme';
 
 type Props = NativeStackScreenProps<PartnerRegistrationStackParamList, 'VendorReview'>;
@@ -39,6 +41,16 @@ function mapBusinessType(value: string): VendorType {
   if (lower.includes('part')) return 'part_time_driver';
   return 'towing_company';
 }
+
+const VENDOR_DOC_TYPE_MAP: Record<string, string> = {
+  aadhaar: 'aadhaar',
+  pan: 'pan',
+  gst: 'gst',
+  business_registration: 'shop_license',
+  shop_photo: 'vehicle_photo',
+  cancelled_cheque: 'cancelled_cheque',
+  profile_photo: 'selfie',
+};
 
 export default function VendorReviewScreen({ navigation, route }: Props) {
   const dispatch = useAppDispatch();
@@ -69,6 +81,32 @@ export default function VendorReviewScreen({ navigation, route }: Props) {
         address: address || undefined,
         acceptTerms: true,
       });
+
+      try {
+        const session = await refreshAuthSession();
+        dispatch(
+          updateTokens({
+            accessToken: session.accessToken,
+            refreshToken: session.refreshToken,
+          }),
+        );
+        dispatch(updateUser(session.user));
+      } catch {
+        // Backend role middleware falls back to DB role if refresh fails.
+      }
+
+      for (const doc of vendorDocuments) {
+        const documentType = VENDOR_DOC_TYPE_MAP[doc.id] ?? 'other';
+        try {
+          await uploadVendorDocument(documentType, {
+            uri: doc.uri,
+            name: doc.name,
+            mimeType: doc.mimeType ?? 'image/jpeg',
+          });
+        } catch {
+          // Registration saved — document upload can be retried from admin review.
+        }
+      }
 
       dispatch(finishPartnerSignup());
       if (authUser) {
@@ -119,9 +157,7 @@ export default function VendorReviewScreen({ navigation, route }: Props) {
       <View style={styles.successCard}>
         <CheckCircle2 size={28} color={colors.partnerRed} strokeWidth={2} />
         <Text style={styles.successTitle}>Review your application</Text>
-        <Text style={styles.successSubtitle}>
-          Submitted to admin for review. You can track status from your dashboard.
-        </Text>
+        <Text style={styles.successSubtitle}>{PARTNER_WAITING_ADMIN_APPROVAL}</Text>
       </View>
 
       <Text style={styles.sectionTitle}>Business Information</Text>

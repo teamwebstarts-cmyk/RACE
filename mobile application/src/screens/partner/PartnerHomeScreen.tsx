@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   Briefcase,
@@ -15,12 +15,15 @@ import GlassCard from '../../components/ui/GlassCard';
 import PrimaryButton from '../../components/ui/PrimaryButton';
 import AppScreenLayout from '../../components/ui/AppScreenLayout';
 import { useAppSelector } from '../../redux/hooks';
+import { useDriverLocationReporting } from '../../hooks/useDriverLocationReporting';
 import {
   useDriverActiveJobQuery,
   useDriverAvailabilityMutation,
   useDriverJobsQuery,
 } from '../../services/driver/useDriverQueries';
+import { getProfile } from '../../services/profileService';
 import { useVendorDashboardQuery, useVendorStatusQuery } from '../../services/vendor/useVendorMutations';
+import { PARTNER_WAITING_ADMIN_APPROVAL } from '../../constants/partnerCopy';
 import { getVendorConfig } from '../../data/vendorWizardConfig';
 import type { PartnerTabParamList } from '../../types/partnerNavigation';
 import type { VendorStatus } from '../../types/vendor';
@@ -41,7 +44,7 @@ const VENDOR_STATUS_META: Record<
 > = {
   pending: {
     label: 'Pending review',
-    hint: 'Submitted — waiting for admin approval on the portal',
+    hint: PARTNER_WAITING_ADMIN_APPROVAL,
     pillBg: 'rgba(244, 161, 21, 0.16)',
     pillText: colors.warning,
     border: 'rgba(244, 161, 21, 0.35)',
@@ -50,7 +53,7 @@ const VENDOR_STATUS_META: Record<
   },
   under_review: {
     label: 'Under review',
-    hint: 'Admin is reviewing your application',
+    hint: PARTNER_WAITING_ADMIN_APPROVAL,
     pillBg: 'rgba(244, 161, 21, 0.16)',
     pillText: colors.warning,
     border: 'rgba(244, 161, 21, 0.35)',
@@ -139,6 +142,21 @@ export default function PartnerHomeScreen() {
 
   const [isOnline, setIsOnline] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    if (!isDriver) return;
+    void getProfile()
+      .then(profile => {
+        if (typeof profile.isAvailable === 'boolean') {
+          setIsOnline(profile.isAvailable);
+        }
+      })
+      .catch(() => {
+        // Keep default online state if profile fetch fails.
+      });
+  }, [isDriver]);
+
+  useDriverLocationReporting(isDriver && isOnline);
   const config = vendor ? getVendorConfig(vendor.vendorType) : undefined;
   const vendorMeta = getVendorStatusMeta(vendorLoading ? undefined : vendor?.status);
   const VendorStatusIcon = vendorMeta.Icon;
@@ -300,22 +318,32 @@ export default function PartnerHomeScreen() {
             {formatReadableAddress(activeJob.pickup?.address || activeJob.pickup?.label)}
           </Text>
           <PrimaryButton
-            label="Open jobs"
+            label="Manage active job"
             variant="outline"
-            onPress={() => navigation.navigate('PartnerJobs')}
+            onPress={() =>
+              navigation.navigate('PartnerJobs', {
+                screen: 'PartnerActiveJob',
+                params: {
+                  bookingId: activeJob.id,
+                  bookingType: activeJob.bookingType,
+                },
+              } as never)
+            }
           />
         </GlassCard>
       ) : (
         <GlassCard>
           <Text style={styles.cardTitle}>Quick actions</Text>
-          <PrimaryButton
-            label="View job requests"
-            variant="outline"
-            onPress={() => navigation.navigate('PartnerJobs')}
-          />
+          {isDriver ? (
+            <PrimaryButton
+              label="View job requests"
+              variant="outline"
+              onPress={() => navigation.navigate('PartnerJobs')}
+            />
+          ) : null}
           {isVendor ? (
             <>
-              <View style={styles.spacer} />
+              {isDriver ? <View style={styles.spacer} /> : null}
               <PrimaryButton
                 label="Manage drivers"
                 variant="outline"

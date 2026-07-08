@@ -7,31 +7,52 @@ import {
   Text,
   View,
 } from 'react-native';
-import { IdCard, Phone, User } from 'lucide-react-native';
+import { Clock3, FileStack, IdCard, Phone, ShieldCheck, User } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import FormField from '../../components/auth/FormField';
+import PartnerDocumentUploadList, {
+  type PartnerDocumentFieldConfig,
+} from '../../components/partner/PartnerDocumentUploadList';
 import AppScreenLayout from '../../components/ui/AppScreenLayout';
 import PrimaryButton from '../../components/ui/PrimaryButton';
 import GlassCard from '../../components/ui/GlassCard';
 import { getApiErrorMessage } from '../../services/auth/useAuthMutations';
+import { uploadVendorDriverDocument } from '../../services/vendor/vendorDriversApi';
 import {
   useCreateVendorDriverMutation,
   useRemoveVendorDriverMutation,
   useVendorDriversQuery,
 } from '../../services/vendor/useVendorDriversQueries';
+import { useVendorStatusQuery } from '../../services/vendor/useVendorMutations';
 import type { PartnerAccountStackParamList } from '../../types/partnerNavigation';
+import { PARTNER_WAITING_ADMIN_APPROVAL } from '../../constants/partnerCopy';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 
 type Props = NativeStackScreenProps<PartnerAccountStackParamList, 'VendorDrivers'>;
 
 const DRIVER_TYPES = ['Tow Driver', 'Full-Time', 'Part-Time'] as const;
 
+const FLEET_DRIVER_DOCUMENTS: PartnerDocumentFieldConfig[] = [
+  { id: 'driving_license', label: 'Driving License', required: true, Icon: IdCard },
+  { id: 'aadhaar', label: 'Aadhaar Card', required: true, Icon: IdCard },
+  { id: 'police_verification', label: 'Police Verification', required: true, Icon: ShieldCheck },
+  {
+    id: 'medical_certificate',
+    label: 'Medical Fitness Certificate',
+    required: true,
+    Icon: FileStack,
+  },
+];
+
 function isValidIndianMobile(phone: string): boolean {
   return /^[6-9]\d{9}$/.test(phone);
 }
 
 export default function VendorDriversScreen({}: Props) {
+  const { data: vendor, isLoading: vendorLoading } = useVendorStatusQuery(true);
+  const isApproved = vendor?.status === 'approved';
+
   const { data: drivers = [], isLoading, isRefetching, refetch } = useVendorDriversQuery(true);
   const createMutation = useCreateVendorDriverMutation();
   const removeMutation = useRemoveVendorDriverMutation();
@@ -42,6 +63,9 @@ export default function VendorDriversScreen({}: Props) {
   const [driverType, setDriverType] = useState<(typeof DRIVER_TYPES)[number]>('Tow Driver');
   const [showForm, setShowForm] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [driverDocuments, setDriverDocuments] = useState<
+    Array<{ id: string; label: string; uri: string; name: string; mimeType?: string }>
+  >([]);
 
   const phoneDigits = phone.replace(/\D/g, '');
 
@@ -61,24 +85,47 @@ export default function VendorDriversScreen({}: Props) {
     return Object.keys(next).length === 0;
   };
 
+  const onToggleForm = () => {
+    if (!isApproved) {
+      Alert.alert('Approval required', PARTNER_WAITING_ADMIN_APPROVAL);
+      return;
+    }
+    setShowForm(v => !v);
+  };
+
   const submitCreate = async () => {
+    if (!isApproved) {
+      Alert.alert('Approval required', PARTNER_WAITING_ADMIN_APPROVAL);
+      return;
+    }
     if (!validate()) return;
 
     try {
-      await createMutation.mutateAsync({
+      const created = await createMutation.mutateAsync({
         name: name.trim(),
         phone: phoneDigits,
         licenseNo: licenseNo.trim(),
         driverType,
         city: 'Bhubaneswar',
       });
-      Alert.alert(
-        'Driver added',
-        `${name.trim()} is in your fleet. They can log in on the Partner app with this number (OTP SMS).`,
-      );
+
+      for (const doc of driverDocuments) {
+        try {
+          await uploadVendorDriverDocument(created.id, doc.id, {
+            uri: doc.uri,
+            name: doc.name,
+            mimeType: doc.mimeType ?? 'image/jpeg',
+          });
+        } catch {
+          // Driver created; doc upload can be retried later.
+        }
+      }
+
+      Alert.alert('Driver added', `${name.trim()} has been added to your fleet.`);
       setName('');
       setPhone('');
       setLicenseNo('');
+      setDriverDocuments([]);
       setErrors({});
       setShowForm(false);
     } catch (error) {
@@ -101,6 +148,7 @@ export default function VendorDriversScreen({}: Props) {
     ]);
   };
 
+
   return (
     <AppScreenLayout
       keyboardAvoiding
@@ -111,21 +159,31 @@ export default function VendorDriversScreen({}: Props) {
       header={
         <View style={styles.headerPad}>
           <Text style={styles.title}>My Drivers</Text>
-          <Text style={styles.subtitle}>Add fleet drivers — they log in on Partner app</Text>
         </View>
       }>
+      {!vendorLoading && !isApproved ? (
+        <View style={styles.pendingCard}>
+          <Clock3 size={22} color={colors.warning} strokeWidth={2.2} />
+          <Text style={styles.pendingTitle}>{PARTNER_WAITING_ADMIN_APPROVAL}</Text>
+        </View>
+      ) : null}
+
+      {isApproved ? (
+        <View style={styles.approvedBanner}>
+          <ShieldCheck size={18} color={colors.success} strokeWidth={2.2} />
+          <Text style={styles.approvedText}>Vendor approved — you can add drivers</Text>
+        </View>
+      ) : null}
+
       <PrimaryButton
         label={showForm ? 'Hide form' : 'Add driver'}
         variant="outline"
-        onPress={() => setShowForm(v => !v)}
+        onPress={onToggleForm}
+        disabled={!isApproved && !vendorLoading}
       />
 
-      {showForm ? (
+      {showForm && isApproved ? (
         <View style={styles.form}>
-          <Text style={styles.formHint}>
-            Use a real 10-digit mobile. Driver receives SMS OTP on the Partner app.
-          </Text>
-
           <FormField
             variant="outlined"
             label="Full name"
@@ -183,6 +241,22 @@ export default function VendorDriversScreen({}: Props) {
             ))}
           </View>
 
+          <Text style={styles.sectionTitle}>Documents</Text>
+          <Text style={styles.helperText}>
+            Upload documents. Status stays pending until admin approves.
+          </Text>
+          <PartnerDocumentUploadList
+            documents={FLEET_DRIVER_DOCUMENTS}
+            uploadedIds={driverDocuments.map((d) => d.id)}
+            onUpload={(id, uri, name, mimeType) => {
+              const label = FLEET_DRIVER_DOCUMENTS.find((doc) => doc.id === id)?.label ?? id;
+              setDriverDocuments((prev) => [
+                ...prev.filter((d) => d.id !== id),
+                { id, label, uri, name, mimeType },
+              ]);
+            }}
+          />
+
           <PrimaryButton
             label={createMutation.isPending ? 'Saving…' : 'Save to fleet'}
             onPress={() => void submitCreate()}
@@ -191,11 +265,9 @@ export default function VendorDriversScreen({}: Props) {
         </View>
       ) : null}
 
-      {isLoading ? (
+      {isLoading || vendorLoading ? (
         <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.xl }} />
-      ) : drivers.length === 0 ? (
-        <Text style={styles.empty}>No drivers yet. Add a driver with a fresh mobile number.</Text>
-      ) : (
+      ) : drivers.length > 0 ? (
         drivers.map(driver => (
           <GlassCard key={driver.id} style={styles.card}>
             <Text style={styles.driverName}>{driver.name}</Text>
@@ -209,7 +281,7 @@ export default function VendorDriversScreen({}: Props) {
             </Pressable>
           </GlassCard>
         ))
-      )}
+      ) : null}
     </AppScreenLayout>
   );
 }
@@ -227,11 +299,39 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.xxl,
     fontWeight: typography.weights.extrabold,
   },
-  subtitle: { marginTop: spacing.xs, color: colors.grey, fontSize: typography.sizes.sm },
   scrollContent: {
     paddingTop: spacing.lg,
     paddingBottom: spacing.xxxl * 2,
     gap: spacing.md,
+  },
+  pendingCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.lg,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: 'rgba(244, 161, 21, 0.35)',
+    backgroundColor: 'rgba(244, 161, 21, 0.08)',
+  },
+  pendingTitle: {
+    flex: 1,
+    color: colors.dark,
+    fontWeight: typography.weights.semibold,
+    fontSize: typography.sizes.md,
+  },
+  approvedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+  },
+  approvedText: {
+    color: colors.success,
+    fontWeight: typography.weights.semibold,
+    flex: 1,
   },
   form: {
     backgroundColor: colors.cardBg,
@@ -242,14 +342,32 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     ...shadows.card,
   },
-  formHint: { color: colors.grey, fontSize: typography.sizes.sm, marginBottom: spacing.sm },
+  sectionTitle: {
+    color: colors.dark,
+    fontWeight: typography.weights.semibold,
+    fontSize: typography.sizes.sm,
+    marginTop: spacing.md,
+  },
+  helperText: {
+    color: colors.grey,
+    fontSize: typography.sizes.xs,
+    marginTop: spacing.xs,
+    marginBottom: spacing.sm,
+    lineHeight: typography.lineHeights.relaxed,
+  },
   typeLabel: {
     color: colors.dark,
     fontWeight: typography.weights.semibold,
     fontSize: typography.sizes.sm,
     marginTop: spacing.sm,
   },
-  typeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.xs, marginBottom: spacing.sm },
+  typeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+    marginBottom: spacing.sm,
+  },
   typeChip: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
@@ -264,5 +382,4 @@ const styles = StyleSheet.create({
   meta: { color: colors.grey, fontSize: typography.sizes.sm },
   removeBtn: { marginTop: spacing.sm },
   removeText: { color: colors.error, fontWeight: typography.weights.semibold },
-  empty: { color: colors.grey, textAlign: 'center', marginTop: spacing.xl, lineHeight: 22 },
 });

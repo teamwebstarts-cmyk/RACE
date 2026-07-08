@@ -66,4 +66,5 @@ export interface ProfileResponseDto {
   isVerified: boolean;
   isProfileCompleted: boolean;
   role: string;
+  isAvailable?: boolean;
 }

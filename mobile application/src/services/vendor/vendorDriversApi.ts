@@ -1,6 +1,7 @@
 import { api } from '../api';
 import { API_ENDPOINTS } from '../../config/api';
 import type { ApiSuccessResponse } from '../../types/auth';
+import { store } from '../../redux/store';
 
 export type FleetDriver = {
   id: string;
@@ -50,4 +51,31 @@ export async function claimVendorDriver(phone: string): Promise<FleetDriver> {
 
 export async function removeVendorDriver(driverId: string): Promise<void> {
   await api.delete(API_ENDPOINTS.vendorDriver(driverId));
+}
+
+export async function uploadVendorDriverDocument(
+  driverId: string,
+  documentType: string,
+  file: { uri: string; name: string; mimeType: string },
+): Promise<FleetDriver> {
+  const formData = new FormData();
+  formData.append('documentType', documentType);
+  formData.append('file', {
+    uri: file.uri,
+    name: file.name,
+    type: file.mimeType,
+  } as unknown as Blob);
+
+  const token = store.getState().auth.accessToken;
+  const { data } = await api.post<ApiSuccessResponse<FleetDriver>>(
+    API_ENDPOINTS.vendorDriverUploadDocument(driverId),
+    formData,
+    {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    },
+  );
+  return data.data;
 }

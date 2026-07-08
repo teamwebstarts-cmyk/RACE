@@ -6,6 +6,8 @@ import {
   listDriverJobs,
   rejectDriverJob,
   setDriverAvailability,
+  updateDriverBookingStatus,
+  updateDriverLocation,
 } from './driverApi';
 
 export const driverQueryKeys = {
@@ -63,5 +65,27 @@ export function useRejectDriverJobMutation() {
       void queryClient.invalidateQueries({ queryKey: driverQueryKeys.jobs });
       void queryClient.invalidateQueries({ queryKey: driverQueryKeys.active });
     },
+  });
+}
+
+export function useUpdateDriverBookingStatusMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      bookingId: string;
+      bookingType: 'towing' | 'driver';
+      status: string;
+    }) => updateDriverBookingStatus(input.bookingId, input.bookingType, input.status),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: driverQueryKeys.jobs });
+      void queryClient.invalidateQueries({ queryKey: driverQueryKeys.active });
+    },
+  });
+}
+
+export function useUpdateDriverLocationMutation() {
+  return useMutation({
+    mutationFn: (coords: { latitude: number; longitude: number }) =>
+      updateDriverLocation(coords.latitude, coords.longitude),
   });
 }
