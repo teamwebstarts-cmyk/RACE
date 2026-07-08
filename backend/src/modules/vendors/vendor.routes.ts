@@ -1,9 +1,14 @@
 import { Router } from 'express';
 
 import { authMiddleware } from '../../middleware/auth.middleware';
+import { requireRole } from '../../middleware/role.middleware';
 import { vendorDocumentUpload } from '../../middleware/upload.middleware';
 import { validate } from '../../middleware/validation.middleware';
 import { vendorController } from './vendor.controller';
+import {
+  claimVendorDriverSchema,
+  createVendorDriverSchema,
+} from './vendor-drivers.validator';
 import {
   registerVendorSchema,
   saveVendorDraftSchema,
@@ -29,5 +34,20 @@ router.post(
 );
 
 router.post('/selfie', vendorDocumentUpload.single('file'), vendorController.uploadSelfie);
+
+router.get('/drivers', requireRole('vendor'), vendorController.listDrivers);
+router.post(
+  '/drivers',
+  requireRole('vendor'),
+  validate(createVendorDriverSchema),
+  vendorController.createDriver,
+);
+router.post(
+  '/drivers/claim',
+  requireRole('vendor'),
+  validate(claimVendorDriverSchema),
+  vendorController.claimDriver,
+);
+router.delete('/drivers/:id', requireRole('vendor'), vendorController.removeDriver);
 
 export default router;

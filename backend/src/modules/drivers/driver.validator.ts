@@ -24,7 +24,12 @@ export const updateDriverBookingStatusSchema = z.object({
   bookingType: z.enum(['towing', 'driver']),
 });
 
+export const driverBookingActionSchema = z.object({
+  bookingType: z.enum(['towing', 'driver']),
+});
+
 export type UpdateDriverAvailabilityDto = z.infer<typeof updateDriverAvailabilitySchema>;
 export type UpdateDriverLocationDto = z.infer<typeof updateDriverLocationSchema>;
 export type DriverBookingsQueryDto = z.infer<typeof driverBookingsQuerySchema>;
 export type UpdateDriverBookingStatusDto = z.infer<typeof updateDriverBookingStatusSchema>;
+export type DriverBookingActionDto = z.infer<typeof driverBookingActionSchema>;

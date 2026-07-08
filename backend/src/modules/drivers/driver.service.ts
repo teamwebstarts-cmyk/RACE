@@ -7,7 +7,7 @@ import {
   appendStatusHistory,
   assertValidStatusTransition,
 } from '../bookings/shared/booking.helpers';
-import { releaseDriver } from '../bookings/shared/driver-assignment.service';
+import { releaseDriver, unassignDriverFromBooking } from '../bookings/shared/driver-assignment.service';
 import type { UnifiedBookingStatus } from '../bookings/shared/booking-status.constants';
 import type {
   DriverBookingsQueryDto,
@@ -197,6 +197,36 @@ export class DriverService {
     });
 
     return updated;
+  }
+
+  /** Accept allotted job: DRIVER_ASSIGNED → DRIVER_EN_ROUTE (customer tracking updates). */
+  async acceptBooking(driverId: string, role: string, bookingId: string, bookingType: 'towing' | 'driver') {
+    return this.updateBookingStatus(driverId, role, bookingId, {
+      status: 'DRIVER_EN_ROUTE',
+      bookingType,
+    });
+  }
+
+  /** Reject allotted job: free driver and return booking to CONFIRMED for reassignment. */
+  async rejectBooking(driverId: string, role: string, bookingId: string, bookingType: 'towing' | 'driver') {
+    assertDriverRole(role);
+
+    const Model = bookingType === 'towing' ? towingBookingRepository : driverBookingRepository;
+    const booking = await Model.findById(bookingId);
+    if (!booking) throw new NotFoundError('Booking not found');
+    if (!booking.driverId || booking.driverId.toString() !== driverId) {
+      throw new ForbiddenError('This booking is not assigned to you');
+    }
+    if (booking.status !== 'DRIVER_ASSIGNED') {
+      throw new BadRequestError('Only newly assigned jobs can be rejected');
+    }
+
+    await unassignDriverFromBooking(bookingId, bookingType, driverId);
+    emitBookingStatusUpdate(bookingId, 'CONFIRMED', {
+      reason: 'Driver rejected assignment',
+    });
+
+    return { rejected: true, bookingId, status: 'CONFIRMED' as const };
   }
 }
 

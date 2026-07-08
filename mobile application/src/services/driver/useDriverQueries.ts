@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
+  acceptDriverJob,
   getDriverActiveJob,
   listDriverJobs,
+  rejectDriverJob,
   setDriverAvailability,
 } from './driverApi';
 
@@ -33,6 +35,30 @@ export function useDriverAvailabilityMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (isAvailable: boolean) => setDriverAvailability(isAvailable),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: driverQueryKeys.jobs });
+      void queryClient.invalidateQueries({ queryKey: driverQueryKeys.active });
+    },
+  });
+}
+
+export function useAcceptDriverJobMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { bookingId: string; bookingType: 'towing' | 'driver' }) =>
+      acceptDriverJob(input.bookingId, input.bookingType),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: driverQueryKeys.jobs });
+      void queryClient.invalidateQueries({ queryKey: driverQueryKeys.active });
+    },
+  });
+}
+
+export function useRejectDriverJobMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { bookingId: string; bookingType: 'towing' | 'driver' }) =>
+      rejectDriverJob(input.bookingId, input.bookingType),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: driverQueryKeys.jobs });
       void queryClient.invalidateQueries({ queryKey: driverQueryKeys.active });

@@ -7,6 +7,7 @@ import PartnerTabBar from '../components/partner/PartnerTabBar';
 import PartnerHomeScreen from '../screens/partner/PartnerHomeScreen';
 import PartnerJobsScreen from '../screens/partner/PartnerJobsScreen';
 import PartnerAccountScreen from '../screens/partner/PartnerAccountScreen';
+import VendorDriversScreen from '../screens/partner/VendorDriversScreen';
 import VerificationStatusScreen from '../screens/vendor/VerificationStatusScreen';
 import type {
   PartnerAccountStackParamList,
@@ -42,6 +43,11 @@ function PartnerAccountStackNavigator() {
         name="PartnerAccountMain"
         component={PartnerAccountScreen}
         options={{ headerShown: false }}
+      />
+      <AccountStack.Screen
+        name="VendorDrivers"
+        component={VendorDriversScreen}
+        options={{ headerTitle: 'My Drivers' }}
       />
       <AccountStack.Screen
         name="VendorVerificationStatus"

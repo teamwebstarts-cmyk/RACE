@@ -38,4 +38,5 @@ export type PartnerTabParamList = {
 export type PartnerAccountStackParamList = {
   PartnerAccountMain: undefined;
   VendorVerificationStatus: undefined;
+  VendorDrivers: undefined;
 };

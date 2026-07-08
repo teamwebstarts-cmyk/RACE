@@ -45,8 +45,29 @@ export async function listDriverJobs(params?: {
 }
 
 export async function getDriverActiveJob(): Promise<DriverJobBooking | null> {
-  const { data } = await api.get<ApiSuccessResponse<DriverJobBooking | null>>(
+  const { data } = await api.get<ApiSuccessResponse<{ active: boolean; booking?: DriverJobBooking } | DriverJobBooking | null>>(
     API_ENDPOINTS.driverActiveBooking,
   );
-  return data.data ?? null;
+  const payload = data.data;
+  if (!payload) return null;
+  if (typeof payload === 'object' && 'active' in payload) {
+    return payload.active && payload.booking ? payload.booking : null;
+  }
+  return payload as DriverJobBooking;
+}
+
+export async function acceptDriverJob(
+  bookingId: string,
+  bookingType: 'towing' | 'driver',
+): Promise<unknown> {
+  const { data } = await api.post(API_ENDPOINTS.driverBookingAccept(bookingId), { bookingType });
+  return data.data;
+}
+
+export async function rejectDriverJob(
+  bookingId: string,
+  bookingType: 'towing' | 'driver',
+): Promise<unknown> {
+  const { data } = await api.post(API_ENDPOINTS.driverBookingReject(bookingId), { bookingType });
+  return data.data;
 }

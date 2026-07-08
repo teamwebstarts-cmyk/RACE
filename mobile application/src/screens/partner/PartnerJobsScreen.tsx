@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
+  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -10,16 +12,59 @@ import {
 import { Navigation } from 'lucide-react-native';
 
 import GlassCard from '../../components/ui/GlassCard';
+import PrimaryButton from '../../components/ui/PrimaryButton';
 import AppScreenLayout from '../../components/ui/AppScreenLayout';
 import { useAppSelector } from '../../redux/hooks';
-import { useDriverJobsQuery } from '../../services/driver/useDriverQueries';
+import {
+  useAcceptDriverJobMutation,
+  useDriverJobsQuery,
+  useRejectDriverJobMutation,
+} from '../../services/driver/useDriverQueries';
 import { formatReadableAddress } from '../../utils/readableAddress';
 import { colors, radius, spacing, typography } from '../../theme';
+import { getApiErrorMessage } from '../../services/auth/useAuthMutations';
 
 export default function PartnerJobsScreen() {
   const user = useAppSelector(state => state.auth.user);
   const isDriver = user?.role === 'driver';
   const { data: jobs = [], isLoading, isRefetching, refetch } = useDriverJobsQuery(isDriver);
+  const acceptMutation = useAcceptDriverJobMutation();
+  const rejectMutation = useRejectDriverJobMutation();
+  const [actingId, setActingId] = useState<string | null>(null);
+
+  const onAccept = async (bookingId: string, bookingType: 'towing' | 'driver') => {
+    setActingId(bookingId);
+    try {
+      await acceptMutation.mutateAsync({ bookingId, bookingType });
+      Alert.alert('Job accepted', 'Customer can now see you are on the way.');
+    } catch (error) {
+      Alert.alert('Accept failed', getApiErrorMessage(error, 'Could not accept job'));
+    } finally {
+      setActingId(null);
+    }
+  };
+
+  const onReject = (bookingId: string, bookingType: 'towing' | 'driver') => {
+    Alert.alert('Reject job?', 'This booking will go back for reassignment.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Reject',
+        style: 'destructive',
+        onPress: () => {
+          void (async () => {
+            setActingId(bookingId);
+            try {
+              await rejectMutation.mutateAsync({ bookingId, bookingType });
+            } catch (error) {
+              Alert.alert('Reject failed', getApiErrorMessage(error, 'Could not reject job'));
+            } finally {
+              setActingId(null);
+            }
+          })();
+        },
+      },
+    ]);
+  };
 
   return (
     <AppScreenLayout
@@ -28,8 +73,8 @@ export default function PartnerJobsScreen() {
           <Text style={styles.title}>Jobs</Text>
           <Text style={styles.subtitle}>
             {isDriver
-              ? 'Bookings assigned to you from customer requests'
-              : 'Driver accounts see assigned jobs here'}
+              ? 'Accept allotted bookings — customer tracking updates live'
+              : 'Driver accounts see and accept assigned jobs here'}
           </Text>
         </View>
       }
@@ -39,7 +84,7 @@ export default function PartnerJobsScreen() {
         <View style={styles.empty}>
           <Text style={styles.emptyTitle}>Driver jobs only</Text>
           <Text style={styles.emptySubtitle}>
-            Log in with a demo driver (Om / Ramesh / Vaibhav) to see assigned bookings.
+            Log in as a driver (fleet or self-registered) to accept bookings.
           </Text>
         </View>
       ) : isLoading ? (
@@ -55,8 +100,7 @@ export default function PartnerJobsScreen() {
           </View>
           <Text style={styles.emptyTitle}>No jobs yet</Text>
           <Text style={styles.emptySubtitle}>
-            Stay online. When a customer books towing or driver hire near you, the job will appear
-            here (and in admin).
+            Stay online. When a customer books near you, the job appears here for Accept.
           </Text>
         </ScrollView>
       ) : (
@@ -65,30 +109,51 @@ export default function PartnerJobsScreen() {
           refreshControl={
             <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />
           }>
-          {jobs.map(job => (
-            <GlassCard key={`${job.bookingType}-${job.id}`} style={styles.jobCard}>
-              <View style={styles.jobHeader}>
-                <Text style={styles.jobNumber}>#{job.bookingNumber}</Text>
-                <View style={styles.typePill}>
-                  <Text style={styles.typePillText}>
-                    {job.bookingType === 'towing' ? 'Towing' : 'Driver'}
-                  </Text>
+          {jobs.map(job => {
+            const canDecide = job.status === 'DRIVER_ASSIGNED';
+            const busy = actingId === job.id;
+            return (
+              <GlassCard key={`${job.bookingType}-${job.id}`} style={styles.jobCard}>
+                <View style={styles.jobHeader}>
+                  <Text style={styles.jobNumber}>#{job.bookingNumber}</Text>
+                  <View style={styles.typePill}>
+                    <Text style={styles.typePillText}>
+                      {job.bookingType === 'towing' ? 'Towing' : 'Driver'}
+                    </Text>
+                  </View>
                 </View>
-              </View>
-              <Text style={styles.status}>{job.status.replace(/_/g, ' ')}</Text>
-              <Text style={styles.address}>
-                Pickup: {formatReadableAddress(job.pickup?.address || job.pickup?.label)}
-              </Text>
-              {job.dropoff ? (
+                <Text style={styles.status}>{job.status.replace(/_/g, ' ')}</Text>
                 <Text style={styles.address}>
-                  Drop: {formatReadableAddress(job.dropoff.address || job.dropoff.label)}
+                  Pickup: {formatReadableAddress(job.pickup?.address || job.pickup?.label)}
                 </Text>
-              ) : null}
-              {typeof job.estimatedFare === 'number' ? (
-                <Text style={styles.fare}>Est. ₹{Math.round(job.estimatedFare)}</Text>
-              ) : null}
-            </GlassCard>
-          ))}
+                {job.dropoff ? (
+                  <Text style={styles.address}>
+                    Drop: {formatReadableAddress(job.dropoff.address || job.dropoff.label)}
+                  </Text>
+                ) : null}
+                {typeof job.estimatedFare === 'number' ? (
+                  <Text style={styles.fare}>Est. ₹{Math.round(job.estimatedFare)}</Text>
+                ) : null}
+
+                {canDecide ? (
+                  <View style={styles.actions}>
+                    <Pressable
+                      disabled={busy}
+                      onPress={() => void onAccept(job.id, job.bookingType)}
+                      style={[styles.acceptBtn, busy && styles.disabled]}>
+                      <Text style={styles.acceptLabel}>{busy ? '…' : 'Accept'}</Text>
+                    </Pressable>
+                    <Pressable
+                      disabled={busy}
+                      onPress={() => onReject(job.id, job.bookingType)}
+                      style={[styles.rejectBtn, busy && styles.disabled]}>
+                      <Text style={styles.rejectLabel}>Reject</Text>
+                    </Pressable>
+                  </View>
+                ) : null}
+              </GlassCard>
+            );
+          })}
         </ScrollView>
       )}
     </AppScreenLayout>
@@ -113,17 +178,13 @@ const styles = StyleSheet.create({
     color: colors.grey,
     fontSize: typography.sizes.sm,
   },
-  content: {
-    flexGrow: 1,
-  },
+  content: { flexGrow: 1 },
   list: {
     paddingTop: spacing.lg,
     paddingBottom: spacing.xxl,
     gap: spacing.md,
   },
-  jobCard: {
-    gap: spacing.xs,
-  },
+  jobCard: { gap: spacing.xs },
   jobHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -150,15 +211,43 @@ const styles = StyleSheet.create({
     textTransform: 'capitalize',
     fontWeight: typography.weights.semibold,
   },
-  address: {
-    color: colors.grey,
-    fontSize: typography.sizes.sm,
-  },
+  address: { color: colors.grey, fontSize: typography.sizes.sm },
   fare: {
     marginTop: spacing.xs,
     color: colors.dark,
     fontWeight: typography.weights.bold,
   },
+  actions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  acceptBtn: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: radius.button,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  acceptLabel: {
+    color: colors.dark,
+    fontWeight: typography.weights.bold,
+  },
+  rejectBtn: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: radius.button,
+    borderWidth: 1.5,
+    borderColor: colors.error,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rejectLabel: {
+    color: colors.error,
+    fontWeight: typography.weights.bold,
+  },
+  disabled: { opacity: 0.5 },
   empty: {
     alignItems: 'center',
     paddingHorizontal: spacing.md,

@@ -75,6 +75,13 @@ export default function PartnerAccountScreen({ navigation }: Props) {
       <View style={styles.actions}>
         {isVendor ? (
           <PrimaryButton
+            label="My drivers / Add driver"
+            variant="outline"
+            onPress={() => navigation.navigate('VendorDrivers')}
+          />
+        ) : null}
+        {isVendor ? (
+          <PrimaryButton
             label="Verification timeline"
             variant="outline"
             onPress={() => navigation.navigate('VendorVerificationStatus')}

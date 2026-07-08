@@ -163,6 +163,39 @@ export async function releaseDriver(driverId: string): Promise<void> {
   }).exec();
 }
 
+/** Driver rejects an assigned job — frees driver and returns booking to CONFIRMED for reassignment. */
+export async function unassignDriverFromBooking(
+  bookingId: string,
+  bookingType: ActiveBookingType,
+  driverId: string,
+): Promise<void> {
+  if (bookingType === 'towing') {
+    const booking = await TowingBookingModel.findById(bookingId).exec();
+    if (!booking) throw new NotFoundError('Booking not found');
+    if (!booking.driverId || booking.driverId.toString() !== driverId) {
+      throw new BadRequestError('Booking is not assigned to this driver');
+    }
+    await TowingBookingModel.findByIdAndUpdate(bookingId, {
+      $unset: { driverId: 1 },
+      status: 'CONFIRMED',
+      statusHistory: appendStatusHistory(booking.statusHistory, 'CONFIRMED'),
+    }).exec();
+  } else {
+    const booking = await DriverBookingModel.findById(bookingId).exec();
+    if (!booking) throw new NotFoundError('Booking not found');
+    if (!booking.driverId || booking.driverId.toString() !== driverId) {
+      throw new BadRequestError('Booking is not assigned to this driver');
+    }
+    await DriverBookingModel.findByIdAndUpdate(bookingId, {
+      $unset: { driverId: 1 },
+      status: 'CONFIRMED',
+      statusHistory: appendStatusHistory(booking.statusHistory, 'CONFIRMED'),
+    }).exec();
+  }
+
+  await releaseDriver(driverId);
+}
+
 export async function autoAssignDriver(
   bookingId: string,
   bookingType: ActiveBookingType,

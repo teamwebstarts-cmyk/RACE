@@ -1,5 +1,5 @@
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
 import { CheckCircle2 } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -9,11 +9,14 @@ import { VENDOR_REGISTRATION_STEPS } from '../../../../constants/partnerRegistra
 import { useAppDispatch, useAppSelector } from '../../../../redux/hooks';
 import { completeOnboarding } from '../../../../redux/auth/authSlice';
 import { finishPartnerSignup } from '../../../../redux/onboarding/onboardingSlice';
+import { getApiErrorMessage } from '../../../../services/auth/useAuthMutations';
+import { registerVendor } from '../../../../services/vendor/vendorApi';
 import { usePartnerRegistrationStore } from '../../../../store/partnerRegistrationStore';
 import type {
   PartnerRegistrationStackParamList,
   PartnerRootStackParamList,
 } from '../../../../types/partnerNavigation';
+import type { VendorType } from '../../../../types/vendor';
 import { colors, radius, spacing, typography } from '../../../../theme';
 
 type Props = NativeStackScreenProps<PartnerRegistrationStackParamList, 'VendorReview'>;
@@ -27,31 +30,70 @@ function ReviewRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+function mapBusinessType(value: string): VendorType {
+  const lower = value.toLowerCase();
+  if (lower.includes('tow') && lower.includes('truck')) return 'tow_truck_driver';
+  if (lower.includes('mechanic')) return 'mechanic';
+  if (lower.includes('full')) return 'full_time_driver';
+  if (lower.includes('part')) return 'part_time_driver';
+  return 'towing_company';
+}
+
 export default function VendorReviewScreen({ navigation }: Props) {
   const dispatch = useAppDispatch();
-  const authUser = useAppSelector((state) => state.auth.user);
+  const authUser = useAppSelector(state => state.auth.user);
   const { vendorBusiness, vendorAddress, vendorDocuments } = usePartnerRegistrationStore();
+  const [submitting, setSubmitting] = useState(false);
 
-  const submit = () => {
-    dispatch(finishPartnerSignup());
-    if (authUser) {
-      dispatch(
-        completeOnboarding({
-          ...authUser,
-          fullName: vendorBusiness.ownerName || authUser.fullName,
-          email: vendorBusiness.email || authUser.email,
-          isProfileCompleted: true,
-        }),
-      );
-    } else {
-      dispatch(completeOnboarding());
+  const submit = async () => {
+    setSubmitting(true);
+    try {
+      const address = [
+        vendorAddress.addressLine1,
+        vendorAddress.addressLine2,
+        vendorAddress.city,
+        vendorAddress.state,
+        vendorAddress.pinCode,
+      ]
+        .filter(Boolean)
+        .join(', ');
+
+      await registerVendor({
+        vendorType: mapBusinessType(vendorBusiness.businessType || 'towing company'),
+        businessName: vendorBusiness.businessName,
+        ownerName: vendorBusiness.ownerName || authUser?.fullName || 'Vendor',
+        mobileNumber: vendorBusiness.mobileNumber || authUser?.mobileNumber || '',
+        email: vendorBusiness.email || undefined,
+        address: address || undefined,
+        acceptTerms: true,
+      });
+
+      dispatch(finishPartnerSignup());
+      if (authUser) {
+        dispatch(
+          completeOnboarding({
+            ...authUser,
+            role: 'vendor',
+            fullName: vendorBusiness.ownerName || authUser.fullName,
+            email: vendorBusiness.email || authUser.email,
+            isProfileCompleted: true,
+          }),
+        );
+      } else {
+        dispatch(completeOnboarding());
+      }
+
+      const rootNavigation =
+        navigation.getParent<NativeStackScreenProps<PartnerRootStackParamList>['navigation']>();
+      rootNavigation?.reset({
+        index: 0,
+        routes: [{ name: 'PartnerMain' }],
+      });
+    } catch (error) {
+      Alert.alert('Submit failed', getApiErrorMessage(error, 'Could not submit vendor application'));
+    } finally {
+      setSubmitting(false);
     }
-    const rootNavigation =
-      navigation.getParent<NativeStackScreenProps<PartnerRootStackParamList>['navigation']>();
-    rootNavigation?.reset({
-      index: 0,
-      routes: [{ name: 'PartnerMain' }],
-    });
   };
 
   return (
@@ -65,15 +107,18 @@ export default function VendorReviewScreen({ navigation }: Props) {
         <PartnerRegistrationFooter
           showBack
           onBack={() => navigation.goBack()}
-          continueLabel="Submit Application"
-          onContinue={submit}
+          continueLabel={submitting ? 'Submitting…' : 'Submit Application'}
+          onContinue={() => {
+            if (!submitting) void submit();
+          }}
         />
       }>
+      {submitting ? <ActivityIndicator color={colors.primary} style={{ marginBottom: spacing.md }} /> : null}
       <View style={styles.successCard}>
         <CheckCircle2 size={28} color={colors.partnerRed} strokeWidth={2} />
         <Text style={styles.successTitle}>Review your application</Text>
         <Text style={styles.successSubtitle}>
-          Admin will verify your business and documents before activation.
+          Submitted to admin. In demo, you can open dashboard and add drivers immediately.
         </Text>
       </View>
 
@@ -98,7 +143,7 @@ export default function VendorReviewScreen({ navigation }: Props) {
 
       <Text style={styles.sectionTitle}>Documents ({vendorDocuments.length})</Text>
       <View style={styles.card}>
-        {vendorDocuments.map((doc) => (
+        {vendorDocuments.map(doc => (
           <ReviewRow
             key={doc.id}
             label={doc.label}

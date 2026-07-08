@@ -227,11 +227,14 @@ export class VendorService {
       await vendorRepository.replaceDocuments(vendor.id, dto.documents);
     }
 
-    const docs = await vendorRepository.findDocuments(vendor.id);
-    validateRequiredDocuments(
-      dto.vendorType,
-      docs.map((d) => d.documentType),
-    );
+    // Production: enforce required docs. Demo / local: allow submit without uploads.
+    if (process.env.NODE_ENV === 'production') {
+      const docs = await vendorRepository.findDocuments(vendor.id);
+      validateRequiredDocuments(
+        dto.vendorType,
+        docs.map((d) => d.documentType),
+      );
+    }
 
     await notificationService.notifyVendorSubmitted(userId, dto.mobileNumber, vendor.id);
 

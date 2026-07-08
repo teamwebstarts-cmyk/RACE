@@ -1,5 +1,5 @@
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
 import { CheckCircle2 } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -9,11 +9,15 @@ import { DRIVER_REGISTRATION_STEPS } from '../../../../constants/partnerRegistra
 import { useAppDispatch, useAppSelector } from '../../../../redux/hooks';
 import { completeOnboarding } from '../../../../redux/auth/authSlice';
 import { finishPartnerSignup } from '../../../../redux/onboarding/onboardingSlice';
+import { API_ENDPOINTS } from '../../../../config/api';
+import { api } from '../../../../services/api';
+import { getApiErrorMessage } from '../../../../services/auth/useAuthMutations';
 import { usePartnerRegistrationStore } from '../../../../store/partnerRegistrationStore';
 import type {
   PartnerRegistrationStackParamList,
   PartnerRootStackParamList,
 } from '../../../../types/partnerNavigation';
+import type { ApiSuccessResponse } from '../../../../types/auth';
 import { colors, radius, spacing, typography } from '../../../../theme';
 
 type Props = NativeStackScreenProps<PartnerRegistrationStackParamList, 'DriverReview'>;
@@ -27,31 +31,67 @@ function ReviewRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+function mapVehicleToDriverType(vehicleType: string): 'Tow Driver' | 'Full-Time' | 'Part-Time' {
+  const lower = vehicleType.toLowerCase();
+  if (lower.includes('tow') || lower.includes('truck')) return 'Tow Driver';
+  if (lower.includes('part')) return 'Part-Time';
+  return 'Full-Time';
+}
+
 export default function DriverReviewScreen({ navigation }: Props) {
   const dispatch = useAppDispatch();
-  const authUser = useAppSelector((state) => state.auth.user);
+  const authUser = useAppSelector(state => state.auth.user);
   const { driverPersonal, driverVehicle, driverDocuments } = usePartnerRegistrationStore();
+  const [submitting, setSubmitting] = useState(false);
 
-  const submit = () => {
-    dispatch(finishPartnerSignup());
-    if (authUser) {
-      dispatch(
-        completeOnboarding({
-          ...authUser,
-          fullName: driverPersonal.fullName || authUser.fullName,
-          email: driverPersonal.email || authUser.email,
-          isProfileCompleted: true,
-        }),
-      );
-    } else {
-      dispatch(completeOnboarding());
+  const submit = async () => {
+    setSubmitting(true);
+    try {
+      const { data } = await api.post<
+        ApiSuccessResponse<{
+          id: string;
+          role: string;
+          fullName?: string;
+          status: string;
+          isProfileCompleted: boolean;
+        }>
+      >(API_ENDPOINTS.driverRegister ?? '/api/v1/driver/register', {
+        fullName: driverPersonal.fullName || authUser?.fullName || 'Driver',
+        email: driverPersonal.email || undefined,
+        address: driverPersonal.address || undefined,
+        licenseNo: driverVehicle.rcNumber || `LIC-${Date.now().toString().slice(-6)}`,
+        driverType: mapVehicleToDriverType(driverVehicle.vehicleType || 'car'),
+        vehicleRegistration: driverVehicle.vehicleNumber || undefined,
+        city: 'Bhubaneswar',
+        vehicleType: driverVehicle.vehicleType || undefined,
+      });
+
+      dispatch(finishPartnerSignup());
+      if (authUser) {
+        dispatch(
+          completeOnboarding({
+            ...authUser,
+            role: 'driver',
+            fullName: data.data.fullName || driverPersonal.fullName || authUser.fullName,
+            email: driverPersonal.email || authUser.email,
+            isProfileCompleted: true,
+          }),
+        );
+      } else {
+        dispatch(completeOnboarding());
+      }
+
+      const rootNavigation =
+        navigation.getParent<NativeStackScreenProps<PartnerRootStackParamList>['navigation']>();
+      rootNavigation?.reset({
+        index: 0,
+        routes: [{ name: 'PartnerMain' }],
+      });
+    } catch (error) {
+      Alert.alert('Submit failed', getApiErrorMessage(error, 'Could not submit driver application'));
+    } finally {
+      setSubmitting(false);
     }
-    const rootNavigation =
-      navigation.getParent<NativeStackScreenProps<PartnerRootStackParamList>['navigation']>();
-    rootNavigation?.reset({
-      index: 0,
-      routes: [{ name: 'PartnerMain' }],
-    });
   };
 
   return (
@@ -65,15 +105,18 @@ export default function DriverReviewScreen({ navigation }: Props) {
         <PartnerRegistrationFooter
           showBack
           onBack={() => navigation.goBack()}
-          continueLabel="Submit Application"
-          onContinue={submit}
+          continueLabel={submitting ? 'Submitting…' : 'Submit Application'}
+          onContinue={() => {
+            if (!submitting) void submit();
+          }}
         />
       }>
+      {submitting ? <ActivityIndicator color={colors.primary} style={{ marginBottom: spacing.md }} /> : null}
       <View style={styles.successCard}>
         <CheckCircle2 size={28} color={colors.partnerRed} strokeWidth={2} />
         <Text style={styles.successTitle}>Review your application</Text>
         <Text style={styles.successSubtitle}>
-          Your application will be verified by Admin before you can start receiving jobs.
+          In demo builds you become an approved driver after submit and can accept jobs.
         </Text>
       </View>
 
@@ -98,7 +141,7 @@ export default function DriverReviewScreen({ navigation }: Props) {
 
       <Text style={styles.sectionTitle}>Documents ({driverDocuments.length})</Text>
       <View style={styles.card}>
-        {driverDocuments.map((doc) => (
+        {driverDocuments.map(doc => (
           <ReviewRow
             key={doc.id}
             label={doc.label}

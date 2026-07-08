@@ -142,6 +142,18 @@ export default function PartnerHomeScreen() {
             variant="outline"
             onPress={() => navigation.navigate('PartnerJobs')}
           />
+          {isVendor ? (
+            <>
+              <View style={styles.spacer} />
+              <PrimaryButton
+                label="Manage drivers"
+                variant="outline"
+                onPress={() =>
+                  navigation.navigate('PartnerAccount', { screen: 'VendorDrivers' } as never)
+                }
+              />
+            </>
+          ) : null}
         </GlassCard>
       )}
 
@@ -299,4 +311,5 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.semibold,
     flex: 1,
   },
+  spacer: { height: spacing.sm },
 });
