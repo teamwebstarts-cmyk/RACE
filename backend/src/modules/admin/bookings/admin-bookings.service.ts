@@ -277,7 +277,25 @@ export const adminBookingsService = {
   },
 
   async getCounts() {
-    const [all, created, assigned, enRoute, completed, cancelled, refunded, pending] = await Promise.all([
+    const [
+      legacyAll,
+      legacyCreated,
+      legacyAssigned,
+      legacyEnRoute,
+      legacyCompleted,
+      legacyCancelled,
+      legacyRefunded,
+      towingAll,
+      towingPending,
+      towingActive,
+      towingCompleted,
+      towingCancelled,
+      driverAll,
+      driverPending,
+      driverActive,
+      driverCompleted,
+      driverCancelled,
+    ] = await Promise.all([
       BookingModel.countDocuments(),
       BookingModel.countDocuments({ status: 'CREATED' }),
       BookingModel.countDocuments({ status: { $in: ['ASSIGNED', 'ACCEPTED'] } }),
@@ -285,12 +303,36 @@ export const adminBookingsService = {
       BookingModel.countDocuments({ status: { $in: COMPLETED_STATUSES } }),
       BookingModel.countDocuments({ status: 'CANCELLED' }),
       BookingModel.countDocuments({ status: 'REFUNDED' }),
-      Promise.all([
-        TowingBookingModel.countDocuments({ status: { $in: ['PENDING', 'CONFIRMED', 'DRIVER_ASSIGNED'] } }),
-        DriverBookingModel.countDocuments({ status: { $in: ['PENDING', 'CONFIRMED', 'DRIVER_ASSIGNED'] } }),
-      ]).then(([a, b]) => a + b),
+      TowingBookingModel.countDocuments(),
+      TowingBookingModel.countDocuments({
+        status: { $in: ['PENDING', 'CONFIRMED', 'DRIVER_ASSIGNED'] },
+      }),
+      TowingBookingModel.countDocuments({
+        status: { $in: ['DRIVER_EN_ROUTE', 'DRIVER_ARRIVED', 'IN_PROGRESS'] },
+      }),
+      TowingBookingModel.countDocuments({ status: { $in: ['COMPLETED', 'RATED'] } }),
+      TowingBookingModel.countDocuments({ status: 'CANCELLED' }),
+      DriverBookingModel.countDocuments(),
+      DriverBookingModel.countDocuments({
+        status: { $in: ['PENDING', 'CONFIRMED', 'DRIVER_ASSIGNED'] },
+      }),
+      DriverBookingModel.countDocuments({
+        status: { $in: ['DRIVER_EN_ROUTE', 'DRIVER_ARRIVED', 'IN_PROGRESS'] },
+      }),
+      DriverBookingModel.countDocuments({ status: { $in: ['COMPLETED', 'RATED'] } }),
+      DriverBookingModel.countDocuments({ status: 'CANCELLED' }),
     ]);
-    return { all, created, assigned, enRoute, completed, cancelled, refunded, pending };
+
+    return {
+      all: legacyAll + towingAll + driverAll,
+      created: legacyCreated,
+      assigned: legacyAssigned,
+      enRoute: legacyEnRoute + towingActive + driverActive,
+      completed: legacyCompleted + towingCompleted + driverCompleted,
+      cancelled: legacyCancelled + towingCancelled + driverCancelled,
+      refunded: legacyRefunded,
+      pending: towingPending + driverPending,
+    };
   },
 
   async getById(id: string, type?: 'towing' | 'driver' | 'legacy') {

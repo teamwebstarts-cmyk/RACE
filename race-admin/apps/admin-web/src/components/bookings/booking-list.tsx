@@ -179,7 +179,7 @@ export function BookingList() {
   const tabCounts: Record<string, number> = {
     ALL: counts?.all ?? 0,
     PENDING: counts?.pending ?? 0,
-    ACTIVE: (counts?.assigned ?? 0) + (counts?.enRoute ?? 0),
+    ACTIVE: counts?.enRoute ?? 0,
     COMPLETED: counts?.completed ?? 0,
     CANCELLED: counts?.cancelled ?? 0,
   };
