@@ -58,7 +58,6 @@ export const colors = {
   accentOrange: '#F4A115',
   accentRed: sharedColors.error,
   warning: '#F4A115',
-  // Partner accents = same RACE gold
   partnerRed: sharedColors.primary,
   partnerRedLight: sharedColors.goldLight,
   partnerOrangeLight: sharedColors.goldLight,

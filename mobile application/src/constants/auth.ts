@@ -7,10 +7,17 @@ export const AUTH_USER = {
 /** Demo: registered returning user (10-digit mobile without country code) */
 export const REGISTERED_PHONE_DIGITS = '8249472910';
 
-/** Partner app demo mobile (matches OTP screen mockup) */
-export const PARTNER_DEMO_PHONE = '9876543210';
+/** Prefer Om Singh for partner demo login UI */
+export const PARTNER_DEMO_PHONE = '8888880001';
 
 export const DEMO_OTP = '247392';
+
+/** Seeded demo drivers (backend: npm run seed:demo-drivers). OTP always 247392 in non-prod. */
+export const PARTNER_DEMO_DRIVERS = [
+  { name: 'Om Singh', phone: '8888880001', type: 'Tow Driver' },
+  { name: 'Ramesh', phone: '8888880002', type: 'Full-Time Driver' },
+  { name: 'Vaibhav', phone: '8888880003', type: 'Part-Time Driver' },
+] as const;
 
 export const DEMO_PIN = '1234';
 

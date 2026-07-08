@@ -13,7 +13,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import AuthToast, { AuthLoadingOverlay } from '../../../components/auth/AuthToast';
 import GoogleIcon from '../../../components/auth/GoogleIcon';
 import PartnerScreenLayout from '../../../components/partner/PartnerScreenLayout';
-import { DEMO_OTP, PARTNER_DEMO_PHONE } from '../../../constants/auth';
+import { DEMO_OTP, PARTNER_DEMO_DRIVERS, PARTNER_DEMO_PHONE } from '../../../constants/auth';
 import { useAppSelector } from '../../../redux/hooks';
 import {
   getApiErrorMessage,
@@ -89,12 +89,26 @@ export default function PartnerLoginScreen({ navigation, route }: Props) {
         }>
         {__DEV__ ? (
           <View style={styles.demoCard}>
-            <Text style={styles.demoTitle}>Demo login</Text>
-            <Text style={styles.demoText}>
-              Mobile: <Text style={styles.demoValue}>{PARTNER_DEMO_PHONE}</Text>
-            </Text>
-            <Text style={styles.demoText}>
-              OTP: <Text style={styles.demoValue}>{DEMO_OTP}</Text> (after Send OTP)
+            <Text style={styles.demoTitle}>Demo drivers (OTP {DEMO_OTP})</Text>
+            {PARTNER_DEMO_DRIVERS.map(driver => (
+              <Pressable
+                key={driver.phone}
+                onPress={() => {
+                  setMobileNumber(driver.phone);
+                  setError('');
+                }}
+                style={styles.demoRow}>
+                <Text style={styles.demoText}>
+                  <Text style={styles.demoValue}>{driver.name}</Text>
+                  {' · '}
+                  {driver.phone}
+                  {' · '}
+                  {driver.type}
+                </Text>
+              </Pressable>
+            ))}
+            <Text style={[styles.demoText, { marginTop: spacing.xs }]}>
+              Prefill: <Text style={styles.demoValue}>{PARTNER_DEMO_PHONE}</Text> (tap a row to switch)
             </Text>
           </View>
         ) : null}
@@ -182,6 +196,9 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.bold,
     marginBottom: spacing.xs,
     textAlign: 'center',
+  },
+  demoRow: {
+    paddingVertical: 4,
   },
   demoText: {
     color: colors.dark,

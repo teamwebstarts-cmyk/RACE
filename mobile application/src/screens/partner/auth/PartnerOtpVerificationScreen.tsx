@@ -114,6 +114,18 @@ export default function PartnerOtpVerificationScreen({ navigation, route }: Prop
         const result = await verifyOtpMutation.mutateAsync({ mobileNumber, otp: code });
         setVerified(true);
         const role = resolvePartnerRole();
+        const backendRole = result.user.role;
+        const isApprovedPartner =
+          (backendRole === 'driver' || backendRole === 'vendor') &&
+          result.user.isProfileCompleted &&
+          !result.onboardingRequired;
+
+        // Seeded demo drivers / approved partners skip registration UI.
+        if (isApprovedPartner) {
+          dispatch(completeOnboarding(result.user));
+          goToPartnerMain();
+          return;
+        }
 
         if (role && (result.onboardingRequired || !result.user.isProfileCompleted)) {
           goToRegistration(role);

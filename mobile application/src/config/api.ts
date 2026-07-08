@@ -59,4 +59,9 @@ export const API_ENDPOINTS = {
   sosContext: '/api/v1/sos/context',
   sosAlert: '/api/v1/sos/alert',
   wallet: '/api/v1/profile/wallet',
+  driverAvailability: '/api/v1/driver/availability',
+  driverLocation: '/api/v1/driver/location',
+  driverMyBookings: '/api/v1/driver/bookings',
+  driverActiveBooking: '/api/v1/driver/bookings/active',
+  driverBookingStatus: (id: string) => `/api/v1/driver/bookings/${id}/status`,
 } as const;
