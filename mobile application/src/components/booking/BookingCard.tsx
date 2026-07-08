@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import StatusChip from '../ui/StatusChip';
 import type { Booking } from '../../types/booking';
+import { formatReadableAddress } from '../../utils/readableAddress';
 import { colors, radius, spacing, typography } from '../../theme';
 
 interface BookingCardProps {
@@ -23,14 +24,14 @@ export default function BookingCard({ booking, onPress, compact }: BookingCardPr
       <View style={styles.row}>
         <Ionicons name="location" size={14} color={colors.primary} />
         <Text style={styles.location} numberOfLines={1}>
-          {booking.pickup.label}
+          {formatReadableAddress(booking.pickup.address || booking.pickup.label)}
         </Text>
       </View>
       {booking.dropoff ? (
         <View style={styles.row}>
           <Ionicons name="navigate" size={14} color={colors.accentRed} />
           <Text style={styles.location} numberOfLines={1}>
-            {booking.dropoff.label}
+            {formatReadableAddress(booking.dropoff.address || booking.dropoff.label)}
           </Text>
         </View>
       ) : null}

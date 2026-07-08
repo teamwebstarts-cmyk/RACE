@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Clock } from 'lucide-react-native';
+import { AlarmClock, ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import TowingBookingLayout, { useBookingTheme } from '../../../components/booking/TowingBookingLayout';
@@ -247,7 +247,17 @@ export default function DriverDateTimeScreen({ navigation }: Props) {
               paddingHorizontal: t.px(16),
               paddingVertical: t.px(14),
             }}>
-            <Clock size={t.iconSm} color={colors.primary} strokeWidth={2} />
+            <View
+              style={{
+                width: t.px(36),
+                height: t.px(36),
+                borderRadius: t.px(18),
+                backgroundColor: colors.goldLight,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+              <AlarmClock size={t.px(20)} color={colors.primary} strokeWidth={2.4} />
+            </View>
             <Text
               style={{
                 flex: 1,

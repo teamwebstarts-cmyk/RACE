@@ -1,6 +1,7 @@
 import { images } from '../assets';
 import type { DriverDurationId, DriverTimeId, DriverTypeId } from '../types/driverBooking';
 import type { DriverPackageHours, DriverVehicleCategory } from '../types/fare';
+import { formatReadableAddress } from '../utils/readableAddress';
 
 export const DRIVER_ACCENT = '#F59E0B';
 export const DRIVER_LIGHT_BG = '#FEF3C7';
@@ -184,7 +185,7 @@ export function getTimeLabel(timeId: DriverTimeId): string {
 export { getDateReviewLabel } from '../utils/driverCalendar';
 
 export function getShortLocation(address: string): string {
-  return address.split(',')[0]?.trim() || address;
+  return formatReadableAddress(address);
 }
 
 export function isBookableDriverType(id: DriverTypeId): boolean {

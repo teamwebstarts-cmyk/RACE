@@ -95,17 +95,33 @@ export default function TowingCompletedScreen({ navigation, route }: Props) {
             disabled={isPaying}
             style={{
               width: '100%',
-              backgroundColor: colors.primary,
-              borderRadius: t.cardRadius,
-              paddingVertical: t.px(14),
+              flexDirection: 'row',
               alignItems: 'center',
+              justifyContent: 'space-between',
+              backgroundColor: colors.goldLight,
+              borderRadius: t.cardRadius,
+              borderWidth: 1.5,
+              borderColor: colors.primary,
+              paddingVertical: t.px(14),
+              paddingHorizontal: t.px(16),
               marginBottom: t.px(16),
               opacity: isPaying ? 0.7 : 1,
             }}>
-            <Text style={{ fontSize: t.labelBold, fontWeight: typography.weights.bold, color: colors.dark }}>
-              {isPaying
-                ? 'Processing...'
-                : `Pay remaining ₹${booking?.remainingAmount?.toLocaleString('en-IN') ?? ''} (70%)`}
+            <Text
+              style={{
+                fontSize: t.bodyLarge,
+                fontWeight: typography.weights.semibold,
+                color: colors.dark,
+              }}>
+              {isPaying ? 'Processing…' : 'Pay now'}
+            </Text>
+            <Text
+              style={{
+                fontSize: t.labelBold,
+                fontWeight: typography.weights.extrabold,
+                color: colors.primary,
+              }}>
+              ₹{booking?.remainingAmount?.toLocaleString('en-IN') ?? '—'}
             </Text>
           </Pressable>
         ) : null}
@@ -124,7 +140,13 @@ export default function TowingCompletedScreen({ navigation, route }: Props) {
           style={{ alignItems: 'center' }}>
           <View style={{ flexDirection: 'row', gap: t.px(8), marginBottom: t.px(12) }}>
             {[1, 2, 3, 4, 5].map(star => (
-              <Star key={star} size={t.px(28)} color={colors.primary} fill={colors.primary} />
+              <Star
+                key={star}
+                size={t.px(28)}
+                color={colors.primary}
+                fill="transparent"
+                strokeWidth={2}
+              />
             ))}
           </View>
           <Text

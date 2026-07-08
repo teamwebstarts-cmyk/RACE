@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Animated, Pressable, Text, View } from 'react-native';
-import { Check, ChevronDown, ChevronUp, CreditCard, Smartphone, Wallet } from 'lucide-react-native';
+import { Check, ChevronDown, ChevronUp, Smartphone, Wallet } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import TowingBookingLayout, { useBookingTheme } from '../../../components/booking/TowingBookingLayout';
@@ -27,7 +27,7 @@ import { colors, shadows, typography } from '../../../theme';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'TowingAdvancePayment'>;
 
-type PaymentMethodId = 'upi' | 'card' | 'cash';
+type PaymentMethodId = 'upi' | 'cash';
 
 const TOWING_ACCENT = '#F59E0B';
 const SELECTED_BG = '#FEF3C7';
@@ -43,12 +43,6 @@ const PAYMENT_METHODS: Array<{
     label: 'UPI',
     description: 'PhonePe / GPay / Paytm',
     Icon: Smartphone,
-  },
-  {
-    id: 'card',
-    label: 'Credit / Debit Card',
-    description: 'Visa, Mastercard, RuPay',
-    Icon: CreditCard,
   },
   {
     id: 'cash',
@@ -325,16 +319,19 @@ export default function TowingAdvancePaymentScreen({ navigation }: Props) {
           backgroundColor: SELECTED_BG,
           borderWidth: 1,
           borderColor: TOWING_ACCENT,
-          padding: t.px(16),
+          paddingVertical: t.px(16),
+          paddingHorizontal: t.px(16),
           marginBottom: t.px(20),
+          flexDirection: 'row',
           alignItems: 'center',
+          justifyContent: 'space-between',
         }}>
-        <Text style={{ fontSize: t.body, color: colors.grey, marginBottom: t.px(4) }}>
-          Pay now (30%)
+        <Text style={{ fontSize: t.bodyLarge, fontWeight: typography.weights.semibold, color: colors.dark }}>
+          Pay now
         </Text>
         <Text
           style={{
-            fontSize: t.px(28),
+            fontSize: t.px(22),
             fontWeight: typography.weights.extrabold,
             color: TOWING_ACCENT,
           }}>

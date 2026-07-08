@@ -55,21 +55,41 @@ export default function BookingsScreen() {
     }, [refetch]),
   );
 
+  const typeFiltered = useMemo(() => {
+    if (activeTab === 'towing') {
+      return bookings.filter(b => (b.bookingType ?? 'towing') === 'towing');
+    }
+    if (activeTab === 'driver') {
+      return bookings.filter(b => b.bookingType === 'driver');
+    }
+    return bookings;
+  }, [activeTab, bookings]);
+
   const ongoingList = useMemo(
-    () => bookings.filter(isBookingOngoing).map(mapBookingToActiveCard),
-    [bookings],
+    () => typeFiltered.filter(isBookingOngoing).map(mapBookingToActiveCard),
+    [typeFiltered],
   );
 
   const historyList = useMemo(
-    () => bookings.filter(isBookingCompleted).map(mapBookingToHistoryRow),
-    [bookings],
+    () => typeFiltered.filter(isBookingCompleted).map(mapBookingToHistoryRow),
+    [typeFiltered],
   );
 
-  const showOngoing = activeTab === 'all' || activeTab === 'ongoing';
-  const showHistory = activeTab === 'all' || activeTab === 'completed';
+  const showOngoing =
+    activeTab === 'all' ||
+    activeTab === 'ongoing' ||
+    activeTab === 'towing' ||
+    activeTab === 'driver';
+  const showHistory =
+    activeTab === 'all' ||
+    activeTab === 'completed' ||
+    activeTab === 'towing' ||
+    activeTab === 'driver';
 
   const visibleOngoing =
-    activeTab === 'ongoing' ? ongoingList : ongoingList.slice(0, 1);
+    activeTab === 'ongoing' || activeTab === 'towing' || activeTab === 'driver'
+      ? ongoingList
+      : ongoingList.slice(0, 1);
 
   const openTrack = (bookingId: string, bookingType: 'towing' | 'driver') => {
     if (bookingType === 'driver') {
@@ -94,9 +114,8 @@ export default function BookingsScreen() {
       <View
         style={{
           flexDirection: 'row',
-          backgroundColor: colors.lightGrey,
-          borderRadius: px(12),
-          padding: px(4),
+          flexWrap: 'wrap',
+          gap: px(8),
           marginTop: px(16),
           marginBottom: px(18),
         }}>
@@ -107,12 +126,14 @@ export default function BookingsScreen() {
               key={tab.id}
               onPress={() => setActiveTab(tab.id)}
               style={{
-                flex: 1,
                 alignItems: 'center',
                 justifyContent: 'center',
-                paddingVertical: px(10),
-                borderRadius: px(10),
-                backgroundColor: isActive ? colors.primary : 'transparent',
+                paddingVertical: px(8),
+                paddingHorizontal: px(12),
+                borderRadius: px(20),
+                borderWidth: 1,
+                borderColor: isActive ? colors.primary : colors.border,
+                backgroundColor: isActive ? colors.primary : colors.background,
               }}>
               <Text
                 style={{

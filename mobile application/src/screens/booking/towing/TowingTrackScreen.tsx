@@ -14,6 +14,7 @@ import {
   formatUnifiedStatusLabel,
   isCompletedUnifiedStatus,
 } from '../../../utils/bookingDisplay';
+import { formatReadableAddress } from '../../../utils/readableAddress';
 import { colors, shadows, typography } from '../../../theme';
 
 type Props = NativeStackScreenProps<HomeStackParamList & BookingsStackParamList, 'TowingTrack'>;
@@ -44,7 +45,13 @@ export default function TowingTrackScreen({ navigation, route }: Props) {
   const bookingId = route.params?.bookingId;
   const fromBookings = route.params?.fromBookings;
   const booking = useBookingQuery(bookingId ?? '');
-  const { etaLabel, status, driverLocation } = useBookingTracking(bookingId, 'towing');
+  const { etaLabel, status, driverLocation, driverName, driverRating } = useBookingTracking(
+    bookingId,
+    'towing',
+  );
+  const displayDriverName =
+    driverName ?? booking?.driver?.name ?? 'Assigning driver';
+  const hasAssignedDriver = Boolean(driverName ?? booking?.driver?.name);
   const activeStep = useMemo(() => stepIndexForStatus(status), [status]);
   const isCompleted = isCompletedUnifiedStatus(status);
 
@@ -206,12 +213,17 @@ export default function TowingTrackScreen({ navigation, route }: Props) {
                 fontWeight: typography.weights.bold,
                 color: colors.dark,
               }}>
-              {driverLocation?.driverName ?? booking?.driver?.name ?? 'Assigning driver'}
+              {displayDriverName}
             </Text>
+            {hasAssignedDriver ? (
+              <Text style={{ fontSize: t.caption, color: colors.grey, marginBottom: t.px(2) }}>
+                ★ {driverRating.toFixed(1)} · Tow driver
+              </Text>
+            ) : null}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.px(4) }}>
               <MapPin size={t.px(12)} color={colors.grey} />
               <Text style={{ fontSize: t.caption, color: colors.grey }}>
-                Towing · {booking?.pickup.address ?? 'Pickup en route'}
+                Towing · {formatReadableAddress(booking?.pickup.address) || 'Pickup en route'}
               </Text>
             </View>
             {!!driverLocation && (

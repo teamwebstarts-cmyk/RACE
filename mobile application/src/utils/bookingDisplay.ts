@@ -1,6 +1,7 @@
 import type { Booking } from '../types/booking';
 import type { ActiveBooking, BookingHistoryItem } from '../types/models';
 import type { ServiceBookingType } from '../types/serviceBooking';
+import { formatReadableAddress } from './readableAddress';
 
 export const ONGOING_UNIFIED_STATUSES = [
   'PENDING',
@@ -61,8 +62,11 @@ export function mapBookingToActiveCard(booking: Booking): ActiveBooking {
     status: booking.unifiedStatus
       ? formatUnifiedStatusLabel(booking.unifiedStatus)
       : formatUnifiedStatusLabel(booking.status),
-    pickup: booking.pickup.address,
-    drop: booking.dropoff?.address ?? 'On-site service',
+    pickup: formatReadableAddress(booking.pickup.address || booking.pickup.label),
+    drop:
+      formatReadableAddress(booking.dropoff?.address || booking.dropoff?.label) === '—'
+        ? 'On-site service'
+        : formatReadableAddress(booking.dropoff?.address || booking.dropoff?.label),
     eta: booking.etaMinutes ? `${booking.etaMinutes} min` : '15 min',
     driver: booking.driver
       ? {
@@ -91,7 +95,7 @@ export function mapBookingToHistoryRow(booking: Booking): BookingHistoryItem {
       month: 'short',
       year: 'numeric',
     }),
-    location: booking.pickup.address,
+    location: formatReadableAddress(booking.pickup.address || booking.pickup.label),
     amount: booking.invoice?.total ?? 0,
     status: booking.unifiedStatus
       ? formatUnifiedStatusLabel(booking.unifiedStatus)

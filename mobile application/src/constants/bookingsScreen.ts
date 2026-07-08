@@ -7,12 +7,14 @@ import {
   type LucideIcon,
 } from 'lucide-react-native';
 
-export type BookingTabId = 'all' | 'ongoing' | 'completed';
+export type BookingTabId = 'all' | 'ongoing' | 'completed' | 'towing' | 'driver';
 
 export const BOOKING_TABS: Array<{ id: BookingTabId; label: string }> = [
-  { id: 'all', label: 'All Bookings' },
+  { id: 'all', label: 'All' },
   { id: 'ongoing', label: 'Ongoing' },
-  { id: 'completed', label: 'Completed' },
+  { id: 'completed', label: 'Done' },
+  { id: 'towing', label: 'Towing' },
+  { id: 'driver', label: 'Driver' },
 ];
 
 export function getBookingServiceIcon(service: string): LucideIcon {

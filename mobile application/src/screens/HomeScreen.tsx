@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -30,17 +30,18 @@ import {
 } from '../constants/home';
 import { getServiceCategoryIcon } from '../constants/servicesScreen';
 import { images } from '../assets';
+import LocationSelectorSheet from '../components/location/LocationSelectorSheet';
+import NotServiceableScreen from '../components/location/NotServiceableScreen';
 import AppScreenLayout from '../components/ui/AppScreenLayout';
 import TabRootHeader from '../components/ui/TabRootHeader';
 import { useAuthStore } from '../store/authStore';
 import { useCatalogStore } from '../store/catalogStore';
+import { useLocationStore } from '../store/locationStore';
 import { useProfileStore } from '../store/profileStore';
-import { useUserLocationStore } from '../store/userLocationStore';
 import { getProfileFirstName } from '../utils/profileDisplay';
 import { brand } from '../theme/brand';
 import type { HomeStackParamList, RootTabParamList } from '../types/navigation';
 import { openServiceCategory } from '../utils/serviceNavigation';
-import { formatLocationLabel } from '../utils/locationDisplay';
 import { colors, shadows, typography } from '../theme';
 
 const REF_W = 390;
@@ -52,15 +53,19 @@ export default function HomeScreen({ navigation }: Props) {
   const s = width / REF_W;
   const px = (n: number) => Math.round(n * s);
 
+  const {
+    hasSelectedLocation,
+    isServiceable,
+    selectedLocation,
+    isHydrated: isLocationHydrated,
+  } = useLocationStore();
+
+  const [showLocationSheet, setShowLocationSheet] = useState(false);
+
   const { services, fetchServices, fetchBrand, brand: apiBrand, isLoading, error } =
     useCatalogStore();
   const profile = useProfileStore(state => state.profile);
   const authUser = useAuthStore(state => state.user);
-  const savedLocation = useUserLocationStore(state => state.location);
-  const hydrateLocation = useUserLocationStore(state => state.hydrate);
-  const fetchCurrentLocation = useUserLocationStore(state => state.fetchCurrentLocation);
-  const isLocating = useUserLocationStore(state => state.isLocating);
-  const isLocationHydrated = useUserLocationStore(state => state.isHydrated);
 
   useEffect(() => {
     void fetchServices();
@@ -68,24 +73,10 @@ export default function HomeScreen({ navigation }: Props) {
   }, [fetchBrand, fetchServices]);
 
   useEffect(() => {
-    let mounted = true;
-
-    async function initLocation() {
-      await hydrateLocation();
-      if (!mounted) return;
-
-      const current = useUserLocationStore.getState().location;
-      if (!current) {
-        await fetchCurrentLocation();
-      }
+    if (isLocationHydrated && !hasSelectedLocation) {
+      setShowLocationSheet(true);
     }
-
-    void initLocation();
-
-    return () => {
-      mounted = false;
-    };
-  }, [fetchCurrentLocation, hydrateLocation]);
+  }, [hasSelectedLocation, isLocationHydrated]);
 
   const quickItems = useMemo(() => {
     return services.slice(0, 4).map(category => ({
@@ -115,15 +106,10 @@ export default function HomeScreen({ navigation }: Props) {
     getProfileFirstName(profile?.fullName) ||
     getProfileFirstName(authUser?.fullName) ||
     'there';
-  const displayLocation = useMemo(() => {
-    if (savedLocation) {
-      return formatLocationLabel(savedLocation);
-    }
-    if (isLocationHydrated && !isLocating) {
-      return 'Set your location';
-    }
-    return 'Locating...';
-  }, [isLocationHydrated, isLocating, savedLocation]);
+  // Prefer saved name whenever present — don't gate on hydration (that caused "Locating..." stuck)
+  const displayLocation =
+    selectedLocation?.displayName ??
+    (isLocationHydrated ? 'Set your location' : 'Locating...');
 
   const callSupport = () => {
     const phone = apiBrand?.phoneRaw ?? brand.phoneRaw;
@@ -139,37 +125,60 @@ export default function HomeScreen({ navigation }: Props) {
     openServiceCategory(navigation, categoryId, categoryTitle);
   };
 
+  const openLocationSheet = () => setShowLocationSheet(true);
+
+  const onLocationSelected = () => {
+    setShowLocationSheet(false);
+  };
+
+  if (isLocationHydrated && hasSelectedLocation && !isServiceable) {
+    return (
+      <>
+        <NotServiceableScreen onChangeLocation={openLocationSheet} />
+        <LocationSelectorSheet
+          visible={showLocationSheet}
+          dismissible
+          onRequestClose={() => setShowLocationSheet(false)}
+          onLocationSelected={onLocationSelected}
+        />
+      </>
+    );
+  }
+
   return (
+    <>
     <AppScreenLayout
       contentStyle={{ paddingTop: px(10) }}
       header={
-        <TabRootHeader
-          title={getGreeting(displayName)}
-          subtitle="What do you need help with today?"
-          actions={
-            <Pressable
-              onPress={() => navigation.navigate('SelectLocation')}
+        <View>
+          <Pressable
+            onPress={openLocationSheet}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: px(6),
+              paddingHorizontal: px(20),
+              paddingTop: px(4),
+              paddingBottom: px(8),
+            }}>
+            <MapPin size={px(16)} color={colors.primary} strokeWidth={2.4} />
+            <Text
+              numberOfLines={1}
               style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: px(4),
-                maxWidth: px(140),
+                flexShrink: 1,
+                fontSize: px(14),
+                fontWeight: typography.weights.bold,
+                color: colors.dark,
               }}>
-              <MapPin size={px(14)} color={colors.primary} strokeWidth={2.2} />
-              <Text
-                numberOfLines={1}
-                style={{
-                  fontSize: px(11),
-                  fontWeight: typography.weights.semibold,
-                  color: colors.dark,
-                  flexShrink: 1,
-                }}>
-                {displayLocation}
-              </Text>
-              <ChevronDown size={px(12)} color={colors.grey} />
-            </Pressable>
-          }
-        />
+              {displayLocation}
+            </Text>
+            <ChevronDown size={px(14)} color={colors.grey} strokeWidth={2.4} />
+          </Pressable>
+          <TabRootHeader
+            title={getGreeting(displayName)}
+            subtitle="What do you need help with today?"
+          />
+        </View>
       }>
           {/* Hero */}
           <View
@@ -538,6 +547,14 @@ export default function HomeScreen({ navigation }: Props) {
             ))}
           </View>
     </AppScreenLayout>
+
+      <LocationSelectorSheet
+        visible={showLocationSheet || (isLocationHydrated && !hasSelectedLocation)}
+        dismissible={hasSelectedLocation}
+        onRequestClose={() => setShowLocationSheet(false)}
+        onLocationSelected={onLocationSelected}
+      />
+    </>
   );
 }
 

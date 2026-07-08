@@ -67,6 +67,16 @@ function mapServiceBookingToBooking(
     durationMinutes: item.estimatedDurationHours
       ? Math.round(item.estimatedDurationHours * 60)
       : undefined,
+    driver: item.driver
+      ? {
+          id: item.driver.id,
+          name: item.driver.name,
+          rating: item.driver.rating,
+          phone: item.driver.phone,
+          experience: 'RACE verified',
+          verified: true,
+        }
+      : undefined,
     invoice: {
       baseFare: item.estimatedFare,
       total: item.estimatedFare,

@@ -24,8 +24,12 @@ import type { SubmitServiceBookingRatingDto } from '../shared/booking-rating.val
 import { buildServiceBookingRatingUpdate } from '../shared/booking-rating.helpers';
 import { getCancellationPolicy, type CancellationResult } from '../shared/cancellation.helpers';
 import { releaseDriver } from '../shared/driver-assignment.service';
+import { resolveAssignedDriver } from '../shared/assigned-driver.helpers';
 
-function mapDriverBooking(booking: IDriverBooking): DriverBookingResponseDto {
+function mapDriverBooking(
+  booking: IDriverBooking,
+  driver?: DriverBookingResponseDto['driver'],
+): DriverBookingResponseDto {
   return {
     id: booking.id,
     bookingNumber: booking.bookingNumber,
@@ -47,6 +51,7 @@ function mapDriverBooking(booking: IDriverBooking): DriverBookingResponseDto {
     paymentStatus: booking.paymentStatus,
     status: booking.status,
     driverId: booking.driverId?.toString(),
+    driver,
     scheduledAt: booking.scheduledAt?.toISOString(),
     statusHistory: booking.statusHistory.map((entry) => ({
       status: entry.status,
@@ -69,6 +74,13 @@ function mapDriverBooking(booking: IDriverBooking): DriverBookingResponseDto {
     createdAt: booking.createdAt.toISOString(),
     updatedAt: booking.updatedAt.toISOString(),
   };
+}
+
+async function mapDriverBookingWithDriver(
+  booking: IDriverBooking,
+): Promise<DriverBookingResponseDto> {
+  const driver = await resolveAssignedDriver(booking.driverId?.toString());
+  return mapDriverBooking(booking, driver);
 }
 
 export class DriverBookingService {
@@ -108,7 +120,7 @@ export class DriverBookingService {
       statusHistory: createInitialStatusHistory('PENDING'),
     });
 
-    return mapDriverBooking(booking);
+    return mapDriverBookingWithDriver(booking);
   }
 
   async listBookings(
@@ -116,7 +128,7 @@ export class DriverBookingService {
     status?: UnifiedBookingStatus,
   ): Promise<DriverBookingResponseDto[]> {
     const bookings = await driverBookingRepository.findByCustomer(customerId, { status });
-    return bookings.map(mapDriverBooking);
+    return Promise.all(bookings.map(mapDriverBookingWithDriver));
   }
 
   async getBookingById(
@@ -132,7 +144,7 @@ export class DriverBookingService {
       throw new ForbiddenError('You do not have access to this booking');
     }
 
-    return mapDriverBooking(booking);
+    return mapDriverBookingWithDriver(booking);
   }
 
   async updateStatus(
@@ -175,7 +187,7 @@ export class DriverBookingService {
       })),
     });
 
-    return mapDriverBooking(updated);
+    return mapDriverBookingWithDriver(updated);
   }
 
   async getTracking(
@@ -191,21 +203,30 @@ export class DriverBookingService {
       throw new ForbiddenError('You do not have access to this booking');
     }
 
+    const driver = await resolveAssignedDriver(booking.driverId?.toString());
+
     let driverLocation: DriverTrackingResponseDto['driverLocation'];
     if (booking.driverId) {
-      const driver = await UserModel.findById(booking.driverId)
+      const driverUser = await UserModel.findById(booking.driverId)
         .select('currentLocation fullName mobileNumber')
         .exec();
       if (
-        driver?.currentLocation?.latitude !== undefined &&
-        driver.currentLocation.longitude !== undefined
+        driverUser?.currentLocation?.latitude !== undefined &&
+        driverUser.currentLocation.longitude !== undefined
       ) {
         driverLocation = {
-          latitude: driver.currentLocation.latitude,
-          longitude: driver.currentLocation.longitude,
-          updatedAt: driver.currentLocation.updatedAt?.toISOString(),
-          driverName: driver.fullName,
-          driverPhone: driver.mobileNumber,
+          latitude: driverUser.currentLocation.latitude,
+          longitude: driverUser.currentLocation.longitude,
+          updatedAt: driverUser.currentLocation.updatedAt?.toISOString(),
+          driverName: driverUser.fullName ?? driver?.name,
+          driverPhone: driverUser.mobileNumber ?? driver?.phone,
+        };
+      } else if (driver) {
+        driverLocation = {
+          latitude: booking.pickup.latitude,
+          longitude: booking.pickup.longitude,
+          driverName: driver.name,
+          driverPhone: driver.phone,
         };
       }
     }
@@ -217,6 +238,7 @@ export class DriverBookingService {
         status: entry.status,
         timestamp: entry.timestamp.toISOString(),
       })),
+      driver,
       driverLocation,
       pickup: booking.pickup,
       dropoff: booking.dropoff,
@@ -312,7 +334,7 @@ export class DriverBookingService {
       })),
     });
 
-    const mapped = mapDriverBooking(booking);
+    const mapped = await mapDriverBookingWithDriver(booking);
     return {
       booking: mapped,
       refundAmount: policy.refundAmount,
@@ -344,7 +366,7 @@ export class DriverBookingService {
       throw new NotFoundError('Driver booking not found');
     }
 
-    return mapDriverBooking(updated);
+    return mapDriverBookingWithDriver(updated);
   }
 
   async submitRating(
@@ -373,7 +395,7 @@ export class DriverBookingService {
       throw new NotFoundError('Driver booking not found');
     }
 
-    return mapDriverBooking(updated);
+    return mapDriverBookingWithDriver(updated);
   }
 }
 

@@ -18,7 +18,7 @@ const RATING_LABELS = ['', 'Poor', 'Fair', 'Good', 'Great', 'Excellent!'];
 export default function RatingReviewScreen({ navigation, route }: Props) {
   const booking = useBookingQuery(route.params.bookingId);
   const submitRating = useSubmitRatingMutation();
-  const [rating, setRating] = useState(5);
+  const [rating, setRating] = useState(0);
   const [review, setReview] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const bookingType = route.params.bookingType ?? booking?.bookingType ?? 'towing';
@@ -97,7 +97,7 @@ export default function RatingReviewScreen({ navigation, route }: Props) {
             <PrimaryButton
               label={submitRating.isPending ? 'Submitting...' : 'Submit Review'}
               onPress={handleSubmit}
-              disabled={submitRating.isPending}
+              disabled={submitRating.isPending || rating === 0}
             />
             <Pressable onPress={() => navigation.goBack()} style={styles.skip}>
               <Text style={styles.skipText}>Skip</Text>

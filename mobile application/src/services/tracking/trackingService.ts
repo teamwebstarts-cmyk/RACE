@@ -17,6 +17,12 @@ export interface TrackingUpdate {
   longitude: number;
   etaMinutes: number;
   status: string;
+  driver?: {
+    id: string;
+    name: string;
+    phone: string;
+    rating: number;
+  };
   driverLocation?: {
     latitude: number;
     longitude: number;
@@ -107,6 +113,7 @@ class TrackingService {
             longitude: towing.driverLocation?.longitude ?? 85.8245,
             etaMinutes: 15,
             status: towing.status,
+            driver: towing.driver,
             driverLocation: towing.driverLocation,
           };
           this.pushUpdate(bookingId, update);
@@ -123,6 +130,7 @@ class TrackingService {
             longitude: driver.driverLocation?.longitude ?? 85.8245,
             etaMinutes: 15,
             status: driver.status,
+            driver: driver.driver,
             driverLocation: driver.driverLocation,
           };
           this.pushUpdate(bookingId, update);

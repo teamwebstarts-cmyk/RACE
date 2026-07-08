@@ -14,7 +14,15 @@ import { colors, spacing, typography } from '../../theme';
 
 type Props = NativeStackScreenProps<BookingsStackParamList, 'BookingsMain'>;
 
-type Tab = 'all' | 'ongoing' | 'completed';
+type Tab = 'all' | 'ongoing' | 'completed' | 'towing' | 'driver';
+
+const TAB_LABELS: Record<Tab, string> = {
+  all: 'All',
+  ongoing: 'Ongoing',
+  completed: 'Done',
+  towing: 'Towing',
+  driver: 'Driver',
+};
 
 export default function BookingsScreen({ navigation }: Props) {
   const { data: bookings = [], isLoading, isError, refetch } = useBookingsQuery();
@@ -23,10 +31,15 @@ export default function BookingsScreen({ navigation }: Props) {
   const filtered = useMemo(() => {
     if (tab === 'ongoing') return bookings.filter(isBookingOngoing);
     if (tab === 'completed') return bookings.filter(isBookingCompleted);
+    if (tab === 'towing') return bookings.filter(b => (b.bookingType ?? 'towing') === 'towing');
+    if (tab === 'driver') return bookings.filter(b => b.bookingType === 'driver');
     return bookings;
   }, [bookings, tab]);
 
-  const activeBooking = bookings.find(isBookingOngoing);
+  const activeBooking = useMemo(() => {
+    if (tab === 'completed' || tab === 'towing' || tab === 'driver') return undefined;
+    return bookings.find(isBookingOngoing);
+  }, [bookings, tab]);
 
   return (
     <Screen>
@@ -37,19 +50,19 @@ export default function BookingsScreen({ navigation }: Props) {
             <Text style={styles.subtitle}>Track and manage your service requests</Text>
 
             <View style={styles.tabs}>
-              {(['all', 'ongoing', 'completed'] as Tab[]).map((t) => (
+              {(['all', 'ongoing', 'completed', 'towing', 'driver'] as Tab[]).map(t => (
                 <Pressable
                   key={t}
                   style={[styles.tab, tab === t && styles.tabActive]}
                   onPress={() => setTab(t)}>
                   <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>
-                    {t === 'all' ? 'All' : t === 'ongoing' ? 'Ongoing' : 'Completed'}
+                    {TAB_LABELS[t]}
                   </Text>
                 </Pressable>
               ))}
             </View>
 
-            {activeBooking && tab !== 'completed' ? (
+            {activeBooking ? (
               <>
                 <SectionTitle title="active" highlight="booking" />
                 <BookingCard
@@ -105,9 +118,9 @@ const styles = StyleSheet.create({
   scroll: { flexGrow: 1 },
   title: { fontSize: typography.sizes.xxl, fontWeight: typography.weights.extrabold, color: colors.textDark },
   subtitle: { color: colors.textMuted, marginBottom: spacing.lg },
-  tabs: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg },
+  tabs: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.lg },
   tab: {
-    flex: 1,
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: 20,
     borderWidth: 1,

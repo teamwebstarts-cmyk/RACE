@@ -37,6 +37,13 @@ export interface CombinedBookingListItemDto {
   advancePaid: boolean;
   remainingAmount: number;
   remainingPaid: boolean;
+  driverId?: string;
+  driver?: {
+    id: string;
+    name: string;
+    phone: string;
+    rating: number;
+  };
   scheduledAt?: string;
   statusHistory: Array<{ status: string; timestamp: string }>;
   createdAt: string;

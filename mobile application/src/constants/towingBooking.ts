@@ -7,6 +7,7 @@ import type {
   TowingTypeId,
   TowingVehicleTypeId,
 } from '../types/towingBooking';
+import { formatReadableAddress } from '../utils/readableAddress';
 
 export const TOWING_BOOKING_STEPS = 10;
 
@@ -130,7 +131,7 @@ export function getTimeLabel(timeId: TowingTimeId): string {
 }
 
 export function getShortLocation(address: string): string {
-  return address.split(',')[0]?.trim() || address;
+  return formatReadableAddress(address);
 }
 
 export function getServiceLocationLabel(

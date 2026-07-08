@@ -80,6 +80,12 @@ export interface DriverBookingResponseDto {
   paymentStatus: string;
   status: string;
   driverId?: string;
+  driver?: {
+    id: string;
+    name: string;
+    phone: string;
+    rating: number;
+  };
   scheduledAt?: string;
   statusHistory: Array<{ status: string; timestamp: string; note?: string }>;
   cancelledAt?: string;
@@ -101,6 +107,12 @@ export interface DriverTrackingResponseDto {
   bookingId: string;
   status: string;
   statusHistory: Array<{ status: string; timestamp: string }>;
+  driver?: {
+    id: string;
+    name: string;
+    phone: string;
+    rating: number;
+  };
   driverLocation?: {
     latitude: number;
     longitude: number;

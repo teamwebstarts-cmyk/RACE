@@ -23,8 +23,12 @@ import type { SubmitServiceBookingRatingDto } from '../shared/booking-rating.val
 import { buildServiceBookingRatingUpdate } from '../shared/booking-rating.helpers';
 import { getCancellationPolicy, type CancellationResult } from '../shared/cancellation.helpers';
 import { releaseDriver } from '../shared/driver-assignment.service';
+import { resolveAssignedDriver } from '../shared/assigned-driver.helpers';
 
-function mapTowingBooking(booking: ITowingBooking): TowingBookingResponseDto {
+function mapTowingBooking(
+  booking: ITowingBooking,
+  driver?: TowingBookingResponseDto['driver'],
+): TowingBookingResponseDto {
   return {
     id: booking.id,
     bookingNumber: booking.bookingNumber,
@@ -44,6 +48,7 @@ function mapTowingBooking(booking: ITowingBooking): TowingBookingResponseDto {
     status: booking.status,
     vendorId: booking.vendorId?.toString(),
     driverId: booking.driverId?.toString(),
+    driver,
     scheduledAt: booking.scheduledAt?.toISOString(),
     statusHistory: booking.statusHistory.map((entry) => ({
       status: entry.status,
@@ -66,6 +71,11 @@ function mapTowingBooking(booking: ITowingBooking): TowingBookingResponseDto {
     createdAt: booking.createdAt.toISOString(),
     updatedAt: booking.updatedAt.toISOString(),
   };
+}
+
+async function mapTowingBookingWithDriver(booking: ITowingBooking): Promise<TowingBookingResponseDto> {
+  const driver = await resolveAssignedDriver(booking.driverId?.toString());
+  return mapTowingBooking(booking, driver);
 }
 
 export class TowingBookingService {
@@ -104,7 +114,7 @@ export class TowingBookingService {
       statusHistory: createInitialStatusHistory('PENDING'),
     });
 
-    return mapTowingBooking(booking);
+    return mapTowingBookingWithDriver(booking);
   }
 
   async listBookings(
@@ -112,7 +122,7 @@ export class TowingBookingService {
     status?: UnifiedBookingStatus,
   ): Promise<TowingBookingResponseDto[]> {
     const bookings = await towingBookingRepository.findByCustomer(customerId, { status });
-    return bookings.map(mapTowingBooking);
+    return Promise.all(bookings.map(mapTowingBookingWithDriver));
   }
 
   async getBookingById(
@@ -128,7 +138,7 @@ export class TowingBookingService {
       throw new ForbiddenError('You do not have access to this booking');
     }
 
-    return mapTowingBooking(booking);
+    return mapTowingBookingWithDriver(booking);
   }
 
   async updateStatus(
@@ -171,7 +181,7 @@ export class TowingBookingService {
       })),
     });
 
-    return mapTowingBooking(updated);
+    return mapTowingBookingWithDriver(updated);
   }
 
   async getTracking(
@@ -187,21 +197,31 @@ export class TowingBookingService {
       throw new ForbiddenError('You do not have access to this booking');
     }
 
+    const driver = await resolveAssignedDriver(booking.driverId?.toString());
+
     let driverLocation: TowingTrackingResponseDto['driverLocation'];
     if (booking.driverId) {
-      const driver = await UserModel.findById(booking.driverId)
+      const driverUser = await UserModel.findById(booking.driverId)
         .select('currentLocation fullName mobileNumber')
         .exec();
       if (
-        driver?.currentLocation?.latitude !== undefined &&
-        driver.currentLocation.longitude !== undefined
+        driverUser?.currentLocation?.latitude !== undefined &&
+        driverUser.currentLocation.longitude !== undefined
       ) {
         driverLocation = {
-          latitude: driver.currentLocation.latitude,
-          longitude: driver.currentLocation.longitude,
-          updatedAt: driver.currentLocation.updatedAt?.toISOString(),
-          driverName: driver.fullName,
-          driverPhone: driver.mobileNumber,
+          latitude: driverUser.currentLocation.latitude,
+          longitude: driverUser.currentLocation.longitude,
+          updatedAt: driverUser.currentLocation.updatedAt?.toISOString(),
+          driverName: driverUser.fullName ?? driver?.name,
+          driverPhone: driverUser.mobileNumber ?? driver?.phone,
+        };
+      } else if (driver) {
+        // Assigned but no live GPS yet — still expose name/phone for the app
+        driverLocation = {
+          latitude: booking.pickup.latitude,
+          longitude: booking.pickup.longitude,
+          driverName: driver.name,
+          driverPhone: driver.phone,
         };
       }
     }
@@ -213,6 +233,7 @@ export class TowingBookingService {
         status: entry.status,
         timestamp: entry.timestamp.toISOString(),
       })),
+      driver,
       driverLocation,
       pickup: booking.pickup,
       dropoff: booking.dropoff,
@@ -310,7 +331,7 @@ export class TowingBookingService {
       })),
     });
 
-    const mapped = mapTowingBooking(booking);
+    const mapped = await mapTowingBookingWithDriver(booking);
     return {
       booking: mapped,
       refundAmount: policy.refundAmount,
@@ -343,7 +364,7 @@ export class TowingBookingService {
       throw new NotFoundError('Towing booking not found');
     }
 
-    return mapTowingBooking(updated);
+    return mapTowingBookingWithDriver(updated);
   }
 
   async submitRating(
@@ -372,7 +393,7 @@ export class TowingBookingService {
       throw new NotFoundError('Towing booking not found');
     }
 
-    return mapTowingBooking(updated);
+    return mapTowingBookingWithDriver(updated);
   }
 }
 

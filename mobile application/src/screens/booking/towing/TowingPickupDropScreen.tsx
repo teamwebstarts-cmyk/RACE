@@ -8,8 +8,10 @@ import TowingBookingLayout, { useBookingTheme } from '../../../components/bookin
 import { useTowingBooking } from '../../../context/TowingBookingContext';
 import { estimateTowingFare } from '../../../services/bookings/fareApi';
 import { useSavedLocationsQuery } from '../../../services/profile/useProfileQueries';
+import { useLocationStore } from '../../../store/locationStore';
 import type { LocationResult } from '../../../types/location';
 import type { HomeStackParamList } from '../../../types/navigation';
+import { assertServiceableBookingLocation } from '../../../utils/serviceableLocation';
 import { formatRupee } from '../../../utils/towingPricing';
 import { colors, shadows, typography } from '../../../theme';
 
@@ -94,6 +96,7 @@ function applyLocation(location: LocationResult) {
 export default function TowingPickupDropScreen({ navigation }: Props) {
   const { t } = useBookingTheme();
   const { booking, updateBooking } = useTowingBooking();
+  const selectedLocation = useLocationStore(state => state.selectedLocation);
   const [pickup, setPickup] = useState(booking.pickup || PLACEHOLDER);
   const [pickupLat, setPickupLat] = useState(booking.pickupLat);
   const [pickupLng, setPickupLng] = useState(booking.pickupLng);
@@ -106,6 +109,21 @@ export default function TowingPickupDropScreen({ navigation }: Props) {
   const [farePreview, setFarePreview] = useState<number | null>(null);
   const [isLoadingFare, setIsLoadingFare] = useState(false);
   const { data: savedLocations = [] } = useSavedLocationsQuery();
+
+  useEffect(() => {
+    if (!selectedLocation) return;
+    if (booking.pickupLat != null) return;
+    if (pickupLat != null) return;
+
+    setPickup(selectedLocation.address);
+    setPickupLat(selectedLocation.latitude);
+    setPickupLng(selectedLocation.longitude);
+    updateBooking({
+      pickup: selectedLocation.address,
+      pickupLat: selectedLocation.latitude,
+      pickupLng: selectedLocation.longitude,
+    });
+  }, [booking.pickupLat, pickupLat, selectedLocation, updateBooking]);
 
   const canContinue =
     pickup.trim() &&
@@ -264,13 +282,17 @@ export default function TowingPickupDropScreen({ navigation }: Props) {
               <Pressable
                 key={loc.id}
                 onPress={() => {
+                  const lat = loc.latitude ?? 0;
+                  const lng = loc.longitude ?? 0;
+                  if (!assertServiceableBookingLocation(lat, lng)) return;
+
                   const mapped = applyLocation({
                     address: loc.address,
                     city: '',
                     state: '',
                     pincode: '',
-                    latitude: loc.latitude ?? 0,
-                    longitude: loc.longitude ?? 0,
+                    latitude: lat,
+                    longitude: lng,
                     placeId: '',
                   });
                   setPickup(mapped.address);
@@ -306,6 +328,7 @@ export default function TowingPickupDropScreen({ navigation }: Props) {
         }
         onClose={() => setShowPickupPicker(false)}
         onLocationSelected={location => {
+          if (!assertServiceableBookingLocation(location.latitude, location.longitude)) return;
           setPickup(location.address);
           setPickupLat(location.latitude);
           setPickupLng(location.longitude);
@@ -322,6 +345,7 @@ export default function TowingPickupDropScreen({ navigation }: Props) {
         }
         onClose={() => setShowDropPicker(false)}
         onLocationSelected={location => {
+          if (!assertServiceableBookingLocation(location.latitude, location.longitude)) return;
           setDrop(location.address);
           setDropLat(location.latitude);
           setDropLng(location.longitude);

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Platform, Pressable, Text, View } from 'react-native';
-import { Building2, ChevronRight, Home, MapPin, PlusCircle } from 'lucide-react-native';
+import { Building2, ChevronRight, Clock, Home, MapPin, PlusCircle } from 'lucide-react-native';
 import MapView, { PROVIDER_DEFAULT, PROVIDER_GOOGLE } from 'react-native-maps';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -8,8 +8,13 @@ import LocationPickerModal from '../../../components/common/LocationPickerModal'
 import TowingBookingLayout, { useBookingTheme } from '../../../components/booking/TowingBookingLayout';
 import { DRIVER_ACCENT, DRIVER_LIGHT_BG } from '../../../constants/driverBooking';
 import { useDriverBooking } from '../../../context/DriverBookingContext';
+import { useBookingsQuery } from '../../../services/bookings/useBookingQueries';
 import { useSavedLocationsQuery } from '../../../services/profile/useProfileQueries';
+import { useLocationStore } from '../../../store/locationStore';
 import type { HomeStackParamList } from '../../../types/navigation';
+import { getRecentDriverPickups } from '../../../utils/recentDriverPickups';
+import { formatReadableAddress } from '../../../utils/readableAddress';
+import { assertServiceableBookingLocation } from '../../../utils/serviceableLocation';
 import { colors, shadows, typography } from '../../../theme';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'DriverPickup'>;
@@ -25,11 +30,51 @@ const LOCATION_ICONS = {
 export default function DriverPickupScreen({ navigation }: Props) {
   const { t } = useBookingTheme();
   const { booking, updateBooking } = useDriverBooking();
+  const selectedLocation = useLocationStore(state => state.selectedLocation);
   const [pickup, setPickup] = useState(booking.pickup || PLACEHOLDER);
   const [pickupLat, setPickupLat] = useState(booking.pickupLat);
   const [pickupLng, setPickupLng] = useState(booking.pickupLng);
   const [showPicker, setShowPicker] = useState(false);
   const { data: savedLocations = [] } = useSavedLocationsQuery();
+  const { data: bookings = [] } = useBookingsQuery();
+
+  const recentPickups = useMemo(
+    () =>
+      getRecentDriverPickups(bookings).filter(
+        loc =>
+          loc.address !== pickup &&
+          !(
+            pickupLat != null &&
+            pickupLng != null &&
+            Math.abs(loc.latitude - pickupLat) < 0.0001 &&
+            Math.abs(loc.longitude - pickupLng) < 0.0001
+          ),
+      ),
+    [bookings, pickup, pickupLat, pickupLng],
+  );
+
+  useEffect(() => {
+    if (!selectedLocation) return;
+    if (booking.pickupLat != null) return;
+    if (pickupLat != null) return;
+
+    setPickup(selectedLocation.address);
+    setPickupLat(selectedLocation.latitude);
+    setPickupLng(selectedLocation.longitude);
+    updateBooking({
+      pickup: selectedLocation.address,
+      pickupLat: selectedLocation.latitude,
+      pickupLng: selectedLocation.longitude,
+    });
+  }, [booking.pickupLat, pickupLat, selectedLocation, updateBooking]);
+
+  const applyPickup = (address: string, latitude: number, longitude: number) => {
+    if (!assertServiceableBookingLocation(latitude, longitude)) return;
+    setPickup(address);
+    setPickupLat(latitude);
+    setPickupLng(longitude);
+    updateBooking({ pickup: address, pickupLat: latitude, pickupLng: longitude });
+  };
 
   const hasPickup =
     pickup.trim().length > 0 &&
@@ -112,9 +157,7 @@ export default function DriverPickupScreen({ navigation }: Props) {
                       setShowPicker(true);
                       return;
                     }
-                    setPickup(location.address);
-                    setPickupLat(location.latitude);
-                    setPickupLng(location.longitude);
+                    applyPickup(location.address, location.latitude, location.longitude);
                   }}
                   style={[
                     {
@@ -173,6 +216,75 @@ export default function DriverPickupScreen({ navigation }: Props) {
             </Pressable>
           </View>
         </View>
+
+        {recentPickups.length > 0 ? (
+          <View>
+            <Text
+              style={{
+                fontSize: t.caption,
+                fontWeight: typography.weights.semibold,
+                color: colors.dark,
+                marginBottom: t.px(10),
+              }}>
+              Recent
+            </Text>
+            <View style={{ gap: t.px(8) }}>
+              {recentPickups.map(location => (
+                <Pressable
+                  key={location.id}
+                  onPress={() => applyPickup(location.address, location.latitude, location.longitude)}
+                  style={[
+                    {
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: t.px(12),
+                      borderRadius: t.inputRadius,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      backgroundColor: colors.background,
+                      paddingHorizontal: t.px(12),
+                      paddingVertical: t.px(12),
+                    },
+                    shadows.card,
+                  ]}>
+                  <View
+                    style={{
+                      width: t.px(36),
+                      height: t.px(36),
+                      borderRadius: t.px(18),
+                      backgroundColor: colors.lightGrey,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>
+                    <Clock size={t.px(18)} color={colors.grey} strokeWidth={2} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text
+                      style={{
+                        fontSize: t.body,
+                        fontWeight: typography.weights.bold,
+                        color: colors.dark,
+                      }}
+                      numberOfLines={1}>
+                      {location.title}
+                    </Text>
+                    <Text
+                      style={{
+                        marginTop: t.px(2),
+                        fontSize: t.caption,
+                        color: colors.grey,
+                        lineHeight: t.px(16),
+                      }}
+                      numberOfLines={2}>
+                      {formatReadableAddress(location.address)}
+                    </Text>
+                  </View>
+                  <ChevronRight size={t.iconSm} color={colors.grey} />
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        ) : null}
 
         <Pressable onPress={() => setShowPicker(true)}>
           <View
@@ -263,14 +375,7 @@ export default function DriverPickupScreen({ navigation }: Props) {
         }
         onClose={() => setShowPicker(false)}
         onLocationSelected={location => {
-          setPickup(location.address);
-          setPickupLat(location.latitude);
-          setPickupLng(location.longitude);
-          updateBooking({
-            pickup: location.address,
-            pickupLat: location.latitude,
-            pickupLng: location.longitude,
-          });
+          applyPickup(location.address, location.latitude, location.longitude);
         }}
       />
     </TowingBookingLayout>

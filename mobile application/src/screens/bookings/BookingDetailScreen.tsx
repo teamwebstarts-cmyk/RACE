@@ -38,6 +38,7 @@ import {
   isBookingOngoing,
   resolveBookingType,
 } from '../../utils/bookingDisplay';
+import { formatReadableAddress } from '../../utils/readableAddress';
 import { colors, shadows, typography } from '../../theme';
 
 const REF_W = 390;
@@ -229,13 +230,15 @@ export default function BookingDetailScreen({ navigation, route }: Props) {
             <View>
               <Text style={{ fontSize: px(11), color: colors.grey }}>Pickup</Text>
               <Text style={{ fontSize: px(13), fontWeight: typography.weights.semibold, color: colors.dark }}>
-                {booking.pickup.address}
+                {formatReadableAddress(booking.pickup.address || booking.pickup.label)}
               </Text>
             </View>
             <View>
               <Text style={{ fontSize: px(11), color: colors.grey }}>Drop</Text>
               <Text style={{ fontSize: px(13), fontWeight: typography.weights.semibold, color: colors.dark }}>
-                {booking.dropoff?.address ?? 'On-site service'}
+                {booking.dropoff
+                  ? formatReadableAddress(booking.dropoff.address || booking.dropoff.label)
+                  : 'On-site service'}
               </Text>
             </View>
           </View>

@@ -39,6 +39,13 @@ export interface ServiceBooking {
     tags?: string[];
     createdAt: string;
   };
+  driverId?: string;
+  driver?: {
+    id: string;
+    name: string;
+    phone: string;
+    rating: number;
+  };
 }
 
 export interface CreateTowingBookingRequest {
@@ -109,6 +116,12 @@ export interface ServiceBookingTracking {
   bookingId: string;
   status: string;
   statusHistory: Array<{ status: string; timestamp: string }>;
+  driver?: {
+    id: string;
+    name: string;
+    phone: string;
+    rating: number;
+  };
   driverLocation?: {
     latitude: number;
     longitude: number;
