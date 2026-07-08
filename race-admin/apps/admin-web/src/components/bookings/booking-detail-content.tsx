@@ -33,6 +33,11 @@ function SummaryCard({ booking }: { booking: BookingDetail }) {
             <h2 className="text-2xl font-bold text-[#F5A623]">{booking.bookingNumber}</h2>
             <div className="mt-3 flex flex-wrap items-center gap-3">
               <StatusBadge status={booking.status} />
+              {booking.internalStatus === 'DRIVER_ASSIGNED' ? (
+                <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800">
+                  Driver allotted — waiting for accept
+                </span>
+              ) : null}
               <span className="text-sm text-[#555555]">{booking.service}</span>
             </div>
           </div>

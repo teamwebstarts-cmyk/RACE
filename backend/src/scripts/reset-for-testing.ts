@@ -2,8 +2,11 @@ import dotenv from 'dotenv';
 
 import { connectDatabase, disconnectDatabase, getDatabaseConnection } from '../database/connection';
 import { ActivityLogModel } from '../modules/admin/models/activity-log.model';
+import { BookingModel } from '../modules/bookings/booking.model';
 import { DriverBookingModel } from '../modules/bookings/driver/driver-booking.model';
 import { TowingBookingModel } from '../modules/bookings/towing/towing-booking.model';
+import { VendorVehicleModel } from '../modules/admin/models/vendor-vehicle.model';
+import { TransactionModel } from '../modules/admin/models/transaction.model';
 import { SavedLocationModel } from '../modules/locations/location.model';
 import { NotificationModel } from '../modules/notifications/notification.model';
 import { PaymentMethodModel } from '../modules/payments/payment.model';
@@ -44,6 +47,18 @@ const DELETE_TARGETS: DeleteTarget[] = [
     delete: async () => (await DriverBookingModel.deleteMany({})).deletedCount,
   },
   {
+    collection: 'bookings',
+    delete: async () => (await BookingModel.deleteMany({})).deletedCount,
+  },
+  {
+    collection: 'vendorvehicles',
+    delete: async () => (await VendorVehicleModel.deleteMany({})).deletedCount,
+  },
+  {
+    collection: 'transactions',
+    delete: async () => (await TransactionModel.deleteMany({})).deletedCount,
+  },
+  {
     collection: 'driverenquiries',
     delete: () => deleteFromCollection('driverenquiries'),
   },
@@ -80,8 +95,6 @@ const PRESERVED_COLLECTIONS = [
   'services',
   'subscriptionplans',
   'platformsettings',
-  'vendors',
-  'drivers',
 ];
 
 async function main(): Promise<void> {

@@ -14,6 +14,7 @@ import { logActivity } from '../shared/activity-logger';
 import { createNotification } from '../shared/notification-service';
 import { mapLocationPoint } from '../shared/response-mappers';
 import { generateBookingFinancials, generateRefund } from '../shared/transaction-engine';
+import { mapPublicBookingStatus } from '../../bookings/shared/booking-display-status';
 import { NotFoundError } from '../../../shared/utils/errors';
 
 const COMPLETED_STATUSES = ['SERVICE_COMPLETED', 'PAID'];
@@ -57,9 +58,11 @@ function statusMatches(status: string, filter?: string): boolean {
   if (filter === 'ACTIVE') {
     return ['CREATED', 'ASSIGNED', 'ACCEPTED', 'EN_ROUTE', 'ARRIVED', 'SERVICE_STARTED', 'PAYMENT_PENDING', 'CONFIRMED', 'DRIVER_ASSIGNED', 'DRIVER_EN_ROUTE', 'DRIVER_ARRIVED', 'IN_PROGRESS'].includes(status);
   }
+  if (filter === 'PENDING') {
+    return ['PENDING', 'CONFIRMED', 'DRIVER_ASSIGNED'].includes(status);
+  }
   return status === filter;
 }
-
 function inDateRange(date: Date, from?: string, to?: string): boolean {
   if (from && date < new Date(from)) return false;
   if (to) {
@@ -243,12 +246,18 @@ export const adminBookingsService = {
         vendorName: '—',
         driverId,
         driverName: driver?.fullName,
-        driverAssignment: driver ? 'Assigned' : 'Unassigned',
+        driverAssignment:
+          booking.status === 'DRIVER_ASSIGNED'
+            ? 'Awaiting acceptance'
+            : driver
+              ? 'Assigned'
+              : 'Unassigned',
         service: row.bookingType === 'towing' ? 'Towing' : 'Driver Service',
         serviceType: row.bookingType,
         amount: booking.estimatedFare ?? 0,
         city: customer?.address?.city ?? '—',
-        status: booking.status,
+        status: mapPublicBookingStatus(booking.status),
+        internalStatus: booking.status,
         date: new Date(booking.createdAt).toISOString(),
         fareBreakdown: booking.fareBreakdown,
         vehicleCategory: booking.vehicleCategory,
@@ -277,8 +286,8 @@ export const adminBookingsService = {
       BookingModel.countDocuments({ status: 'CANCELLED' }),
       BookingModel.countDocuments({ status: 'REFUNDED' }),
       Promise.all([
-        TowingBookingModel.countDocuments({ status: 'PENDING' }),
-        DriverBookingModel.countDocuments({ status: 'PENDING' }),
+        TowingBookingModel.countDocuments({ status: { $in: ['PENDING', 'CONFIRMED', 'DRIVER_ASSIGNED'] } }),
+        DriverBookingModel.countDocuments({ status: { $in: ['PENDING', 'CONFIRMED', 'DRIVER_ASSIGNED'] } }),
       ]).then(([a, b]) => a + b),
     ]);
     return { all, created, assigned, enRoute, completed, cancelled, refunded, pending };
@@ -336,7 +345,8 @@ export const adminBookingsService = {
         serviceType: type,
         amount: booking.estimatedFare ?? 0,
         city: customer?.address?.city ?? '—',
-        status: booking.status,
+        status: mapPublicBookingStatus(booking.status),
+        internalStatus: booking.status,
         date: booking.createdAt.toISOString(),
         location: {
           pickup: {
@@ -377,9 +387,12 @@ export const adminBookingsService = {
         })),
         timeline: booking.statusHistory.map((entry, index) => ({
           id: `${booking._id.toString()}-${index}`,
-          title: entry.status.replace(/_/g, ' '),
+          title:
+            entry.status === 'DRIVER_ASSIGNED'
+              ? 'Driver allotted — awaiting acceptance'
+              : entry.status.replace(/_/g, ' '),
           timestamp: entry.timestamp.toISOString(),
-          status: entry.status,
+          status: mapPublicBookingStatus(entry.status),
           description: entry.note,
         })),
         cancellationInfo: booking.cancelledAt

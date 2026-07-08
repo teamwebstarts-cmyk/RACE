@@ -190,6 +190,7 @@ export class DriverService {
     }
 
     emitBookingStatusUpdate(bookingId, dto.status, {
+      driverAccepted: dto.status === 'DRIVER_EN_ROUTE',
       statusHistory: updated.statusHistory.map((entry) => ({
         status: entry.status,
         timestamp: entry.timestamp.toISOString(),

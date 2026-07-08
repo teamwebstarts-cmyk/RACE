@@ -7,6 +7,8 @@ import { TowingBookingModel } from '../towing/towing-booking.model';
 import { DriverBookingModel } from '../driver/driver-booking.model';
 import { canTransition } from './booking-status.constants';
 import { appendStatusHistory } from './booking.helpers';
+import { emitBookingStatusUpdate } from '../../../shared/socket.service';
+import { mapPublicBookingStatus } from './booking-display-status';
 import type { ActiveBookingType } from '../../users/user.model';
 
 const FALLBACK_DISTANCE_KM = 999;
@@ -153,6 +155,12 @@ export async function assignDriverToBooking(
     activeBookingId: new Types.ObjectId(bookingId),
     activeBookingType: bookingType,
   }).exec();
+
+  emitBookingStatusUpdate(bookingId, mapPublicBookingStatus('DRIVER_ASSIGNED'), {
+    internalStatus: 'DRIVER_ASSIGNED',
+    driverAccepted: false,
+    message: 'Driver allotted — awaiting acceptance',
+  });
 }
 
 export async function releaseDriver(driverId: string): Promise<void> {

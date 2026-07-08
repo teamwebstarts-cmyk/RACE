@@ -24,6 +24,10 @@ import { buildServiceBookingRatingUpdate } from '../shared/booking-rating.helper
 import { getCancellationPolicy, type CancellationResult } from '../shared/cancellation.helpers';
 import { releaseDriver } from '../shared/driver-assignment.service';
 import { resolveAssignedDriver } from '../shared/assigned-driver.helpers';
+import {
+  isDriverVisibleToCustomer,
+  mapPublicBookingStatus,
+} from '../shared/booking-display-status';
 
 function mapTowingBooking(
   booking: ITowingBooking,
@@ -197,10 +201,13 @@ export class TowingBookingService {
       throw new ForbiddenError('You do not have access to this booking');
     }
 
-    const driver = await resolveAssignedDriver(booking.driverId?.toString());
+    const driverVisible = isDriverVisibleToCustomer(booking.status);
+    const driver = driverVisible
+      ? await resolveAssignedDriver(booking.driverId?.toString())
+      : undefined;
 
     let driverLocation: TowingTrackingResponseDto['driverLocation'];
-    if (booking.driverId) {
+    if (driverVisible && booking.driverId) {
       const driverUser = await UserModel.findById(booking.driverId)
         .select('currentLocation fullName mobileNumber')
         .exec();
@@ -228,9 +235,9 @@ export class TowingBookingService {
 
     return {
       bookingId: booking.id,
-      status: booking.status,
+      status: mapPublicBookingStatus(booking.status),
       statusHistory: booking.statusHistory.map((entry) => ({
-        status: entry.status,
+        status: mapPublicBookingStatus(entry.status),
         timestamp: entry.timestamp.toISOString(),
       })),
       driver,

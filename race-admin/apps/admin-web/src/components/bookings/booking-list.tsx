@@ -23,12 +23,18 @@ function bookingTypeBadge(type?: string) {
 
 const TABS = [
   { key: 'ALL', label: 'All Bookings' },
-  { key: 'CREATED', label: 'Created' },
-  { key: 'ASSIGNED', label: 'Assigned' },
-  { key: 'EN_ROUTE', label: 'En Route' },
+  { key: 'PENDING', label: 'Pending' },
+  { key: 'ACTIVE', label: 'Active' },
   { key: 'COMPLETED', label: 'Completed' },
   { key: 'CANCELLED', label: 'Cancelled' },
 ] as const;
+
+function assignmentLabel(row: BookingListItem): string {
+  if (row.driverAssignment === 'Awaiting acceptance') {
+    return row.driverName ? `${row.driverName} (awaiting accept)` : 'Awaiting driver accept';
+  }
+  return row.driverName ?? row.driverAssignment ?? 'Unassigned';
+}
 
 const BOOKING_FIELDS = [
   { name: 'customerName', label: 'Customer Name', required: true, placeholder: 'Enter customer name' },
@@ -127,7 +133,7 @@ export function BookingList() {
       {
         accessorKey: 'driverAssignment',
         header: 'Assignment',
-        cell: ({ row }) => row.original.driverName ?? row.original.driverAssignment ?? 'Unassigned',
+        cell: ({ row }) => assignmentLabel(row.original),
       },
       { accessorKey: 'service', header: 'Service' },
       {
@@ -172,9 +178,8 @@ export function BookingList() {
 
   const tabCounts: Record<string, number> = {
     ALL: counts?.all ?? 0,
-    CREATED: counts?.created ?? 0,
-    ASSIGNED: counts?.assigned ?? 0,
-    EN_ROUTE: counts?.enRoute ?? 0,
+    PENDING: counts?.pending ?? 0,
+    ACTIVE: (counts?.assigned ?? 0) + (counts?.enRoute ?? 0),
     COMPLETED: counts?.completed ?? 0,
     CANCELLED: counts?.cancelled ?? 0,
   };
