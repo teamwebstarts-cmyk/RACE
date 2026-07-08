@@ -62,7 +62,6 @@ export default function PartnerLoginScreen({ navigation, route }: Props) {
       const result = await sendOtpMutation.mutateAsync({ mobileNumber });
       navigation.navigate('PartnerOtpVerification', {
         mobileNumber,
-        devOtp: result.devOtp,
         isExistingUser: result.isExistingUser ?? false,
       });
     } catch (err) {

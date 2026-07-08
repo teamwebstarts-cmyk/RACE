@@ -4,9 +4,6 @@ import { generateOtp } from '../../shared/utils/otp';
 import { sendSms } from '../../utils/sms';
 import { authRepository } from './auth.repository';
 
-/** Fixed OTP in non-production so mobile + partner demo login is reliable. */
-const DEV_DEMO_OTP = '247392';
-
 export class OtpService {
   private getExpiryDate(): Date {
     return new Date(Date.now() + env.OTP_EXPIRY_SECONDS * 1000);
@@ -21,15 +18,12 @@ export class OtpService {
     }
   }
 
-  private async dispatchSms(mobileNumber: string, otp: string): Promise<void> {
-    await sendSms(mobileNumber, otp);
-  }
-
   async sendOtp(mobileNumber: string): Promise<{ message: string; expiresIn: number }> {
     await this.assertResendAllowed(mobileNumber);
     await authRepository.invalidatePendingOtps(mobileNumber);
 
-    const mobileOtp = env.NODE_ENV === 'production' ? generateOtp() : DEV_DEMO_OTP;
+    // Always generate a real OTP for customer + partner (MVP / all environments).
+    const mobileOtp = generateOtp();
     const expiry = this.getExpiryDate();
 
     await authRepository.createOtpLog({
@@ -42,10 +36,10 @@ export class OtpService {
       emailAttempts: 0,
     });
 
-    await this.dispatchSms(mobileNumber, mobileOtp);
+    await sendSms(mobileNumber, mobileOtp);
 
     return {
-      message: 'OTP sent',
+      message: 'OTP sent to your mobile number',
       expiresIn: env.OTP_EXPIRY_SECONDS,
     };
   }

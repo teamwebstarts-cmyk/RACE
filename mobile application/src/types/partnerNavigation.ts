@@ -18,7 +18,6 @@ export type PartnerAuthStackParamList = {
   PartnerLogin: { role?: PartnerRole } | undefined;
   PartnerOtpVerification: {
     mobileNumber: string;
-    devOtp?: string;
     isExistingUser?: boolean;
   };
 };

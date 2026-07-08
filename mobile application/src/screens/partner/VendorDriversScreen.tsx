@@ -101,7 +101,7 @@ export default function VendorDriversScreen({}: Props) {
         {showForm ? (
           <View style={styles.form}>
             <Text style={styles.formHint}>
-              Enter a real driver mobile. They log in on Partner app with OTP {`247392`} (dev).
+              Enter a real driver mobile. They will receive an SMS OTP to log in on the Partner app.
             </Text>
 
             <Text style={styles.label}>Full name</Text>

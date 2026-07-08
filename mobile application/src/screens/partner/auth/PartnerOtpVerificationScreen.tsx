@@ -11,7 +11,6 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import PartnerOtpInput from '../../../components/partner/PartnerOtpInput';
 import PartnerScreenLayout from '../../../components/partner/PartnerScreenLayout';
-import { DEMO_OTP } from '../../../constants/auth';
 import { useAppDispatch, useAppSelector } from '../../../redux/hooks';
 import { completeOnboarding } from '../../../redux/auth/authSlice';
 import { usePartnerOnboardingStore } from '../../../store/partnerOnboardingStore';
@@ -47,11 +46,10 @@ function formatTimer(seconds: number): string {
 
 export default function PartnerOtpVerificationScreen({ navigation, route }: Props) {
   const dispatch = useAppDispatch();
-  const { mobileNumber, devOtp } = route.params;
+  const { mobileNumber } = route.params;
   const loading = useAppSelector((state) => state.auth.loading);
   const signupAccountType = useAppSelector((state) => state.onboarding.signupAccountType);
   const selectedRole = usePartnerOnboardingStore((state) => state.selectedRole);
-  const demoOtp = devOtp ?? DEMO_OTP;
 
   const [otp, setOtp] = useState('');
   const [error, setError] = useState('');
@@ -165,7 +163,6 @@ export default function PartnerOtpVerificationScreen({ navigation, route }: Prop
       setSecondsLeft(RESEND_SECONDS);
       setOtp('');
       navigation.setParams({
-        devOtp: result.devOtp,
         isExistingUser: result.isExistingUser,
       });
     } catch (err) {
@@ -199,20 +196,6 @@ export default function PartnerOtpVerificationScreen({ navigation, route }: Prop
           <Pencil size={16} color={colors.primary} strokeWidth={2.2} />
         </Pressable>
       </View>
-
-      {__DEV__ ? (
-        <Pressable
-          onPress={() => {
-            setOtp(demoOtp);
-            if (error) {
-              setError('');
-            }
-          }}
-          style={({ pressed }) => [styles.devOtpBox, pressed && styles.pressed]}>
-          <Text style={styles.devOtpLabel}>Demo OTP (tap to fill)</Text>
-          <Text style={styles.devOtpCode}>{demoOtp}</Text>
-        </Pressable>
-      ) : null}
 
       <PartnerOtpInput
         value={otp}
@@ -297,27 +280,6 @@ const styles = StyleSheet.create({
   },
   editButton: {
     padding: spacing.xs,
-  },
-  devOtpBox: {
-    backgroundColor: colors.partnerRedLight,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: '#F5D98A',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  devOtpLabel: {
-    color: colors.dark,
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
-  },
-  devOtpCode: {
-    marginTop: spacing.xs,
-    color: colors.primary,
-    fontSize: typography.sizes.hero,
-    fontWeight: typography.weights.extrabold,
-    letterSpacing: 6,
   },
   errorText: {
     marginTop: spacing.md,

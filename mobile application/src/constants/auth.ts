@@ -7,12 +7,13 @@ export const AUTH_USER = {
 /** Demo: registered returning user (10-digit mobile without country code) */
 export const REGISTERED_PHONE_DIGITS = '8249472910';
 
-/** Prefer Om Singh for partner demo login UI */
+/** Prefer Om Singh for partner demo login UI (legacy constant; prefer real Twilio OTP login). */
 export const PARTNER_DEMO_PHONE = '8888880001';
 
-export const DEMO_OTP = '247392';
+/** @deprecated Fixed OTP removed — backend sends real Twilio SMS OTP. */
+export const DEMO_OTP = '';
 
-/** Seeded demo drivers (backend: npm run seed:demo-drivers). OTP always 247392 in non-prod. */
+/** Legacy seed phones — not used for login shortcuts anymore. */
 export const PARTNER_DEMO_DRIVERS = [
   { name: 'Om Singh', phone: '8888880001', type: 'Tow Driver' },
   { name: 'Ramesh', phone: '8888880002', type: 'Full-Time Driver' },
