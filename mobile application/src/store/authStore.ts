@@ -5,6 +5,12 @@ import type { SendOtpPayload, VerifyOtpPayload } from '../services/authService';
 import { getApiErrorMessage } from '../services/api';
 import { clearSessionStores } from './authSession';
 import { bindSetOnboardingRequired } from './authState';
+import {
+  clearCustomerOnboardingComplete,
+  getCustomerOnboardingStep,
+  setCustomerOnboardingStep,
+  type CustomerOnboardingStep,
+} from './customerOnboarding';
 import { useVehicleStore } from './vehicleStore';
 import type { User } from '../types/auth';
 
@@ -19,6 +25,7 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
   onboardingRequired: boolean;
+  customerOnboardingStep: CustomerOnboardingStep;
   sendOtp: (payload: SendOtpPayload) => Promise<authService.SendOtpResult>;
   verifyOtp: (payload: VerifyOtpPayload) => Promise<void>;
   logout: () => Promise<void>;
@@ -29,25 +36,60 @@ interface AuthState {
   setUser: (user: User | null) => void;
   setAuthenticated: (value: boolean) => void;
   setOnboardingRequired: (value: boolean) => void;
+  setCustomerOnboardingStep: (step: CustomerOnboardingStep) => void;
   setLoading: (value: boolean) => void;
+}
+
+function onboardingRequiredForStep(step: CustomerOnboardingStep): boolean {
+  return step !== 'done';
+}
+
+async function resolveCustomerOnboardingStep(
+  result: Awaited<ReturnType<typeof authService.verifyOtp>>,
+): Promise<CustomerOnboardingStep> {
+  const { useProfileStore } = await import('./profileStore');
+  const profile = useProfileStore.getState().profile;
+
+  if (result.onboardingRequired) {
+    await clearCustomerOnboardingComplete();
+    if (profile?.isProfileCompleted) {
+      const vehicles = useVehicleStore.getState().vehicles;
+      return vehicles.length === 0 ? 'vehicle' : 'pin';
+    }
+    return 'profile';
+  }
+
+  const storedStep = await getCustomerOnboardingStep();
+  if (storedStep !== 'profile') {
+    return storedStep;
+  }
+
+  if (!profile?.isProfileCompleted) {
+    return 'profile';
+  }
+
+  const vehicles = useVehicleStore.getState().vehicles;
+  if (vehicles.length === 0) {
+    return 'vehicle';
+  }
+
+  return 'pin';
 }
 
 async function completeAuthSession(
   result: Awaited<ReturnType<typeof authService.verifyOtp>>,
-): Promise<boolean> {
-  let onboardingRequired = result.onboardingRequired;
+): Promise<CustomerOnboardingStep> {
   try {
     const { useProfileStore } = await import('./profileStore');
     await useProfileStore.getState().fetchProfile();
-    const profile = useProfileStore.getState().profile;
-    if (profile) {
-      onboardingRequired = !profile.isProfileCompleted;
-    }
     await useVehicleStore.getState().fetchVehicles();
   } catch {
-    // Keep auth response flags if profile/vehicles fail to load.
+    // Keep session even if profile/vehicles fail to load.
   }
-  return onboardingRequired;
+
+  const step = await resolveCustomerOnboardingStep(result);
+  await setCustomerOnboardingStep(step);
+  return step;
 }
 
 async function syncReduxCredentials(
@@ -77,12 +119,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isLoading: false,
   error: null,
   onboardingRequired: false,
+  customerOnboardingStep: 'profile',
 
   setAuth: payload =>
     set({
       user: payload.user,
       isAuthenticated: true,
       onboardingRequired: payload.onboardingRequired,
+      customerOnboardingStep: payload.onboardingRequired ? 'profile' : 'done',
       isLoading: false,
       error: null,
     }),
@@ -99,6 +143,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       user: null,
       isAuthenticated: false,
       onboardingRequired: false,
+      customerOnboardingStep: 'profile',
       error: null,
     }),
 
@@ -121,12 +166,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const result = await authService.verifyOtp(payload);
-      const onboardingRequired = await completeAuthSession(result);
+      const customerOnboardingStep = await completeAuthSession(result);
+      const onboardingRequired = onboardingRequiredForStep(customerOnboardingStep);
 
       set({
         user: result.user,
         isAuthenticated: true,
         onboardingRequired,
+        customerOnboardingStep,
         isLoading: false,
         error: null,
       });
@@ -149,6 +196,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   logout: async () => {
     await authService.logout();
     clearSessionStores();
+    await clearCustomerOnboardingComplete();
     await syncReduxLogout();
     get().clearAuth();
   },
@@ -159,7 +207,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   setAuthenticated: value => set({ isAuthenticated: value }),
 
-  setOnboardingRequired: value => set({ onboardingRequired: value }),
+  setOnboardingRequired: value =>
+    set(state => ({
+      onboardingRequired: value,
+      customerOnboardingStep: value ? state.customerOnboardingStep : 'done',
+    })),
+
+  setCustomerOnboardingStep: step =>
+    set({
+      customerOnboardingStep: step,
+      onboardingRequired: onboardingRequiredForStep(step),
+    }),
 
   setLoading: value => set({ isLoading: value }),
 }));

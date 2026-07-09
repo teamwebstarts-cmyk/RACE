@@ -70,11 +70,10 @@ const authSlice = createSlice({
     },
     completeProfileSuccess(state, action: PayloadAction<AuthUser>) {
       state.user = action.payload;
-      state.onboardingRequired = false;
       state.isAuthenticated = true;
       state.loading = false;
 
-      syncZustandPatch(action.payload, false);
+      syncZustandPatch(action.payload, state.onboardingRequired);
     },
     completeOnboarding(state, action: PayloadAction<AuthUser | undefined>) {
       if (action.payload) {
@@ -98,10 +97,8 @@ const authSlice = createSlice({
     },
     updateUser(state, action: PayloadAction<AuthUser>) {
       state.user = action.payload;
-      const onboardingRequired = !action.payload.isProfileCompleted;
-      state.onboardingRequired = onboardingRequired;
 
-      syncZustandPatch(action.payload, onboardingRequired);
+      syncZustandPatch(action.payload, state.onboardingRequired);
     },
     setUseCustomerExperience(state, action: PayloadAction<boolean>) {
       state.useCustomerExperience = action.payload;

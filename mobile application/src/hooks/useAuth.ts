@@ -4,12 +4,15 @@ import * as SecureStore from 'expo-secure-store';
 import { TOKEN_KEYS } from '../config/env';
 import { hydrateAuthStore } from '../redux/store';
 import { setUnauthorizedHandler } from '../services/authSession';
+import { getCustomerOnboardingStep } from '../store/customerOnboarding';
 import { useAuthStore } from '../store/authStore';
 import { useProfileStore } from '../store/profileStore';
+import { useVehicleStore } from '../store/vehicleStore';
 
 export function useAuth() {
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
   const onboardingRequired = useAuthStore(state => state.onboardingRequired);
+  const customerOnboardingStep = useAuthStore(state => state.customerOnboardingStep);
   const [isLoading, setIsLoading] = useState(true);
   const bootstrapStarted = useRef(false);
 
@@ -45,9 +48,10 @@ export function useAuth() {
 
         try {
           await useProfileStore.getState().fetchProfile();
-          const profile = useProfileStore.getState().profile;
-          if (profile && mounted) {
-            useAuthStore.getState().setOnboardingRequired(!profile.isProfileCompleted);
+          await useVehicleStore.getState().fetchVehicles();
+          const step = await getCustomerOnboardingStep();
+          if (mounted) {
+            useAuthStore.getState().setCustomerOnboardingStep(step);
           }
         } catch {
           // Keep session on transient network errors; 401 handler will clear auth.
@@ -71,6 +75,7 @@ export function useAuth() {
     isLoading,
     isAuthenticated,
     onboardingRequired,
+    customerOnboardingStep,
   };
 }
 

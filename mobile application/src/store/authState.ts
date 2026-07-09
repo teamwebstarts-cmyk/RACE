@@ -10,6 +10,6 @@ export function setOnboardingRequired(value: boolean): void {
   setOnboardingRequiredImpl?.(value);
 }
 
-export function syncOnboardingRequiredFromProfile(isProfileCompleted: boolean): void {
-  setOnboardingRequired(!isProfileCompleted);
+export function syncOnboardingRequiredFromProfile(_isProfileCompleted: boolean): void {
+  // Customer onboarding progress is tracked by customerOnboardingStep, not profile completion.
 }

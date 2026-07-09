@@ -20,6 +20,7 @@ import {
   savePersistedAuthState,
 } from './secureAuthStorage';
 import { clearTokens, saveTokens } from '../services/api';
+import { getCustomerOnboardingStep } from '../store/customerOnboarding';
 
 function pickPersistedAuth(state: AuthState) {
   return {
@@ -72,7 +73,15 @@ export async function hydrateAuthStore(): Promise<void> {
   const persisted = await loadPersistedAuthState();
   if (!persisted) return;
 
-  store.dispatch(rehydrateAuth(persisted));
+  const step = await getCustomerOnboardingStep();
+  const onboardingRequired = step !== 'done';
+
+  store.dispatch(
+    rehydrateAuth({
+      ...persisted,
+      onboardingRequired,
+    }),
+  );
 
   if (persisted.accessToken && persisted.refreshToken) {
     await saveTokens(persisted.accessToken, persisted.refreshToken);

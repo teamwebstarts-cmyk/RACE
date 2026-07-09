@@ -11,7 +11,10 @@ interface ProfileState {
   isLoading: boolean;
   error: string | null;
   fetchProfile: () => Promise<void>;
-  updateProfile: (data: UpdateProfileRequest) => Promise<Profile>;
+  updateProfile: (
+    data: UpdateProfileRequest,
+    options?: { syncOnboarding?: boolean },
+  ) => Promise<Profile>;
   clearProfile: () => void;
 }
 
@@ -34,12 +37,14 @@ export const useProfileStore = create<ProfileState>((set) => ({
     }
   },
 
-  updateProfile: async data => {
+  updateProfile: async (data, options) => {
     set({ isLoading: true, error: null });
     try {
       const profile = await profileService.updateProfile(data);
       set({ profile, isLoading: false });
-      syncOnboardingRequiredFromProfile(profile.isProfileCompleted);
+      if (options?.syncOnboarding !== false) {
+        syncOnboardingRequiredFromProfile(profile.isProfileCompleted);
+      }
       return profile;
     } catch (error) {
       set({

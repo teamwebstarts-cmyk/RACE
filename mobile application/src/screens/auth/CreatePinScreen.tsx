@@ -6,6 +6,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import GoldButton from '../../components/auth/GoldButton';
 import { AuthBackHeader } from '../../components/auth/StepHeader';
+import { markCustomerOnboardingComplete } from '../../store/customerOnboarding';
 import { useAuthStore } from '../../store/authStore';
 import type { AuthStackParamList } from '../../types/navigation';
 import { colors, typography } from '../../theme';
@@ -40,7 +41,6 @@ function PinDots({ value, px, active }: { value: string; px: (n: number) => numb
 }
 
 export default function CreatePinScreen({ navigation }: Props) {
-  const setOnboardingRequired = useAuthStore(state => state.setOnboardingRequired);
   const { width } = useWindowDimensions();
   const s = width / REF_W;
   const px = (n: number) => Math.round(n * s);
@@ -86,7 +86,8 @@ export default function CreatePinScreen({ navigation }: Props) {
       Alert.alert('Set PIN first', 'Please set your PIN before continuing to Home.');
       return;
     }
-    setOnboardingRequired(false);
+    await markCustomerOnboardingComplete();
+    useAuthStore.getState().setCustomerOnboardingStep('done');
     const { store } = await import('../../redux/store');
     const { completeOnboarding } = await import('../../redux/auth/authSlice');
     store.dispatch(completeOnboarding());

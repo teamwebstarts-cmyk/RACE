@@ -16,6 +16,7 @@ import { useAuthActions } from '../../hooks/useAuth';
 import { sendOtp } from '../../services/authService';
 import { getApiErrorMessage } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
+import { getCustomerOnboardingRouteFromStep } from '../../store/customerOnboardingRoute';
 import type { AuthStackParamList } from '../../types/navigation';
 import { getPhoneDigits } from '../../utils/phone';
 import { maskMobile } from '../../utils/mask';
@@ -63,7 +64,8 @@ export default function OTPScreen({ navigation, route }: Props) {
           otp: code,
         });
         if (useAuthStore.getState().onboardingRequired) {
-          navigation.navigate('ProfileSetup');
+          const step = useAuthStore.getState().customerOnboardingStep;
+          navigation.navigate(getCustomerOnboardingRouteFromStep(step));
         }
       } catch (err) {
         setError(getApiErrorMessage(err, 'Invalid OTP. Please try again'));

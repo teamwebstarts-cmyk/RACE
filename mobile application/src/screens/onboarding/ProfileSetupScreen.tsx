@@ -33,6 +33,7 @@ import ProfileEmergencyContactFields, {
 import { EMERGENCY_RELATIONSHIP_OPTIONS } from '../../constants/profileForm';
 import { useProfileStore } from '../../store/profileStore';
 import { useAuthStore } from '../../store/authStore';
+import { setCustomerOnboardingStep } from '../../store/customerOnboarding';
 import { useSignupDraftStore } from '../../store/signupDraftStore';
 import type { AuthStackParamList } from '../../types/navigation';
 import { getApiErrorMessage } from '../../services/api';
@@ -149,6 +150,9 @@ export default function ProfileSetupScreen({ navigation }: Props) {
     if (Object.keys(nextErrors).length > 0) return;
 
     try {
+      await setCustomerOnboardingStep('vehicle');
+      useAuthStore.getState().setCustomerOnboardingStep('vehicle');
+
       await updateProfile(
         buildUpdateProfilePayload({
           fullName: resolvedName,
@@ -165,10 +169,10 @@ export default function ProfileSetupScreen({ navigation }: Props) {
           pincode: address.pincode,
           country: profile?.address?.country,
         }),
+        { syncOnboarding: false },
       );
-      // Keep auth-stack onboarding until vehicle + PIN steps finish.
-      useAuthStore.getState().setOnboardingRequired(true);
-      navigation.navigate('VehicleRegistration');
+
+      navigation.replace('VehicleRegistration');
     } catch (error) {
       Alert.alert('Profile', getApiErrorMessage(error, 'Unable to save profile'));
     }
@@ -195,7 +199,12 @@ export default function ProfileSetupScreen({ navigation }: Props) {
             step={1}
             scale={s}
             onBack={canGoBack ? () => navigation.goBack() : undefined}
-            onSkip={() => navigation.navigate('VehicleRegistration')}
+            onSkip={() => {
+              void setCustomerOnboardingStep('vehicle').then(() => {
+                useAuthStore.getState().setCustomerOnboardingStep('vehicle');
+                navigation.navigate('VehicleRegistration');
+              });
+            }}
           />
 
           <Text

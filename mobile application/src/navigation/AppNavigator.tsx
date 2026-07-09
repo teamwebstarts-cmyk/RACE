@@ -1,6 +1,10 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { StyleSheet } from 'react-native';
-import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
+import {
+  NavigationContainer,
+  DefaultTheme,
+  type NavigationContainerRef,
+} from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
@@ -10,6 +14,8 @@ import { DriverBookingProvider } from '../context/DriverBookingContext';
 import { RoadsideBookingProvider } from '../context/RoadsideBookingContext';
 import { TowingBookingProvider } from '../context/TowingBookingContext';
 import { useAuth } from '../hooks/useAuth';
+import { getCustomerOnboardingRouteFromStep } from '../store/customerOnboardingRoute';
+import { useAuthStore } from '../store/authStore';
 import CreateAccountScreen from '../screens/auth/CreateAccountScreen';
 import CreatePinAuthScreen from '../screens/auth/CreatePinScreen';
 import LoginScreen from '../screens/auth/LoginScreen';
@@ -498,9 +504,15 @@ function MainTabNavigator() {
 }
 
 function AuthStackNavigator() {
+  const customerOnboardingStep = useAuthStore(state => state.customerOnboardingStep);
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const onboardingRoute = isAuthenticated
+    ? getCustomerOnboardingRouteFromStep(customerOnboardingStep)
+    : 'Splash';
+
   return (
     <AuthStack.Navigator
-      initialRouteName="Splash"
+      initialRouteName={onboardingRoute}
       screenOptions={{ headerShown: false }}>
       <AuthStack.Screen name="Splash" component={SplashScreen} />
       <AuthStack.Screen name="Onboarding" component={OnboardingScreen} />
@@ -533,18 +545,34 @@ const navigationTheme = {
 };
 
 export default function AppNavigator() {
-  const { isAuthenticated, onboardingRequired } = useAuth();
-  // Authenticated users enter the app; onboarding screens live in Auth stack until profile is done.
-  const showMainApp = isAuthenticated && !onboardingRequired;
+  const { isAuthenticated, customerOnboardingStep } = useAuth();
+  const showMainApp = isAuthenticated && customerOnboardingStep === 'done';
+  const navigationRef = useRef<NavigationContainerRef<RootStackParamList>>(null);
+  const lastRootRoute = useRef<'Auth' | 'Main' | null>(null);
+
+  useEffect(() => {
+    const navigation = navigationRef.current;
+    if (!navigation?.isReady()) {
+      return;
+    }
+
+    const nextRootRoute: 'Auth' | 'Main' = showMainApp ? 'Main' : 'Auth';
+    if (lastRootRoute.current === nextRootRoute) {
+      return;
+    }
+
+    lastRootRoute.current = nextRootRoute;
+    navigation.reset({
+      index: 0,
+      routes: [{ name: nextRootRoute }],
+    });
+  }, [showMainApp]);
 
   return (
-    <NavigationContainer theme={navigationTheme}>
+    <NavigationContainer ref={navigationRef} theme={navigationTheme}>
       <RootStack.Navigator screenOptions={{ headerShown: false }}>
-        {showMainApp ? (
-          <RootStack.Screen name="Main" component={MainTabNavigator} />
-        ) : (
-          <RootStack.Screen name="Auth" component={AuthStackNavigator} />
-        )}
+        <RootStack.Screen name="Auth" component={AuthStackNavigator} />
+        <RootStack.Screen name="Main" component={MainTabNavigator} />
       </RootStack.Navigator>
     </NavigationContainer>
   );
