@@ -11,6 +11,7 @@ import { updateBookingStatus } from '../../redux/bookings/bookingsSlice';
 import type { BookingStatus } from '../../types/booking';
 import { useBookingQuery } from '../../services/bookings/useBookingQueries';
 import { trackingService } from '../../services/tracking/trackingService';
+import { formatLocationDisplay } from '../../utils/readableAddress';
 import type { BookingsStackParamList } from '../../types/navigation';
 import { colors, spacing, typography } from '../../theme';
 
@@ -59,11 +60,11 @@ export default function LiveTrackingScreen({ navigation, route }: Props) {
           </View>
           <View style={styles.routeLine} />
           <View style={[styles.marker, styles.pickup]}>
-            <Text style={styles.markerLabel}>{booking.pickup.label}</Text>
+            <Text style={styles.markerLabel}>{formatLocationDisplay(booking.pickup)}</Text>
           </View>
           {booking.dropoff ? (
             <View style={[styles.marker, styles.drop]}>
-              <Text style={styles.markerLabel}>{booking.dropoff.label}</Text>
+              <Text style={styles.markerLabel}>{formatLocationDisplay(booking.dropoff)}</Text>
             </View>
           ) : null}
           <View style={styles.truckMarker}>
@@ -97,9 +98,9 @@ export default function LiveTrackingScreen({ navigation, route }: Props) {
             ) : null}
 
             <View style={styles.tripRow}>
-              <Text style={styles.tripPoint}>{booking.pickup.label}</Text>
+              <Text style={styles.tripPoint}>{formatLocationDisplay(booking.pickup)}</Text>
               <Ionicons name="arrow-forward" size={16} color={colors.textMuted} />
-              <Text style={styles.tripPoint}>{booking.dropoff?.label ?? 'On-site'}</Text>
+              <Text style={styles.tripPoint}>{booking.dropoff ? formatLocationDisplay(booking.dropoff) : 'On-site'}</Text>
             </View>
 
             <View style={styles.actions}>

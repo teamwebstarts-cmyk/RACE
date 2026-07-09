@@ -8,10 +8,7 @@ export interface RecentPickupLocation {
   longitude: number;
 }
 
-function shortTitle(address: string): string {
-  const first = address.split(',')[0]?.trim() || address.trim();
-  return first.length > 36 ? `${first.slice(0, 36).trim()}…` : first;
-}
+import { formatLocationDisplay } from './readableAddress';
 
 function locationKey(latitude: number, longitude: number, address: string): string {
   return `${latitude.toFixed(4)},${longitude.toFixed(4)}|${address.trim().toLowerCase()}`;
@@ -47,7 +44,7 @@ export function getRecentDriverPickups(
 
     recent.push({
       id: `${booking.id}-pickup`,
-      title: booking.pickup.label || shortTitle(address),
+      title: formatLocationDisplay({ address, label: booking.pickup.label }),
       address,
       latitude: lat,
       longitude: lng,

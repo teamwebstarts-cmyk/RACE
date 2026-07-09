@@ -194,11 +194,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
-    await authService.logout();
-    clearSessionStores();
-    await clearCustomerOnboardingComplete();
-    await syncReduxLogout();
     get().clearAuth();
+    clearSessionStores();
+
+    try {
+      const { queryClient } = await import('../services/queryClient');
+      queryClient.clear();
+    } catch {
+      // Non-fatal if query cache clear fails.
+    }
+
+    await syncReduxLogout();
+    await clearCustomerOnboardingComplete();
+    await authService.logout();
   },
 
   clearError: () => set({ error: null }),

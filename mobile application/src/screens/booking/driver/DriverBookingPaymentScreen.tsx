@@ -82,7 +82,7 @@ export default function DriverBookingPaymentScreen({ navigation }: Props) {
 
   const summaryRows = [
     { label: 'Service', value: getDriverTypeLabel(booking.driverType) },
-    { label: 'Pickup', value: getShortLocation(booking.pickup) },
+    { label: 'Pickup', value: getShortLocation(booking.pickup, booking.pickupLabel) },
     { label: 'Date', value: getDateReviewLabel(parseStoredDate(booking.dateId)) },
     { label: 'Duration', value: `${booking.packageHours} hours` },
     { label: 'Total', value: formatRupee(booking.totalPrice) },

@@ -79,7 +79,7 @@ export default function DriverBookingReviewScreen({ navigation }: Props) {
   const rows = [
     { Icon: Wrench, label: 'Service Type', value: getDriverTypeLabel(booking.driverType) },
     { Icon: Car, label: 'Vehicle', value: booking.vehicleLabel || '—' },
-    { Icon: MapPin, label: 'Pickup', value: getShortLocation(booking.pickup) },
+    { Icon: MapPin, label: 'Pickup', value: getShortLocation(booking.pickup, booking.pickupLabel) },
     {
       Icon: CalendarClock,
       label: 'Date & Time',

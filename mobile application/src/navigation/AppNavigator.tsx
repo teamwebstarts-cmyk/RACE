@@ -512,6 +512,7 @@ function AuthStackNavigator() {
 
   return (
     <AuthStack.Navigator
+      key={isAuthenticated ? `onboarding-${customerOnboardingStep}` : 'logged-out'}
       initialRouteName={onboardingRoute}
       screenOptions={{ headerShown: false }}>
       <AuthStack.Screen name="Splash" component={SplashScreen} />
@@ -549,6 +550,7 @@ export default function AppNavigator() {
   const showMainApp = isAuthenticated && customerOnboardingStep === 'done';
   const navigationRef = useRef<NavigationContainerRef<RootStackParamList>>(null);
   const lastRootRoute = useRef<'Auth' | 'Main' | null>(null);
+  const lastAuthenticated = useRef<boolean | null>(null);
 
   useEffect(() => {
     const navigation = navigationRef.current;
@@ -557,7 +559,10 @@ export default function AppNavigator() {
     }
 
     const nextRootRoute: 'Auth' | 'Main' = showMainApp ? 'Main' : 'Auth';
-    if (lastRootRoute.current === nextRootRoute) {
+    const loggedOut = lastAuthenticated.current === true && !isAuthenticated;
+    lastAuthenticated.current = isAuthenticated;
+
+    if (lastRootRoute.current === nextRootRoute && !loggedOut) {
       return;
     }
 
@@ -566,7 +571,7 @@ export default function AppNavigator() {
       index: 0,
       routes: [{ name: nextRootRoute }],
     });
-  }, [showMainApp]);
+  }, [showMainApp, isAuthenticated]);
 
   return (
     <NavigationContainer ref={navigationRef} theme={navigationTheme}>

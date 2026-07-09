@@ -38,8 +38,10 @@ export async function saveTokens(accessToken: string, refreshToken: string): Pro
 }
 
 export async function clearTokens(): Promise<void> {
-  await SecureStore.deleteItemAsync(TOKEN_KEYS.ACCESS);
-  await SecureStore.deleteItemAsync(TOKEN_KEYS.REFRESH);
+  await Promise.allSettled([
+    SecureStore.deleteItemAsync(TOKEN_KEYS.ACCESS),
+    SecureStore.deleteItemAsync(TOKEN_KEYS.REFRESH),
+  ]);
 }
 
 api.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {

@@ -158,8 +158,8 @@ export default function TowingAdvancePaymentScreen({ navigation }: Props) {
   const summaryRows = [
     { label: 'Service', value: 'Towing' },
     { label: 'Vehicle', value: getVehicleLabel(booking.vehicleType) },
-    { label: 'Pickup', value: getShortLocation(booking.pickup) },
-    { label: 'Drop', value: getShortLocation(booking.drop) },
+    { label: 'Pickup', value: getShortLocation(booking.pickup, booking.pickupLabel) },
+    { label: 'Drop', value: getShortLocation(booking.drop, booking.dropLabel) },
     { label: 'Towing Type', value: getTowingTypeLabel(booking.towingType) },
     {
       label: 'Date & Time',

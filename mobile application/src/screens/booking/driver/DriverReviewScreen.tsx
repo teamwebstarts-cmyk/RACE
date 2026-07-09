@@ -238,7 +238,7 @@ export default function DriverReviewScreen({ navigation }: Props) {
                     fontWeight: typography.weights.semibold,
                     color: colors.dark,
                   }}>
-                  {getShortLocation(booking.pickup)}
+                  {getShortLocation(booking.pickup, booking.pickupLabel)}
                 </Text>
               </View>
             </View>

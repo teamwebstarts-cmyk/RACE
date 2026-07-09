@@ -8,6 +8,8 @@ import TowingBookingLayout, { useBookingTheme } from '../../../components/bookin
 import { ROADSIDE_ACCENT } from '../../../constants/roadsideBooking';
 import { useRoadsideBooking } from '../../../context/RoadsideBookingContext';
 import type { LocationResult } from '../../../types/location';
+import { resolveLocationSelection } from '../../../utils/locationSelection';
+import { formatLocationDisplay } from '../../../utils/readableAddress';
 import type { HomeStackParamList } from '../../../types/navigation';
 import { colors, typography } from '../../../theme';
 
@@ -19,6 +21,7 @@ export default function RoadsideLocationScreen({ navigation }: Props) {
   const { t } = useBookingTheme();
   const { booking, updateBooking } = useRoadsideBooking();
   const [location, setLocation] = useState(booking.location || PLACEHOLDER);
+  const [locationLabel, setLocationLabel] = useState(booking.locationLabel ?? '');
   const [locationLat, setLocationLat] = useState(booking.locationLat);
   const [locationLng, setLocationLng] = useState(booking.locationLng);
   const [landmark, setLandmark] = useState(booking.landmark);
@@ -31,7 +34,9 @@ export default function RoadsideLocationScreen({ navigation }: Props) {
     locationLng != null;
 
   const applyLocation = (result: LocationResult) => {
-    setLocation(result.address);
+    const resolved = resolveLocationSelection(result);
+    setLocation(resolved.address);
+    setLocationLabel(resolved.displayLabel);
     setLocationLat(result.latitude);
     setLocationLng(result.longitude);
   };
@@ -49,7 +54,13 @@ export default function RoadsideLocationScreen({ navigation }: Props) {
           Alert.alert('Location required', 'Select your location on the map before continuing.');
           return;
         }
-        updateBooking({ location, locationLat, locationLng, landmark });
+        updateBooking({
+          location,
+          locationLabel: locationLabel || formatLocationDisplay(location),
+          locationLat,
+          locationLng,
+          landmark,
+        });
         navigation.navigate('RoadsideReview');
       }}>
       <View style={{ gap: t.px(16) }}>
@@ -85,7 +96,7 @@ export default function RoadsideLocationScreen({ navigation }: Props) {
                   color: hasLocation ? colors.dark : colors.grey,
                 }}
                 numberOfLines={2}>
-                {hasLocation ? location : PLACEHOLDER}
+                {hasLocation ? locationLabel || formatLocationDisplay(location) : PLACEHOLDER}
               </Text>
             </View>
           </Pressable>

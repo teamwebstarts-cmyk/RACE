@@ -14,7 +14,7 @@ import {
   formatUnifiedStatusLabel,
   isCompletedUnifiedStatus,
 } from '../../../utils/bookingDisplay';
-import { formatReadableAddress } from '../../../utils/readableAddress';
+import { formatLocationDisplay } from '../../../utils/readableAddress';
 import { colors, shadows, typography } from '../../../theme';
 
 type Props = NativeStackScreenProps<HomeStackParamList & BookingsStackParamList, 'DriverTrack'>;
@@ -223,7 +223,7 @@ export default function DriverTrackScreen({ navigation, route }: Props) {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.px(4) }}>
               <MapPin size={t.px(12)} color={colors.grey} />
               <Text style={{ fontSize: t.caption, color: colors.grey }}>
-                Driver hire · {formatReadableAddress(booking?.pickup.address) || 'Pickup en route'}
+                Driver hire · {formatLocationDisplay(booking?.pickup) || 'Pickup en route'}
               </Text>
             </View>
             {!!driverLocation && (

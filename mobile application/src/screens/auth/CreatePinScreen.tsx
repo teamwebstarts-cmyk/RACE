@@ -197,7 +197,7 @@ export default function CreatePinScreen({ navigation }: Props) {
           </Text>
 
           <Pressable
-            onPress={goToPinStep}
+            onPress={() => goToPinStep()}
             style={({ pressed }) => [styles.pinSection, pressed && styles.pinSectionPressed]}
             accessibilityRole="button"
             accessibilityLabel="Edit entered PIN">

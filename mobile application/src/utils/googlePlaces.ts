@@ -1,6 +1,7 @@
 import type { AddressFormValues } from '../components/profile/ProfileAddressFields';
 import type { LocationResult } from '../types/location';
 import { getGoogleMapsApiKey, reverseGeocode } from './googleMaps';
+import { buildReadableAddressLabel } from './readableAddress';
 
 export const LOCATION_ACCENT = '#F59E0B';
 
@@ -37,6 +38,7 @@ export function parseLocationResult(
 
   return {
     address: formattedAddress,
+    displayLabel: buildReadableAddressLabel(formattedAddress, addressComponents),
     city,
     state: getComponent(addressComponents, 'administrative_area_level_1'),
     pincode: getComponent(addressComponents, 'postal_code'),

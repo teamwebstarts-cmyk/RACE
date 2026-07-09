@@ -12,6 +12,7 @@ import {
   useUpdateLocationMutation,
 } from '../../services/profile/useProfileQueries';
 import type { SavedLocation, SavedLocationType } from '../../types/profile';
+import { formatLocationDisplay } from '../../utils/readableAddress';
 import { colors, shadows, typography } from '../../theme';
 
 const ICONS = { home: Home, office: Building2, custom: MapPin } as const;
@@ -173,7 +174,7 @@ export default function SavedLocationsScreen() {
                     {location.label}
                   </Text>
                   <Text numberOfLines={2} style={{ fontSize: px(11), color: colors.grey, lineHeight: px(15) }}>
-                    {location.address}
+                    {formatLocationDisplay(location.address)}
                   </Text>
                 </Pressable>
                 <Pressable onPress={() => handleDelete(location)} hitSlop={8}>

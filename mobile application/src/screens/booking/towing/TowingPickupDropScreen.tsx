@@ -12,6 +12,8 @@ import { useLocationStore } from '../../../store/locationStore';
 import type { LocationResult } from '../../../types/location';
 import type { HomeStackParamList } from '../../../types/navigation';
 import { assertServiceableBookingLocation } from '../../../utils/serviceableLocation';
+import { resolveLocationSelection } from '../../../utils/locationSelection';
+import { formatReadableLocation } from '../../../utils/readableAddress';
 import { formatRupee } from '../../../utils/towingPricing';
 import { colors, shadows, typography } from '../../../theme';
 
@@ -86,11 +88,7 @@ function LocationCard({
 }
 
 function applyLocation(location: LocationResult) {
-  return {
-    address: location.address,
-    lat: location.latitude,
-    lng: location.longitude,
-  };
+  return resolveLocationSelection(location);
 }
 
 export default function TowingPickupDropScreen({ navigation }: Props) {
@@ -98,9 +96,11 @@ export default function TowingPickupDropScreen({ navigation }: Props) {
   const { booking, updateBooking } = useTowingBooking();
   const selectedLocation = useLocationStore(state => state.selectedLocation);
   const [pickup, setPickup] = useState(booking.pickup || PLACEHOLDER);
+  const [pickupLabel, setPickupLabel] = useState(booking.pickupLabel ?? '');
   const [pickupLat, setPickupLat] = useState(booking.pickupLat);
   const [pickupLng, setPickupLng] = useState(booking.pickupLng);
   const [drop, setDrop] = useState(booking.drop || PLACEHOLDER);
+  const [dropLabel, setDropLabel] = useState(booking.dropLabel ?? '');
   const [dropLat, setDropLat] = useState(booking.dropLat);
   const [dropLng, setDropLng] = useState(booking.dropLng);
   const [showPickupPicker, setShowPickupPicker] = useState(false);
@@ -115,11 +115,23 @@ export default function TowingPickupDropScreen({ navigation }: Props) {
     if (booking.pickupLat != null) return;
     if (pickupLat != null) return;
 
-    setPickup(selectedLocation.address);
+    const resolved = resolveLocationSelection({
+      address: selectedLocation.address,
+      city: selectedLocation.city,
+      state: '',
+      pincode: '',
+      latitude: selectedLocation.latitude,
+      longitude: selectedLocation.longitude,
+      placeId: '',
+      displayLabel: selectedLocation.displayName,
+    });
+    setPickup(resolved.address);
+    setPickupLabel(resolved.displayLabel);
     setPickupLat(selectedLocation.latitude);
     setPickupLng(selectedLocation.longitude);
     updateBooking({
-      pickup: selectedLocation.address,
+      pickup: resolved.address,
+      pickupLabel: resolved.displayLabel,
       pickupLat: selectedLocation.latitude,
       pickupLng: selectedLocation.longitude,
     });
@@ -186,9 +198,11 @@ export default function TowingPickupDropScreen({ navigation }: Props) {
       onContinue={() => {
         updateBooking({
           pickup,
+          pickupLabel: pickupLabel || formatReadableLocation(pickup),
           pickupLat,
           pickupLng,
           drop,
+          dropLabel: dropLabel || formatReadableLocation(drop),
           dropLat,
           dropLng,
           distanceKm: distanceKm ?? undefined,
@@ -210,7 +224,11 @@ export default function TowingPickupDropScreen({ navigation }: Props) {
         ]}>
         <LocationCard
           label="Pickup"
-          value={pickup}
+          value={
+            pickup !== PLACEHOLDER
+              ? pickupLabel || formatReadableLocation(pickup)
+              : pickup
+          }
           pinColor={colors.primary}
           isPickup
           onPress={() => setShowPickupPicker(true)}
@@ -221,7 +239,9 @@ export default function TowingPickupDropScreen({ navigation }: Props) {
 
         <LocationCard
           label="Drop"
-          value={drop}
+          value={
+            drop !== PLACEHOLDER ? dropLabel || formatReadableLocation(drop) : drop
+          }
           pinColor={colors.error}
           isPickup={false}
           onPress={() => setShowDropPicker(true)}
@@ -294,10 +314,12 @@ export default function TowingPickupDropScreen({ navigation }: Props) {
                     latitude: lat,
                     longitude: lng,
                     placeId: '',
+                    displayLabel: loc.label,
                   });
                   setPickup(mapped.address);
-                  setPickupLat(mapped.lat);
-                  setPickupLng(mapped.lng);
+                  setPickupLabel(mapped.displayLabel);
+                  setPickupLat(lat);
+                  setPickupLng(lng);
                 }}
                 style={{
                   paddingHorizontal: t.px(12),
@@ -329,7 +351,9 @@ export default function TowingPickupDropScreen({ navigation }: Props) {
         onClose={() => setShowPickupPicker(false)}
         onLocationSelected={location => {
           if (!assertServiceableBookingLocation(location.latitude, location.longitude)) return;
-          setPickup(location.address);
+          const resolved = resolveLocationSelection(location);
+          setPickup(resolved.address);
+          setPickupLabel(resolved.displayLabel);
           setPickupLat(location.latitude);
           setPickupLng(location.longitude);
         }}
@@ -346,7 +370,9 @@ export default function TowingPickupDropScreen({ navigation }: Props) {
         onClose={() => setShowDropPicker(false)}
         onLocationSelected={location => {
           if (!assertServiceableBookingLocation(location.latitude, location.longitude)) return;
-          setDrop(location.address);
+          const resolved = resolveLocationSelection(location);
+          setDrop(resolved.address);
+          setDropLabel(resolved.displayLabel);
           setDropLat(location.latitude);
           setDropLng(location.longitude);
         }}

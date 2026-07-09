@@ -1,18 +1,12 @@
 import type { LocationResult } from '../types/location';
+import { formatLocationDisplay } from './readableAddress';
 
-export function formatLocationLabel(location: Pick<LocationResult, 'address' | 'city' | 'state'>): string {
-  if (location.city && location.state) {
-    return `${location.city}, ${location.state}`;
-  }
-
-  const parts = location.address
-    .split(',')
-    .map(part => part.trim())
-    .filter(Boolean);
-
-  if (parts.length >= 2) {
-    return `${parts[parts.length - 2]}, ${parts[parts.length - 1]}`;
-  }
-
-  return location.address;
+export function formatLocationLabel(
+  location: Pick<LocationResult, 'address' | 'city' | 'state' | 'displayLabel'>,
+): string {
+  return formatLocationDisplay({
+    address: location.address,
+    displayLabel: location.displayLabel,
+    label: location.city && location.state ? `${location.city}, ${location.state}` : undefined,
+  });
 }

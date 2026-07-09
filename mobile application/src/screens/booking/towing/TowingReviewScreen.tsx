@@ -206,10 +206,15 @@ export default function TowingReviewScreen({ navigation }: Props) {
           <SummaryRow
             Icon={MapPin}
             label="Pickup"
-            value={getShortLocation(booking.pickup)}
+            value={getShortLocation(booking.pickup, booking.pickupLabel)}
             t={t}
           />
-          <SummaryRow Icon={MapPin} label="Drop" value={getShortLocation(booking.drop)} t={t} />
+          <SummaryRow
+            Icon={MapPin}
+            label="Drop"
+            value={getShortLocation(booking.drop, booking.dropLabel)}
+            t={t}
+          />
           <SummaryRow
             Icon={Truck}
             label="Towing Type"

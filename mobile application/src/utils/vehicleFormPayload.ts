@@ -23,6 +23,7 @@ export function labelToFuelType(label: string): FuelType {
 
 export interface VehicleFormValues {
   vehicleType: string;
+  vehicleSubtype?: string;
   vehicleNumber: string;
   brand: string;
   model: string;
@@ -37,6 +38,7 @@ export function buildCreateVehiclePayload(values: VehicleFormValues): CreateVehi
 
   return {
     vehicleType,
+    ...(values.vehicleSubtype ? { vehicleSubtype: values.vehicleSubtype } : {}),
     vehicleNumber: values.vehicleNumber.trim().toUpperCase(),
     brand: values.brand.trim(),
     model: values.model.trim(),

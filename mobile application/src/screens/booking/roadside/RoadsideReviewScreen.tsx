@@ -18,6 +18,7 @@ import { createRoadsideBooking } from '../../../services/bookings/serviceBooking
 import { useVehicleStore } from '../../../store/vehicleStore';
 import { buildRoadsideBookingRequest } from '../../../utils/serviceBookingPayload';
 import { roadsideServiceIdToSlug } from '../../../utils/roadsideServiceMap';
+import { formatLocationDisplay } from '../../../utils/readableAddress';
 import type { HomeStackParamList } from '../../../types/navigation';
 import { colors, shadows, typography } from '../../../theme';
 
@@ -135,7 +136,7 @@ export default function RoadsideReviewScreen({ navigation }: Props) {
 
   const rows = [
     { Icon: Wrench, label: 'Service', value: getRoadsideServiceLabel(booking.serviceId) },
-    { Icon: MapPin, label: 'Location', value: booking.location },
+    { Icon: MapPin, label: 'Location', value: formatLocationDisplay({ address: booking.location, displayLabel: booking.locationLabel }) },
     { Icon: Clock, label: 'ETA', value: `${ROADSIDE_ETA_MINUTES} minutes` },
     {
       Icon: Tag,

@@ -3,9 +3,11 @@ export type RoadsideServiceId = 'flat_tyre' | 'battery' | 'fuel' | 'minor_repair
 export interface RoadsideBookingState {
   serviceId: RoadsideServiceId;
   location: string;
+  locationLabel?: string;
   locationLat?: number;
   locationLng?: number;
   dropoff?: string;
+  dropoffLabel?: string;
   dropoffLat?: number;
   dropoffLng?: number;
   landmark: string;

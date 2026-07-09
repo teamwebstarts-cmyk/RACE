@@ -10,10 +10,11 @@ import Screen, { ScreenContent } from '../../components/ui/Screen';
 import DocumentStatusChip from '../../components/vendor/DocumentStatusChip';
 import { getVendorConfig } from '../../data/vendorWizardConfig';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
-import { logout, setUseCustomerExperience } from '../../redux/auth/authSlice';
+import { setUseCustomerExperience } from '../../redux/auth/authSlice';
 import { resetOnboarding } from '../../redux/onboarding/onboardingSlice';
 import { resetVendorWizard } from '../../redux/vendor/vendorOnboardingSlice';
 import { useVendorStatusQuery } from '../../services/vendor/useVendorMutations';
+import { useAuthStore } from '../../store/authStore';
 import type { PartnerAccountStackParamList } from '../../types/navigation';
 import { colors, spacing, typography } from '../../theme';
 
@@ -27,9 +28,10 @@ export default function PartnerAccountScreen({ navigation }: Props) {
   const config = vendor ? getVendorConfig(vendor.vendorType) : undefined;
 
   const handleLogout = () => {
-    dispatch(logout());
-    dispatch(resetOnboarding());
-    dispatch(resetVendorWizard());
+    void useAuthStore.getState().logout().finally(() => {
+      dispatch(resetOnboarding());
+      dispatch(resetVendorWizard());
+    });
   };
 
   const switchToCustomer = () => {

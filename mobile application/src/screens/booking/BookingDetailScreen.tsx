@@ -9,6 +9,7 @@ import PrimaryButton from '../../components/ui/PrimaryButton';
 import Screen, { Card, ScreenContent } from '../../components/ui/Screen';
 import { useFinalPayment } from '../../hooks/useFinalPayment';
 import { useBookingQuery } from '../../services/bookings/useBookingQueries';
+import { formatLocationDisplay } from '../../utils/readableAddress';
 import type { BookingsStackParamList } from '../../types/navigation';
 import { colors, spacing, typography } from '../../theme';
 
@@ -61,9 +62,9 @@ export default function BookingDetailScreen({ navigation, route }: Props) {
 
             <Card>
               <DetailRow icon="car" label="Vehicle" value={booking.vehicleLabel ?? booking.vehicleNumber} />
-              <DetailRow icon="location" label="Pickup" value={booking.pickup.label} />
+              <DetailRow icon="location" label="Pickup" value={formatLocationDisplay(booking.pickup)} />
               {booking.dropoff ? (
-                <DetailRow icon="navigate" label="Drop" value={booking.dropoff.label} />
+                <DetailRow icon="navigate" label="Drop" value={formatLocationDisplay(booking.dropoff)} />
               ) : null}
               {booking.distanceKm ? (
                 <DetailRow icon="speedometer" label="Distance" value={`${booking.distanceKm} km`} />

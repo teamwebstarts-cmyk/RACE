@@ -7,7 +7,7 @@ import type {
   TowingTypeId,
   TowingVehicleTypeId,
 } from '../types/towingBooking';
-import { formatReadableAddress } from '../utils/readableAddress';
+import { formatLocationDisplay } from '../utils/readableAddress';
 
 export const TOWING_BOOKING_STEPS = 10;
 
@@ -130,8 +130,8 @@ export function getTimeLabel(timeId: TowingTimeId): string {
   return TOWING_TIME_OPTIONS.find(t => t.id === timeId)?.label ?? '30–60 min';
 }
 
-export function getShortLocation(address: string): string {
-  return formatReadableAddress(address);
+export function getShortLocation(address: string, displayLabel?: string): string {
+  return formatLocationDisplay({ address, displayLabel });
 }
 
 export function getServiceLocationLabel(
@@ -139,5 +139,5 @@ export function getServiceLocationLabel(
 ): string {
   if (!serviceLocation) return '—';
   if (serviceLocation.vehicleLabel) return serviceLocation.vehicleLabel;
-  return serviceLocation.address;
+  return formatLocationDisplay(serviceLocation.address);
 }

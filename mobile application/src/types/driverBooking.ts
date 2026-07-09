@@ -11,6 +11,7 @@ export interface DriverBookingState {
   vehicleLabel: string;
   vehicleCategory?: DriverVehicleCategory;
   pickup: string;
+  pickupLabel?: string;
   pickupLat?: number;
   pickupLng?: number;
   dateId: string;

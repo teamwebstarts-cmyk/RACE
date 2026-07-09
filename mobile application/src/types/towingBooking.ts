@@ -19,9 +19,11 @@ export interface TowingBookingState {
   serviceMode: TowingServiceModeId;
   vehicleType: TowingVehicleTypeId;
   pickup: string;
+  pickupLabel?: string;
   pickupLat?: number;
   pickupLng?: number;
   drop: string;
+  dropLabel?: string;
   dropLat?: number;
   dropLng?: number;
   towingType: TowingTypeId;

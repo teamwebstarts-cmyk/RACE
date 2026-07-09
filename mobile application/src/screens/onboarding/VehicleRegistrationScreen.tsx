@@ -34,12 +34,14 @@ import {
   VEHICLE_COLORS,
   VEHICLE_TYPES,
 } from '../../constants/auth';
+import { getVehicleSubtypes, hasVehicleSubtypes } from '../../constants/vehicleSubtypes';
 import { useCreateVehicleMutation } from '../../services/vehicles/useVehicleQueries';
 import { getApiErrorMessage } from '../../services/api';
 import { buildCreateVehiclePayload } from '../../utils/vehicleFormPayload';
 import { useAuthStore } from '../../store/authStore';
 import { setCustomerOnboardingStep } from '../../store/customerOnboarding';
 import type { AuthStackParamList } from '../../types/navigation';
+import type { VehicleType } from '../../types/vehicle';
 import { colors, shadows, typography } from '../../theme';
 
 const REF_W = 390;
@@ -60,7 +62,8 @@ export default function VehicleRegistrationScreen({ navigation }: Props) {
   const px = (n: number) => Math.round(n * s);
   const createVehicleMutation = useCreateVehicleMutation();
 
-  const [selectedType, setSelectedType] = useState('car');
+  const [selectedType, setSelectedType] = useState<VehicleType>('car');
+  const [selectedSubtype, setSelectedSubtype] = useState<string | null>(null);
   const [number, setNumber] = useState('');
   const [brand, setBrand] = useState('');
   const [model, setModel] = useState('');
@@ -69,6 +72,17 @@ export default function VehicleRegistrationScreen({ navigation }: Props) {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const typeCardW = px(62);
+  const subtypeOptions = getVehicleSubtypes(selectedType);
+  const showSubtypeSection = hasVehicleSubtypes(selectedType);
+
+  const handleTypeSelect = (typeId: VehicleType) => {
+    setSelectedType(typeId);
+    setSelectedSubtype(null);
+    clearError('subtype');
+    if (typeId === 'ev') {
+      setSelectedFuel('Electric');
+    }
+  };
 
   const clearError = (key: string) => {
     if (errors[key]) {
@@ -85,6 +99,9 @@ export default function VehicleRegistrationScreen({ navigation }: Props) {
     if (!number.trim()) nextErrors.number = 'Please enter vehicle number';
     if (!brand.trim()) nextErrors.brand = 'Please enter brand';
     if (!model.trim()) nextErrors.model = 'Please enter model';
+    if (showSubtypeSection && !selectedSubtype) {
+      nextErrors.subtype = 'Please select a vehicle subtype';
+    }
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
       return;
@@ -94,6 +111,7 @@ export default function VehicleRegistrationScreen({ navigation }: Props) {
       const vehicle = await createVehicleMutation.mutateAsync(
         buildCreateVehiclePayload({
           vehicleType: selectedType,
+          vehicleSubtype: selectedSubtype ?? undefined,
           vehicleNumber: number,
           brand,
           model,
@@ -195,7 +213,7 @@ export default function VehicleRegistrationScreen({ navigation }: Props) {
                     justifyContent: 'center',
                     gap: px(6),
                   }}
-                  onPress={() => setSelectedType(type.id)}>
+                  onPress={() => handleTypeSelect(type.id as VehicleType)}>
                   <Icon
                     size={px(22)}
                     color={selected ? colors.primary : colors.dark}
@@ -212,6 +230,62 @@ export default function VehicleRegistrationScreen({ navigation }: Props) {
               );
             })}
           </View>
+
+          {showSubtypeSection ? (
+            <>
+              {sectionLabel('Vehicle Subtype')}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{
+                  gap: px(8),
+                  paddingBottom: px(4),
+                }}
+                style={{ marginBottom: px(16) }}>
+                {subtypeOptions.map(subtype => {
+                  const selected = selectedSubtype === subtype;
+                  return (
+                    <Pressable
+                      key={subtype}
+                      onPress={() => {
+                        setSelectedSubtype(subtype);
+                        clearError('subtype');
+                      }}
+                      style={{
+                        paddingHorizontal: px(16),
+                        paddingVertical: px(10),
+                        borderRadius: px(20),
+                        borderWidth: 1,
+                        borderColor: selected ? colors.primary : colors.border,
+                        backgroundColor: selected ? colors.primary : colors.background,
+                      }}>
+                      <Text
+                        style={{
+                          fontSize: px(13),
+                          fontWeight: selected
+                            ? typography.weights.bold
+                            : typography.weights.semibold,
+                          color: selected ? colors.background : colors.dark,
+                        }}>
+                        {subtype}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+              {errors.subtype ? (
+                <Text
+                  style={{
+                    color: colors.error,
+                    fontSize: px(12),
+                    marginTop: px(-10),
+                    marginBottom: px(14),
+                  }}>
+                  {errors.subtype}
+                </Text>
+              ) : null}
+            </>
+          ) : null}
 
           <FormField
             variant="outlined"

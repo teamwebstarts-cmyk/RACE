@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Crosshair, MapPin, Search } from 'lucide-react-native';
 
 import { BHUBANESWAR_DEFAULT, forwardGeocode, reverseGeocode } from '../../utils/googleMaps';
+import { formatLocationDisplay } from '../../utils/readableAddress';
 import { colors, shadows, typography } from '../../theme';
 
 const MAP_PROVIDER = Platform.OS === 'android' ? PROVIDER_GOOGLE : PROVIDER_DEFAULT;
@@ -232,7 +233,7 @@ export default function LocationPickerMap({
             </View>
           ) : (
             <Text style={styles.addressText} numberOfLines={3}>
-              {address || 'Move the map to select a location'}
+              {address ? formatLocationDisplay(address) : 'Move the map to select a location'}
             </Text>
           )}
 

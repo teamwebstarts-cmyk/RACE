@@ -32,16 +32,15 @@ interface LocationState {
   setHydrated: (value: boolean) => void;
 }
 
+import { formatReadableAddress } from '../utils/readableAddress';
+
 function buildDisplayName(address: string, cityName?: string): string {
-  const firstPart = address.split(',')[0]?.trim() || address.trim();
-  const short = firstPart.length > 20 ? `${firstPart.slice(0, 20).trim()}…` : firstPart;
-
-  if (cityName && !short.toLowerCase().includes(cityName.toLowerCase())) {
-    const combined = `${short}, ${cityName}`;
-    return combined.length > 28 ? short : combined;
+  const readable = formatReadableAddress(address);
+  if (cityName && !readable.toLowerCase().includes(cityName.toLowerCase())) {
+    const combined = `${readable}, ${cityName}`;
+    return combined.length > 48 ? readable : combined;
   }
-
-  return short || cityName || 'Selected location';
+  return readable || cityName || 'Selected location';
 }
 
 export const useLocationStore = create<LocationState>()(

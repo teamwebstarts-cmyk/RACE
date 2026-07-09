@@ -24,5 +24,9 @@ export async function savePersistedAuthState(state: PersistedAuthState): Promise
 }
 
 export async function clearPersistedAuthState(): Promise<void> {
-  await SecureStore.deleteItemAsync(REDUX_AUTH_KEY);
+  try {
+    await SecureStore.deleteItemAsync(REDUX_AUTH_KEY);
+  } catch {
+    // Ignore missing persisted auth on logout.
+  }
 }

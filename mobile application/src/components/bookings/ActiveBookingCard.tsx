@@ -7,6 +7,7 @@ import DriverAvatar from './DriverAvatar';
 import { getBookingServiceIcon } from '../../constants/bookingsScreen';
 import { brand } from '../../theme/brand';
 import type { ActiveBooking } from '../../types/models';
+import { formatLocationDisplay } from '../../utils/readableAddress';
 import { colors, typography } from '../../theme';
 
 type Props = {
@@ -133,7 +134,7 @@ export default function ActiveBookingCard({ booking, px, onTrack, onPress }: Pro
                   color: colors.dark,
                   lineHeight: px(15),
                 }}>
-                {booking.pickup}
+                {formatLocationDisplay(booking.pickup)}
               </Text>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: px(7) }}>
@@ -146,7 +147,7 @@ export default function ActiveBookingCard({ booking, px, onTrack, onPress }: Pro
                   color: colors.dark,
                   lineHeight: px(15),
                 }}>
-                {booking.drop}
+                {formatLocationDisplay(booking.drop)}
               </Text>
             </View>
           </View>

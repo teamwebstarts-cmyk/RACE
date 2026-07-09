@@ -12,6 +12,7 @@ import { GooglePlacesAutocomplete, type GooglePlacesAutocompleteRef } from 'reac
 import type { LocationResult } from '../../types/location';
 import { getGoogleMapsApiKey } from '../../utils/googleMaps';
 import { LOCATION_ACCENT, parseLocationFromPlaceDetails } from '../../utils/googlePlaces';
+import { formatLocationDisplay } from '../../utils/readableAddress';
 import { colors, typography } from '../../theme';
 
 export interface LocationPickerProps {
@@ -38,7 +39,9 @@ export default function LocationPicker({
         setUseFallback(true);
         return;
       }
-      setDisplayValue(location.address);
+      const displayLabel =
+        location.displayLabel?.trim() || formatLocationDisplay(location.address);
+      setDisplayValue(displayLabel);
       onLocationSelect(location);
     },
     [onLocationSelect],

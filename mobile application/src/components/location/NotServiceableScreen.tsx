@@ -15,6 +15,7 @@ import { MapPin } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SERVICEABLE_AREAS } from '../../config/serviceableAreas';
+import { formatLocationDisplay } from '../../utils/readableAddress';
 import { useLocationStore } from '../../store/locationStore';
 import { colors, shadows, typography } from '../../theme';
 
@@ -95,7 +96,10 @@ export default function NotServiceableScreen({ onChangeLocation }: NotServiceabl
               <View style={styles.selectedRow}>
                 <MapPin size={16} color={colors.primary} strokeWidth={2.2} />
                 <Text style={styles.selectedAddress} numberOfLines={3}>
-                  {selectedLocation.address}
+                  {formatLocationDisplay({
+                    address: selectedLocation.address,
+                    displayLabel: selectedLocation.displayName,
+                  })}
                 </Text>
               </View>
             </View>

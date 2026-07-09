@@ -3,6 +3,7 @@ import type { ApiSuccessResponse } from '../../types/auth';
 import type { Booking, BookingStatus, SubmitRatingRequest } from '../../types/booking';
 import type { CombinedBookingListItem, ServiceBooking } from '../../types/serviceBooking';
 import { apiClient } from '../api/apiClient';
+import { formatReadableAddress } from '../../utils/readableAddress';
 import {
   getDriverBooking,
   getDriverBookingTracking,
@@ -32,7 +33,7 @@ function mapUnifiedStatus(status: string): BookingStatus {
 }
 
 function toBookingLocation(point: { address: string; latitude: number; longitude: number }) {
-  const label = point.address.split(',')[0]?.trim() || point.address;
+  const label = formatReadableAddress(point.address);
   return {
     label,
     address: point.address,

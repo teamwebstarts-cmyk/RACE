@@ -100,7 +100,9 @@ export default function ProfileScreen() {
       {
         text: 'Yes',
         onPress: () => {
-          void logout();
+          void logout().catch(() => {
+            Alert.alert('Logout failed', 'Please try again or reload the app.');
+          });
         },
       },
     ]);

@@ -23,6 +23,7 @@ import {
   parseLocationFromPlaceDetails,
   reverseGeocodeToLocation,
 } from '../../utils/googlePlaces';
+import { formatLocationDisplay } from '../../utils/readableAddress';
 import { colors, shadows, typography } from '../../theme';
 
 const MAP_PROVIDER = Platform.OS === 'android' ? PROVIDER_GOOGLE : PROVIDER_DEFAULT;
@@ -39,9 +40,10 @@ export interface LocationPickerModalProps {
 }
 
 function splitAddress(address: string): { title: string; subtitle: string } {
-  const parts = address.split(',').map(part => part.trim()).filter(Boolean);
+  const readable = formatLocationDisplay(address);
+  const parts = readable.split(',').map(part => part.trim()).filter(Boolean);
   if (parts.length <= 1) {
-    return { title: address || 'Selected location', subtitle: '' };
+    return { title: readable || 'Selected location', subtitle: '' };
   }
   return {
     title: parts[0],
