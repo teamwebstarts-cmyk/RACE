@@ -5,13 +5,7 @@ import type { SendOtpPayload, VerifyOtpPayload } from '../services/authService';
 import { getApiErrorMessage } from '../services/api';
 import { clearSessionStores } from './authSession';
 import { bindSetOnboardingRequired } from './authState';
-import {
-  clearCustomerOnboardingComplete,
-  getCustomerOnboardingStep,
-  setCustomerOnboardingStep,
-  type CustomerOnboardingStep,
-} from './customerOnboarding';
-import { useVehicleStore } from './vehicleStore';
+import { useProfileStore } from './profileStore';
 import type { User } from '../types/auth';
 
 export interface SetAuthPayload {
@@ -29,7 +23,6 @@ interface AuthState {
   partnerAuthEntry: 'PartnerSplash' | 'PartnerRoleSelection' | 'PartnerLogin';
   /** Bumps on logout so navigation remounts reliably. */
   authSessionVersion: number;
-  customerOnboardingStep: CustomerOnboardingStep;
   sendOtp: (payload: SendOtpPayload) => Promise<authService.SendOtpResult>;
   verifyOtp: (payload: VerifyOtpPayload) => Promise<void>;
   logout: () => Promise<void>;
@@ -40,61 +33,27 @@ interface AuthState {
   setUser: (user: User | null) => void;
   setAuthenticated: (value: boolean) => void;
   setOnboardingRequired: (value: boolean) => void;
-  setCustomerOnboardingStep: (step: CustomerOnboardingStep) => void;
   setLoading: (value: boolean) => void;
   clearPartnerAuthEntry: () => void;
 }
 
-function onboardingRequiredForStep(step: CustomerOnboardingStep): boolean {
-  return step !== 'done';
-}
-
-async function resolveCustomerOnboardingStep(
-  result: Awaited<ReturnType<typeof authService.verifyOtp>>,
-): Promise<CustomerOnboardingStep> {
-  const { useProfileStore } = await import('./profileStore');
-  const profile = useProfileStore.getState().profile;
-
-  if (result.onboardingRequired) {
-    await clearCustomerOnboardingComplete();
-    if (profile?.isProfileCompleted) {
-      const vehicles = useVehicleStore.getState().vehicles;
-      return vehicles.length === 0 ? 'vehicle' : 'pin';
-    }
-    return 'profile';
+function partnerOnboardingRequired(user: User): boolean {
+  if (user.role === 'driver' || user.role === 'vendor') {
+    return !user.isProfileCompleted;
   }
-
-  const storedStep = await getCustomerOnboardingStep();
-  if (storedStep !== 'profile') {
-    return storedStep;
-  }
-
-  if (!profile?.isProfileCompleted) {
-    return 'profile';
-  }
-
-  const vehicles = useVehicleStore.getState().vehicles;
-  if (vehicles.length === 0) {
-    return 'vehicle';
-  }
-
-  return 'pin';
+  return true;
 }
 
 async function completeAuthSession(
   result: Awaited<ReturnType<typeof authService.verifyOtp>>,
-): Promise<CustomerOnboardingStep> {
+): Promise<boolean> {
   try {
-    const { useProfileStore } = await import('./profileStore');
     await useProfileStore.getState().fetchProfile();
-    await useVehicleStore.getState().fetchVehicles();
   } catch {
-    // Keep session even if profile/vehicles fail to load.
+    // Keep session even if profile fails to load.
   }
 
-  const step = await resolveCustomerOnboardingStep(result);
-  await setCustomerOnboardingStep(step);
-  return step;
+  return result.onboardingRequired ?? partnerOnboardingRequired(result.user);
 }
 
 async function syncReduxCredentials(
@@ -124,7 +83,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isLoading: false,
   error: null,
   onboardingRequired: false,
-  customerOnboardingStep: 'profile',
   partnerAuthEntry: 'PartnerSplash',
   authSessionVersion: 0,
 
@@ -133,7 +91,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       user: payload.user,
       isAuthenticated: true,
       onboardingRequired: payload.onboardingRequired,
-      customerOnboardingStep: payload.onboardingRequired ? 'profile' : 'done',
       isLoading: false,
       error: null,
     }),
@@ -150,7 +107,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       user: null,
       isAuthenticated: false,
       onboardingRequired: false,
-      customerOnboardingStep: 'profile',
       error: null,
       partnerAuthEntry: state.partnerAuthEntry,
       authSessionVersion: state.authSessionVersion,
@@ -177,14 +133,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const result = await authService.verifyOtp(payload);
-      const customerOnboardingStep = await completeAuthSession(result);
-      const onboardingRequired = onboardingRequiredForStep(customerOnboardingStep);
+      const onboardingRequired = await completeAuthSession(result);
 
       set({
         user: result.user,
         isAuthenticated: true,
         onboardingRequired,
-        customerOnboardingStep,
         isLoading: false,
         error: null,
       });
@@ -239,17 +193,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   setAuthenticated: value => set({ isAuthenticated: value }),
 
-  setOnboardingRequired: value =>
-    set(state => ({
-      onboardingRequired: value,
-      customerOnboardingStep: value ? state.customerOnboardingStep : 'done',
-    })),
-
-  setCustomerOnboardingStep: step =>
-    set({
-      customerOnboardingStep: step,
-      onboardingRequired: onboardingRequiredForStep(step),
-    }),
+  setOnboardingRequired: value => set({ onboardingRequired: value }),
 
   setLoading: value => set({ isLoading: value }),
 }));

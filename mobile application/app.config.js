@@ -5,8 +5,8 @@ const googleMapsApiKey =
 
 module.exports = {
   expo: {
-    name: 'RACE Service',
-    slug: 'race-customer',
+    name: 'RACE Partner',
+    slug: 'race-partner',
     version: '1.0.0',
     orientation: 'portrait',
     icon: './src/assets/images/logo.png',
@@ -17,14 +17,14 @@ module.exports = {
       backgroundColor: '#232323',
     },
     ios: {
-      bundleIdentifier: 'com.racecar.customer',
+      bundleIdentifier: 'com.racecar.partner',
       supportsTablet: true,
       config: {
         googleMapsApiKey,
       },
     },
     android: {
-      package: 'com.racecar.customer',
+      package: 'com.racecar.partner',
       softwareKeyboardLayoutMode: 'resize',
       adaptiveIcon: {
         foregroundImage: './src/assets/images/logo.png',
@@ -36,7 +36,7 @@ module.exports = {
         },
       },
     },
-    scheme: 'race-customer',
+    scheme: 'race-partner',
     plugins: [
       'expo-asset',
       'expo-font',
@@ -45,15 +45,17 @@ module.exports = {
       [
         'expo-image-picker',
         {
-          photosPermission: 'Allow RACE to access your photos for document upload.',
-          cameraPermission: 'Allow RACE to use your camera for selfie verification.',
+          photosPermission: 'Allow RACE Partner to access your photos for document upload.',
+          cameraPermission: 'Allow RACE Partner to use your camera for selfie verification.',
         },
       ],
       [
         'expo-location',
         {
           locationWhenInUsePermission:
-            'Allow RACE to use your location to set pickup and dropoff.',
+            'Allow RACE Partner to use your location while on active jobs.',
+          locationAlwaysAndWhenInUsePermission:
+            'Allow RACE Partner to share your location while on active jobs.',
         },
       ],
     ],

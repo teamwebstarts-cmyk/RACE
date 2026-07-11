@@ -2,17 +2,13 @@ import { configureStore, type Middleware } from '@reduxjs/toolkit';
 
 import authReducer, {
   completeOnboarding,
-  completeProfileSuccess,
   logout,
   rehydrateAuth,
   setCredentials,
   updateTokens,
   type AuthState,
 } from './auth/authSlice';
-import bookingsReducer from './bookings/bookingsSlice';
 import onboardingReducer from './onboarding/onboardingSlice';
-import profileReducer from './profile/profileSlice';
-import subscriptionsReducer from './subscriptions/subscriptionsSlice';
 import vendorOnboardingReducer from './vendor/vendorOnboardingSlice';
 import {
   clearPersistedAuthState,
@@ -20,7 +16,6 @@ import {
   savePersistedAuthState,
 } from './secureAuthStorage';
 import { clearTokens, saveTokens } from '../services/api';
-import { getCustomerOnboardingStep } from '../store/customerOnboarding';
 
 function pickPersistedAuth(state: AuthState) {
   return {
@@ -37,7 +32,6 @@ const persistAuthMiddleware: Middleware = (storeApi) => (next) => (action) => {
 
   if (
     setCredentials.match(action) ||
-    completeProfileSuccess.match(action) ||
     completeOnboarding.match(action) ||
     updateTokens.match(action)
   ) {
@@ -59,10 +53,7 @@ const persistAuthMiddleware: Middleware = (storeApi) => (next) => (action) => {
 export const store = configureStore({
   reducer: {
     auth: authReducer,
-    bookings: bookingsReducer,
     onboarding: onboardingReducer,
-    profile: profileReducer,
-    subscriptions: subscriptionsReducer,
     vendorOnboarding: vendorOnboardingReducer,
   },
   middleware: (getDefaultMiddleware) =>
@@ -73,15 +64,7 @@ export async function hydrateAuthStore(): Promise<void> {
   const persisted = await loadPersistedAuthState();
   if (!persisted) return;
 
-  const step = await getCustomerOnboardingStep();
-  const onboardingRequired = step !== 'done';
-
-  store.dispatch(
-    rehydrateAuth({
-      ...persisted,
-      onboardingRequired,
-    }),
-  );
+  store.dispatch(rehydrateAuth(persisted));
 
   if (persisted.accessToken && persisted.refreshToken) {
     await saveTokens(persisted.accessToken, persisted.refreshToken);

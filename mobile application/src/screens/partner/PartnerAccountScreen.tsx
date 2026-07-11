@@ -9,23 +9,16 @@ import AppScreenLayout from '../../components/ui/AppScreenLayout';
 import DocumentStatusChip from '../../components/vendor/DocumentStatusChip';
 import { getVendorConfig } from '../../data/vendorWizardConfig';
 import { useAuthActions } from '../../hooks/useAuth';
-import { useAppDispatch, useAppSelector } from '../../redux/hooks';
-import { setUseCustomerExperience } from '../../redux/auth/authSlice';
-import { resetOnboarding } from '../../redux/onboarding/onboardingSlice';
-import { resetVendorWizard } from '../../redux/vendor/vendorOnboardingSlice';
+import { useAppSelector } from '../../redux/hooks';
 import { useVendorStatusQuery } from '../../services/vendor/useVendorMutations';
 import type { PartnerAccountStackParamList } from '../../types/partnerNavigation';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
-import { useAuthStore } from '../../store/authStore';
-import type { PartnerAccountStackParamList } from '../../types/navigation';
-import { colors, spacing, typography } from '../../theme';
 
 type Props = NativeStackScreenProps<PartnerAccountStackParamList, 'PartnerAccountMain'>;
 
 export default function PartnerAccountScreen({ navigation }: Props) {
   const { logout } = useAuthActions();
   const user = useAppSelector(state => state.auth.user);
-  const dispatch = useAppDispatch();
   const isVendor = user?.role === 'vendor';
   const isDriver = user?.role === 'driver';
   const { data: vendor } = useVendorStatusQuery(isVendor);
@@ -43,10 +36,6 @@ export default function PartnerAccountScreen({ navigation }: Props) {
         },
       },
     ]);
-  };
-
-  const switchToCustomer = () => {
-    dispatch(setUseCustomerExperience(true));
   };
 
   return (
@@ -99,11 +88,6 @@ export default function PartnerAccountScreen({ navigation }: Props) {
             onPress={() => navigation.navigate('VendorVerificationStatus')}
           />
         ) : null}
-        <PrimaryButton
-          label="Use customer app"
-          variant="outline"
-          onPress={switchToCustomer}
-        />
         <PrimaryButton label="Log out" onPress={handleLogout} />
       </View>
     </AppScreenLayout>

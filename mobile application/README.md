@@ -1,37 +1,29 @@
-# RACE Service — Mobile Application (React Native + TypeScript)
+# RACE Partner Application
 
-Expo customer app aligned with [team GitHub repo](https://github.com/teamwebstarts-cmyk/RACE/tree/master).
+Standalone Expo app for RACE partners (drivers and vendors).
 
-Built with **React Native**, **Expo**, and **TypeScript** — typed navigation, components, and service catalog models.
-
-## Customer Home Screen Services
-
-**A. Towing** — Instant, Scheduled, Emergency  
-**B. Driver** — Part-Time, Full-Time, Outstation, Night  
-**C. Roadside** — Flat Tyre, Battery Jump, Fuel, Minor Repairs  
-**D. Future Services** — 8 upcoming services (marked Soon)
-
-Each category and service includes a short description and RACE branding from [raceservice.in](https://raceservice.in).
-
-## Run
+## Setup
 
 ```bash
 cd "mobile application"
+cp .env.example .env
 npm install
 npm start
 ```
 
-Scan QR with **Expo Go** on iPhone, or press `i` for simulator (needs Xcode).
+## Environment
 
-## Structure
+| Variable | Description |
+|----------|-------------|
+| `EXPO_PUBLIC_API_URL` | Backend API base URL |
+| `EXPO_PUBLIC_GOOGLE_MAPS_KEY` | Google Maps API key |
 
-```
-src/
-├── types/          # Brand, Service, navigation param lists
-├── data/           # brand.json, colors.json, services.json
-├── assets/images/  # RACE logo + category icons
-├── screens/        # Home, ServiceList, SelectService (.tsx)
-├── components/     # Service cards, Hero, BrandLogo (.tsx)
-├── navigation/     # Tabs + stack (.tsx)
-└── theme/          # RACE colors (#FFC326, #232323)
-```
+## App identity
+
+- **Name:** RACE Partner
+- **Bundle ID:** `com.racecar.partner`
+- **Scheme:** `race-partner`
+
+## Related apps
+
+- **Customer app:** `../customer application`
