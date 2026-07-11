@@ -2,6 +2,7 @@ import React, { type ReactNode } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   View,
@@ -23,6 +24,8 @@ type Props = {
   contentStyle?: StyleProp<ViewStyle>;
   backgroundColor?: string;
   edges?: Edge[];
+  refreshing?: boolean;
+  onRefresh?: () => void;
 };
 
 export default function AppScreenLayout({
@@ -35,6 +38,8 @@ export default function AppScreenLayout({
   contentStyle,
   backgroundColor = colors.background,
   edges = ['top'],
+  refreshing = false,
+  onRefresh,
 }: Props) {
   const insets = useSafeAreaInsets();
   const px = useScreenPx();
@@ -45,6 +50,16 @@ export default function AppScreenLayout({
       style={styles.flex}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
+      refreshControl={
+        onRefresh ? (
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        ) : undefined
+      }
       contentContainerStyle={[
         {
           paddingHorizontal: paddingX,

@@ -4,6 +4,7 @@ import { asyncHandler } from '../../shared/utils/asyncHandler';
 import { sendSuccess } from '../../shared/utils/apiResponse';
 import { AppError } from '../../shared/utils/errors';
 import { getAuthUser, getParamId } from '../../shared/utils/request';
+import { vendorDriversService } from './vendor-drivers.service';
 import { vendorService } from './vendor.service';
 
 export class VendorController {
@@ -35,6 +36,12 @@ export class VendorController {
     const user = getAuthUser(req);
     const vendor = await vendorService.getStatus(user.id);
     return sendSuccess(res, vendor);
+  });
+
+  getDashboard = asyncHandler(async (req: Request, res: Response) => {
+    const user = getAuthUser(req);
+    const stats = await vendorService.getDashboardStats(user.id);
+    return sendSuccess(res, stats);
   });
 
   uploadDocument = asyncHandler(async (req: Request, res: Response) => {
@@ -105,6 +112,48 @@ export class VendorController {
       req.body,
     );
     return sendSuccess(res, vendor);
+  });
+
+  listDrivers = asyncHandler(async (req: Request, res: Response) => {
+    const user = getAuthUser(req);
+    const drivers = await vendorDriversService.list(user.id);
+    return sendSuccess(res, drivers);
+  });
+
+  createDriver = asyncHandler(async (req: Request, res: Response) => {
+    const user = getAuthUser(req);
+    const driver = await vendorDriversService.create(user.id, req.body);
+    return sendSuccess(res, driver, 201);
+  });
+
+  claimDriver = asyncHandler(async (req: Request, res: Response) => {
+    const user = getAuthUser(req);
+    const driver = await vendorDriversService.claimByPhone(user.id, req.body.phone);
+    return sendSuccess(res, driver);
+  });
+
+  removeDriver = asyncHandler(async (req: Request, res: Response) => {
+    const user = getAuthUser(req);
+    const result = await vendorDriversService.remove(user.id, getParamId(req.params.id));
+    return sendSuccess(res, result);
+  });
+
+  uploadDriverDocument = asyncHandler(async (req: Request, res: Response) => {
+    const user = getAuthUser(req);
+    const file = req.file;
+    if (!file) throw new AppError('No file uploaded', 400);
+
+    const driver = await vendorDriversService.uploadDocument(
+      user.id,
+      getParamId(req.params.id),
+      req.body.documentType,
+      {
+        buffer: file.buffer,
+        mimetype: file.mimetype,
+        originalname: file.originalname,
+      },
+    );
+    return sendSuccess(res, driver, 201);
   });
 }
 

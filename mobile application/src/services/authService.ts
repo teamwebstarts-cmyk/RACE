@@ -1,3 +1,7 @@
+import axios from 'axios';
+import * as SecureStore from 'expo-secure-store';
+
+import { API_BASE_URL, TOKEN_KEYS } from '../config/env';
 import { clearTokens, saveTokens, unwrapApi, api } from './api';
 import type { User, VerifyOtpResponse } from '../types/auth';
 
@@ -37,6 +41,20 @@ export async function verifyOtp(payload: VerifyOtpPayload): Promise<VerifyOtpRes
 
 export async function logout(): Promise<void> {
   await clearTokens();
+}
+
+/** Re-issue tokens from DB role (e.g. after vendor registration or admin approval). */
+export async function refreshAuthSession(): Promise<VerifyOtpResponse> {
+  const refreshToken = await SecureStore.getItemAsync(TOKEN_KEYS.REFRESH);
+  if (!refreshToken) {
+    throw new Error('No refresh token');
+  }
+
+  const result = await unwrapApi<VerifyOtpResponse>(
+    axios.post(`${API_BASE_URL}/api/v1/auth/refresh-token`, { refreshToken }),
+  );
+  await saveTokens(result.accessToken, result.refreshToken);
+  return result;
 }
 
 export type { User };

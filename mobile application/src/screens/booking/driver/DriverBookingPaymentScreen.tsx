@@ -110,12 +110,9 @@ export default function DriverBookingPaymentScreen({ navigation }: Props) {
       const bookingId = formatBookingNumber(created.bookingNumber);
 
       setTimeout(() => {
-        navigation.replace('DriverBookingConfirmed', {
-          bookingId,
-          apiBookingId: created.id,
-          service: getDriverTypeLabel(booking.driverType),
-          eta: 'Driver will arrive in 30-60 min',
-          fareBreakdown: breakdown ?? undefined,
+        navigation.replace('DriverAssigned', {
+          bookingId: created.id,
+          bookingType: 'driver',
         });
         resetBooking();
       }, 900);

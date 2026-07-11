@@ -46,6 +46,7 @@ export interface Profile {
   isVerified: boolean;
   isProfileCompleted: boolean;
   role: 'customer' | 'vendor' | 'driver';
+  isAvailable?: boolean;
 }
 
 export interface Service {

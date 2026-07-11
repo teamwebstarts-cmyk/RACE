@@ -18,9 +18,14 @@ export async function loadSessionAfterLogin(): Promise<boolean | undefined> {
 export function clearSessionStores(): void {
   const { useProfileStore } = require('./profileStore') as typeof import('./profileStore');
   const { useVehicleStore } = require('./vehicleStore') as typeof import('./vehicleStore');
+  const { usePartnerRegistrationStore } =
+    require('./partnerRegistrationStore') as typeof import('./partnerRegistrationStore');
+  const { queryClient } = require('../services/queryClient') as typeof import('../services/queryClient');
 
   useProfileStore.getState().clearProfile();
   useVehicleStore.getState().clearVehicles();
+  usePartnerRegistrationStore.getState().reset();
+  queryClient.clear();
 }
 
 export function syncOnboardingRequired(isProfileCompleted: boolean): void {

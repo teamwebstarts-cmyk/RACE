@@ -25,6 +25,10 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
   onboardingRequired: boolean;
+  /** After logout, partner app opens this auth screen instead of splash. */
+  partnerAuthEntry: 'PartnerSplash' | 'PartnerRoleSelection' | 'PartnerLogin';
+  /** Bumps on logout so navigation remounts reliably. */
+  authSessionVersion: number;
   customerOnboardingStep: CustomerOnboardingStep;
   sendOtp: (payload: SendOtpPayload) => Promise<authService.SendOtpResult>;
   verifyOtp: (payload: VerifyOtpPayload) => Promise<void>;
@@ -38,6 +42,7 @@ interface AuthState {
   setOnboardingRequired: (value: boolean) => void;
   setCustomerOnboardingStep: (step: CustomerOnboardingStep) => void;
   setLoading: (value: boolean) => void;
+  clearPartnerAuthEntry: () => void;
 }
 
 function onboardingRequiredForStep(step: CustomerOnboardingStep): boolean {
@@ -120,6 +125,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   error: null,
   onboardingRequired: false,
   customerOnboardingStep: 'profile',
+  partnerAuthEntry: 'PartnerSplash',
+  authSessionVersion: 0,
 
   setAuth: payload =>
     set({
@@ -139,13 +146,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     })),
 
   clearAuth: () =>
-    set({
+    set(state => ({
       user: null,
       isAuthenticated: false,
       onboardingRequired: false,
       customerOnboardingStep: 'profile',
       error: null,
-    }),
+      partnerAuthEntry: state.partnerAuthEntry,
+      authSessionVersion: state.authSessionVersion,
+    })),
+
+  clearPartnerAuthEntry: () => set({ partnerAuthEntry: 'PartnerSplash' }),
 
   sendOtp: async payload => {
     set({ isLoading: true, error: null });
@@ -194,6 +205,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
+    const nextSessionVersion = get().authSessionVersion + 1;
+    set({
+      partnerAuthEntry: 'PartnerRoleSelection',
+      authSessionVersion: nextSessionVersion,
+    });
+
     get().clearAuth();
     clearSessionStores();
 
@@ -205,8 +222,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
 
     await syncReduxLogout();
-    await clearCustomerOnboardingComplete();
-    await authService.logout();
+
+    set({
+      partnerAuthEntry: 'PartnerRoleSelection',
+      authSessionVersion: nextSessionVersion,
+      user: null,
+      isAuthenticated: false,
+      onboardingRequired: false,
+      error: null,
+    });
   },
 
   clearError: () => set({ error: null }),

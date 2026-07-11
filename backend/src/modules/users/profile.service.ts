@@ -17,6 +17,7 @@ function mapProfile(user: IUser): ProfileResponseDto {
     isVerified: user.isVerified,
     isProfileCompleted: user.isProfileCompleted,
     role: user.role,
+    ...(user.role === 'driver' ? { isAvailable: user.isAvailable ?? true } : {}),
   };
 }
 

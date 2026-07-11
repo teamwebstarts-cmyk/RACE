@@ -16,6 +16,7 @@ export class DriverRepository {
     licenseNo: string;
     driverType: string;
     vendorUserId?: Types.ObjectId | string;
+    fleetSource?: 'vendor' | 'admin';
     city: string;
     state?: string;
     vehicleRegistration?: string;
@@ -37,6 +38,7 @@ export class DriverRepository {
         vendorUserId: data.vendorUserId
           ? new Types.ObjectId(data.vendorUserId.toString())
           : undefined,
+        fleetSource: data.fleetSource,
         city: data.city,
         state: data.state ?? 'Odisha',
         vehicleRegistration: data.vehicleRegistration,
@@ -105,10 +107,16 @@ export class DriverRepository {
   async updateManyVendor(
     driverIds: string[],
     vendorUserId: Types.ObjectId | null,
+    fleetSource?: 'vendor' | 'admin',
   ): Promise<void> {
     const update = vendorUserId
-      ? { $set: { 'driverProfile.vendorUserId': vendorUserId } }
-      : { $unset: { 'driverProfile.vendorUserId': 1 } };
+      ? {
+          $set: {
+            'driverProfile.vendorUserId': vendorUserId,
+            'driverProfile.fleetSource': fleetSource ?? 'admin',
+          },
+        }
+      : { $unset: { 'driverProfile.vendorUserId': 1, 'driverProfile.fleetSource': 1 } };
     await UserModel.updateMany({ _id: { $in: driverIds }, role: 'driver' }, update);
   }
 }

@@ -7,6 +7,8 @@ import { TowingBookingModel } from '../towing/towing-booking.model';
 import { DriverBookingModel } from '../driver/driver-booking.model';
 import { canTransition } from './booking-status.constants';
 import { appendStatusHistory } from './booking.helpers';
+import { emitBookingStatusUpdate } from '../../../shared/socket.service';
+import { mapPublicBookingStatus } from './booking-display-status';
 import type { ActiveBookingType } from '../../users/user.model';
 
 const FALLBACK_DISTANCE_KM = 999;
@@ -153,6 +155,12 @@ export async function assignDriverToBooking(
     activeBookingId: new Types.ObjectId(bookingId),
     activeBookingType: bookingType,
   }).exec();
+
+  emitBookingStatusUpdate(bookingId, mapPublicBookingStatus('DRIVER_ASSIGNED'), {
+    internalStatus: 'DRIVER_ASSIGNED',
+    driverAccepted: false,
+    message: 'Driver allotted — awaiting acceptance',
+  });
 }
 
 export async function releaseDriver(driverId: string): Promise<void> {
@@ -161,6 +169,39 @@ export async function releaseDriver(driverId: string): Promise<void> {
     activeBookingId: null,
     activeBookingType: null,
   }).exec();
+}
+
+/** Driver rejects an assigned job — frees driver and returns booking to CONFIRMED for reassignment. */
+export async function unassignDriverFromBooking(
+  bookingId: string,
+  bookingType: ActiveBookingType,
+  driverId: string,
+): Promise<void> {
+  if (bookingType === 'towing') {
+    const booking = await TowingBookingModel.findById(bookingId).exec();
+    if (!booking) throw new NotFoundError('Booking not found');
+    if (!booking.driverId || booking.driverId.toString() !== driverId) {
+      throw new BadRequestError('Booking is not assigned to this driver');
+    }
+    await TowingBookingModel.findByIdAndUpdate(bookingId, {
+      $unset: { driverId: 1 },
+      status: 'CONFIRMED',
+      statusHistory: appendStatusHistory(booking.statusHistory, 'CONFIRMED'),
+    }).exec();
+  } else {
+    const booking = await DriverBookingModel.findById(bookingId).exec();
+    if (!booking) throw new NotFoundError('Booking not found');
+    if (!booking.driverId || booking.driverId.toString() !== driverId) {
+      throw new BadRequestError('Booking is not assigned to this driver');
+    }
+    await DriverBookingModel.findByIdAndUpdate(bookingId, {
+      $unset: { driverId: 1 },
+      status: 'CONFIRMED',
+      statusHistory: appendStatusHistory(booking.statusHistory, 'CONFIRMED'),
+    }).exec();
+  }
+
+  await releaseDriver(driverId);
 }
 
 export async function autoAssignDriver(

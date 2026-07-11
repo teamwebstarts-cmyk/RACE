@@ -5,6 +5,7 @@ import { sendSuccess } from '../../shared/utils/apiResponse';
 import { emitDriverLocation } from '../../shared/socket.service';
 import { getAuthUser, getParamId } from '../../shared/utils/request';
 import { UserModel } from '../users/user.model';
+import { driverSelfService } from './driver-self.service';
 import { driverService } from './driver.service';
 
 export class DriverController {
@@ -52,6 +53,34 @@ export class DriverController {
       req.body,
     );
     return sendSuccess(res, booking);
+  });
+
+  acceptBooking = asyncHandler(async (req: Request, res: Response) => {
+    const user = getAuthUser(req);
+    const booking = await driverService.acceptBooking(
+      user.id,
+      user.role,
+      getParamId(req.params.id),
+      req.body.bookingType,
+    );
+    return sendSuccess(res, booking);
+  });
+
+  rejectBooking = asyncHandler(async (req: Request, res: Response) => {
+    const user = getAuthUser(req);
+    const result = await driverService.rejectBooking(
+      user.id,
+      user.role,
+      getParamId(req.params.id),
+      req.body.bookingType,
+    );
+    return sendSuccess(res, result);
+  });
+
+  registerSelf = asyncHandler(async (req: Request, res: Response) => {
+    const user = getAuthUser(req);
+    const result = await driverSelfService.register(user.id, req.body);
+    return sendSuccess(res, result, 201);
   });
 }
 

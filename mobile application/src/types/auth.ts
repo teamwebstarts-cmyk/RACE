@@ -36,6 +36,7 @@ export interface SendOtpResponse {
   isExistingUser: boolean;
   isProfileCompleted: boolean;
   onboardingRequired?: boolean;
+  devOtp?: string;
 }
 
 export interface VerifyOtpRequest {

@@ -13,10 +13,6 @@ type Props = NativeStackScreenProps<HomeStackParamList, 'DriverBookingConfirmed'
 export default function DriverBookingConfirmedScreen({ navigation, route }: Props) {
   const { t } = useBookingTheme();
   const { bookingId, apiBookingId, service, eta, fareBreakdown } = route.params;
-  const trackParams = {
-    bookingId: apiBookingId,
-    bookingType: 'driver' as const,
-  };
 
   return (
     <TowingBookingLayout
@@ -25,7 +21,12 @@ export default function DriverBookingConfirmedScreen({ navigation, route }: Prop
       showStep={false}
       accentColor={DRIVER_ACCENT}
       buttonLabel="Track Driver"
-      onContinue={() => navigation.navigate('DriverTrack', trackParams)}
+      onContinue={() =>
+        navigation.navigate('DriverAssigned', {
+          bookingId: apiBookingId,
+          bookingType: 'driver',
+        })
+      }
       secondaryLabel="Go Home"
       onSecondary={() => navigation.popToTop()}
       hideFooter={false}>

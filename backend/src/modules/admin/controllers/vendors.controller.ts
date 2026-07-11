@@ -70,11 +70,49 @@ export const adminVendorsController = {
     ));
   }),
 
+  unassignDriver: asyncHandler(async (req: Request, res: Response) => {
+    sendSuccess(
+      res,
+      await adminVendorsService.unassignDriver(
+        routeParam(req.params.id),
+        routeParam(req.params.driverId),
+        getAdminActor(req),
+      ),
+    );
+  }),
+
   listVehicles: asyncHandler(async (req: Request, res: Response) => {
     sendSuccess(res, await adminVehiclesService.listByVendor(routeParam(req.params.id)));
   }),
 
   createVehicle: asyncHandler(async (req: Request, res: Response) => {
     sendSuccess(res, await adminVehiclesService.create(routeParam(req.params.id), req.body, getAdminActor(req)), 201);
+  }),
+
+  listFleetDrivers: asyncHandler(async (req: Request, res: Response) => {
+    sendSuccess(res, await adminVendorsService.listFleetDrivers(routeParam(req.params.id)));
+  }),
+
+  createFleetDriver: asyncHandler(async (req: Request, res: Response) => {
+    sendSuccess(
+      res,
+      await adminVendorsService.createFleetDriver(
+        routeParam(req.params.id),
+        req.body,
+        getAdminActor(req),
+      ),
+      201,
+    );
+  }),
+
+  removeFleetDriver: asyncHandler(async (req: Request, res: Response) => {
+    sendSuccess(
+      res,
+      await adminVendorsService.removeFleetDriver(
+        routeParam(req.params.id),
+        routeParam(req.params.driverId),
+        getAdminActor(req),
+      ),
+    );
   }),
 };

@@ -1,58 +1,62 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
+import StackBackButton from '../components/navigation/StackBackButton';
+import PartnerTabBar from '../components/partner/PartnerTabBar';
+import { useAppSelector } from '../redux/hooks';
 import PartnerHomeScreen from '../screens/partner/PartnerHomeScreen';
 import PartnerJobsScreen from '../screens/partner/PartnerJobsScreen';
+import PartnerActiveJobScreen from '../screens/partner/PartnerActiveJobScreen';
 import PartnerAccountScreen from '../screens/partner/PartnerAccountScreen';
-import VerificationStatusScreen from '../screens/vendor/VerificationStatusScreen';
-import BrandLogo from '../components/ui/BrandLogo';
+import PartnerVerificationStatusScreen from '../screens/partner/PartnerVerificationStatusScreen';
+import VendorDriversScreen from '../screens/partner/VendorDriversScreen';
 import type {
   PartnerAccountStackParamList,
+  PartnerJobsStackParamList,
   PartnerTabParamList,
-} from '../types/navigation';
+} from '../types/partnerNavigation';
 import { colors, typography } from '../theme';
 
 const Tab = createBottomTabNavigator<PartnerTabParamList>();
 const AccountStack = createNativeStackNavigator<PartnerAccountStackParamList>();
+const JobsStack = createNativeStackNavigator<PartnerJobsStackParamList>();
 
 const stackScreenOptions = {
-  headerStyle: { backgroundColor: colors.surfaceDark },
-  headerTitle: () => <BrandLogo size="small" />,
+  headerStyle: {
+    backgroundColor: colors.background,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  headerTintColor: colors.dark,
+  headerTitleStyle: {
+    fontSize: 17,
+    fontWeight: typography.weights.bold,
+    color: colors.dark,
+  },
   headerTitleAlign: 'center' as const,
-  headerTintColor: colors.primary,
   headerShadowVisible: false,
   headerBackTitleVisible: false,
-  contentStyle: { backgroundColor: colors.backgroundSoft },
+  headerBackVisible: false,
+  headerLeft: (props: Parameters<typeof StackBackButton>[0]) => <StackBackButton {...props} />,
+  contentStyle: { backgroundColor: colors.background },
 };
 
-const TAB_ICONS: Record<
-  keyof PartnerTabParamList,
-  { focused: keyof typeof Ionicons.glyphMap; default: keyof typeof Ionicons.glyphMap }
-> = {
-  PartnerHome: { focused: 'speedometer', default: 'speedometer-outline' },
-  PartnerJobs: { focused: 'navigate', default: 'navigate-outline' },
-  PartnerAccount: { focused: 'person', default: 'person-outline' },
-};
-
-function TabIcon({
-  routeName,
-  focused,
-}: {
-  routeName: keyof PartnerTabParamList;
-  focused: boolean;
-}) {
-  const icons = TAB_ICONS[routeName];
+function PartnerJobsStackNavigator() {
   return (
-    <View style={[tabIconStyles.wrap, focused && tabIconStyles.active]}>
-      <Ionicons
-        name={focused ? icons.focused : icons.default}
-        size={20}
-        color={focused ? colors.primary : colors.text}
+    <JobsStack.Navigator screenOptions={stackScreenOptions}>
+      <JobsStack.Screen
+        name="PartnerJobsList"
+        component={PartnerJobsScreen}
+        options={{ headerShown: false }}
       />
-    </View>
+      <JobsStack.Screen
+        name="PartnerActiveJob"
+        component={PartnerActiveJobScreen}
+        options={{ headerTitle: 'Active job' }}
+      />
+    </JobsStack.Navigator>
   );
 }
 
@@ -65,39 +69,35 @@ function PartnerAccountStackNavigator() {
         options={{ headerShown: false }}
       />
       <AccountStack.Screen
+        name="VendorDrivers"
+        component={VendorDriversScreen}
+        options={{ headerTitle: 'My Drivers' }}
+      />
+      <AccountStack.Screen
         name="VendorVerificationStatus"
-        component={VerificationStatusScreen}
-        options={{
-          headerTitle: 'Verification Status',
-          headerTitleStyle: { fontWeight: typography.weights.bold, color: colors.textLight },
-        }}
+        component={PartnerVerificationStatusScreen}
+        options={{ headerShown: false }}
       />
     </AccountStack.Navigator>
   );
 }
 
 export default function PartnerNavigator() {
+  const user = useAppSelector(state => state.auth.user);
+  const isDriver = user?.role === 'driver';
+
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
-        headerShown: false,
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.text,
-        tabBarStyle: {
-          backgroundColor: colors.surfaceDark,
-          borderTopColor: colors.surfaceDarker,
-          height: 68,
-          paddingBottom: 8,
-          paddingTop: 8,
-        },
-        tabBarLabelStyle: {
-          fontSize: typography.sizes.sm,
-          fontWeight: typography.weights.semibold,
-        },
-        tabBarIcon: ({ focused }) => <TabIcon routeName={route.name} focused={focused} />,
-      })}>
+      tabBar={props => <PartnerTabBar {...props} />}
+      screenOptions={{ headerShown: false }}>
       <Tab.Screen name="PartnerHome" component={PartnerHomeScreen} options={{ title: 'Dashboard' }} />
-      <Tab.Screen name="PartnerJobs" component={PartnerJobsScreen} options={{ title: 'Jobs' }} />
+      {isDriver ? (
+        <Tab.Screen
+          name="PartnerJobs"
+          component={PartnerJobsStackNavigator}
+          options={{ title: 'Jobs' }}
+        />
+      ) : null}
       <Tab.Screen
         name="PartnerAccount"
         component={PartnerAccountStackNavigator}
@@ -106,16 +106,3 @@ export default function PartnerNavigator() {
     </Tab.Navigator>
   );
 }
-
-const tabIconStyles = StyleSheet.create({
-  wrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  active: {
-    backgroundColor: colors.surfaceDarker,
-  },
-});

@@ -48,6 +48,19 @@ export async function getVendorStatus(): Promise<VendorProfileResponse> {
   return data.data;
 }
 
+export interface VendorDashboardStats {
+  jobsToday: number;
+  earningsToday: number;
+  earningsTotal: number;
+}
+
+export async function getVendorDashboard(): Promise<VendorDashboardStats> {
+  const { data } = await apiClient.get<ApiSuccessResponse<VendorDashboardStats>>(
+    API_ENDPOINTS.vendorDashboard,
+  );
+  return data.data;
+}
+
 export interface UploadProgressHandler {
   (progress: number): void;
 }

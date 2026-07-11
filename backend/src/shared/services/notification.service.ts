@@ -30,6 +30,25 @@ export class NotificationService {
       title: payload.title,
     });
 
+    if (process.env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.log('\n══════ PARTNER NOTIFICATION ══════');
+      // eslint-disable-next-line no-console
+      console.log(`Event : ${payload.event}`);
+      // eslint-disable-next-line no-console
+      console.log(`User  : ${payload.userId}`);
+      if (payload.mobileNumber) {
+        // eslint-disable-next-line no-console
+        console.log(`Phone : ${payload.mobileNumber}`);
+      }
+      // eslint-disable-next-line no-console
+      console.log(`${payload.title}`);
+      // eslint-disable-next-line no-console
+      console.log(payload.body);
+      // eslint-disable-next-line no-console
+      console.log('══════════════════════════════════\n');
+    }
+
     // Production hooks:
     // await pushProvider.send(payload.userId, { title, body });
     // await smsProvider.send(payload.mobileNumber, payload.body);

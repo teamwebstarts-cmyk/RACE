@@ -5,7 +5,9 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { Provider as ReduxProvider } from 'react-redux';
 
 import { images } from './src/assets';
-import AppNavigator from './src/navigation/AppNavigator';
+import PartnerAppNavigator from './src/navigation/PartnerAppNavigator';
+import RootNavigator from './src/navigation/RootNavigator';
+import { isPartnerApp } from './src/config/appVariant';
 import { SosDetailsProvider } from './src/context/SosDetailsContext';
 import { queryClient } from './src/services/queryClient';
 import { store } from './src/redux/store';
@@ -34,7 +36,7 @@ function AppRoot() {
         backgroundColor={colors.background}
         translucent={Platform.OS === 'android'}
       />
-      <AppNavigator />
+      {isPartnerApp ? <PartnerAppNavigator /> : <RootNavigator />}
     </>
   );
 }

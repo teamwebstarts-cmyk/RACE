@@ -58,8 +58,12 @@ export const colors = {
   accentOrange: '#F4A115',
   accentRed: sharedColors.error,
   warning: '#F4A115',
+  partnerRed: sharedColors.primary,
+  partnerRedLight: sharedColors.goldLight,
+  partnerOrangeLight: sharedColors.goldLight,
   overlay: 'rgba(26, 26, 26, 0.92)',
   shadow: 'rgba(0, 0, 0, 0.12)',
+
   categories: categoryThemes,
 };
 

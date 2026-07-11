@@ -296,6 +296,8 @@ export interface VendorDetail extends VendorListItem {
   recentBookings: VendorBookingRow[];
   documents: VendorDocument[];
   assignedDrivers: VendorAssignedDriver[];
+  /** Vendor self-onboarded fleet (Partner app → My Drivers) */
+  myDrivers?: VendorAssignedDriver[];
   activities: ActivityItem[];
   quickStats: VendorQuickStat[];
   verificationStage?: string;
@@ -422,11 +424,13 @@ export interface BookingListItem {
   vendorName: string;
   driverId?: string;
   driverName?: string;
-  driverAssignment?: 'Assigned' | 'Unassigned';
+  driverAssignment?: 'Assigned' | 'Unassigned' | 'Awaiting acceptance';
   service: string;
   serviceType: string;
   amount: number;
   status: BookingStatus;
+  /** Raw DB status when display status is masked (e.g. DRIVER_ASSIGNED → PENDING). */
+  internalStatus?: string;
   date: string;
   city: string;
   fareBreakdown?: Record<string, unknown>;
@@ -512,6 +516,7 @@ export interface BookingStatusCounts {
   enRoute: number;
   completed: number;
   cancelled: number;
+  pending?: number;
 }
 
 // ─── Financial Management ────────────────────────────────────────────────────

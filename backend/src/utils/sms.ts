@@ -1,5 +1,19 @@
 import twilio from 'twilio';
 
+import { AppError } from '../shared/utils/errors';
+import { logger } from '../shared/utils/logger';
+
+function logDevOtp(to: string, otp: string): void {
+  const toNumber = formatIndianMobile(to);
+  const banner = `══════ DEV OTP ══════  ${toNumber}  →  ${otp}  ══════════════════`;
+  console.log(`\n${banner}\n`);
+  logger.info('DEV OTP (use in app — SMS not sent)', { to: toNumber, otp });
+}
+
+/**
+ * Sends OTP via Twilio SMS.
+ * Customer app and Partner app share this path — no fixed/demo OTP.
+ */
 export async function sendSms(to: string, otp: string): Promise<void> {
   const message = `Your RACE Service OTP is ${otp}. Valid for 5 minutes. Do not share with anyone.`;
 
@@ -8,24 +22,23 @@ export async function sendSms(to: string, otp: string): Promise<void> {
   const twilioPhone = process.env.TWILIO_PHONE_NUMBER;
   const twilioConfigured = Boolean(accountSid && authToken && twilioPhone);
 
-  // Always log the OTP in development so it can be read from the server console.
-  if (process.env.NODE_ENV === 'development') {
-    console.log(`[SMS DEV] To: ${to} | OTP: ${otp}`);
+  if (!twilioConfigured) {
+    if (process.env.NODE_ENV !== 'production') {
+      logDevOtp(to, otp);
+      return;
+    }
+
+    throw new AppError(
+      'SMS service is not configured. Set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER.',
+      503,
+    );
   }
 
-  // If Twilio isn't configured, stop here (dev already logged the OTP above).
-  if (!twilioConfigured) {
-    if (process.env.NODE_ENV !== 'development') {
-      console.warn('[SMS] Twilio not configured — SMS not sent');
-    }
-    return;
-  }
+  const toNumber = formatIndianMobile(to);
 
   try {
     const client = twilio(accountSid, authToken);
-
     const from = formatE164(twilioPhone ?? '');
-    const toNumber = formatIndianMobile(to);
 
     await client.messages.create({
       body: message,
@@ -35,8 +48,15 @@ export async function sendSms(to: string, otp: string): Promise<void> {
 
     console.log(`[SMS SENT] To: ${toNumber}`);
   } catch (error) {
-    console.error(`[SMS ERROR] Failed to send to ${to}:`, error);
-    // Don't throw — OTP still saved in DB and logged to console in dev.
+    console.error(`[SMS ERROR] Failed to send to ${toNumber}:`, error);
+
+    // Dev fallback: Twilio trial only texts verified numbers — still allow login via terminal OTP.
+    if (process.env.NODE_ENV !== 'production') {
+      logDevOtp(toNumber, otp);
+      return;
+    }
+
+    throw new AppError('Failed to send OTP SMS. Please try again.', 502);
   }
 }
 

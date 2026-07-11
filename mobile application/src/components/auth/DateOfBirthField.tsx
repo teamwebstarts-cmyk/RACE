@@ -4,6 +4,7 @@ import { Calendar } from 'lucide-react-native';
 
 import DateOfBirthPickerModal from './DateOfBirthPickerModal';
 import FormField from './FormField';
+import { colors } from '../../theme';
 
 interface DateOfBirthFieldProps {
   value: string;
@@ -11,6 +12,7 @@ interface DateOfBirthFieldProps {
   error?: string;
   scale?: number;
   required?: boolean;
+  variant?: 'filled' | 'outlined';
 }
 
 export default function DateOfBirthField({
@@ -19,18 +21,20 @@ export default function DateOfBirthField({
   error,
   scale = 1,
   required = true,
+  variant = 'outlined',
 }: DateOfBirthFieldProps) {
   const [showPicker, setShowPicker] = useState(false);
 
   return (
     <View>
       <FormField
-        variant="outlined"
-        compact
+        variant={variant}
+        compact={variant === 'outlined'}
         scale={scale}
         label="Date of Birth"
         required={required}
         Icon={Calendar}
+        iconColor={colors.primary}
         value={value}
         placeholder="Tap to select date"
         editable={false}

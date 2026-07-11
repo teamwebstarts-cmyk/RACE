@@ -1,7 +1,7 @@
 import React, { type ReactNode } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { colors, radius, spacing } from '../../theme';
+import { colors, radius, shadows, spacing } from '../../theme';
 
 interface GlassCardProps {
   children: ReactNode;
@@ -9,6 +9,7 @@ interface GlassCardProps {
   padded?: boolean;
 }
 
+/** Light RACE card surface (matches customer app card treatment). */
 export default function GlassCard({ children, style, padded = true }: GlassCardProps) {
   return (
     <View style={[styles.card, padded && styles.padded, style]}>
@@ -19,11 +20,12 @@ export default function GlassCard({ children, style, padded = true }: GlassCardP
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.glass.background,
+    backgroundColor: colors.cardBg,
     borderRadius: radius.card,
     borderWidth: 1,
-    borderColor: colors.glass.border,
+    borderColor: colors.border,
     overflow: 'hidden',
+    ...shadows.card,
   },
   padded: {
     padding: spacing.lg,

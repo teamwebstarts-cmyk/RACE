@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { approveVendor, createVendorVehicle, deleteVendorVehicle, getVendorById, rejectVendor, reviewVendorDocument, updateVendorVehicle } from '@race/api';
+import { approveVendor, assignVendorDrivers, createVendorVehicle, deleteVendorVehicle, getVendorById, rejectVendor, reviewVendorDocument, unassignVendorDriver, updateVendorVehicle } from '@race/api';
 
 export function useVendorDetail(id: string) {
   return useQuery({
@@ -15,8 +15,8 @@ export function useVendorActions(id: string) {
 
   const approve = useMutation({
     mutationFn: () => approveVendor(id),
-    onSuccess: (data) => {
-      queryClient.setQueryData(['vendor', id], data);
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['vendor', id] });
       void queryClient.invalidateQueries({ queryKey: ['vendors'] });
       void queryClient.invalidateQueries({ queryKey: ['vendor-status-counts'] });
     },
@@ -24,8 +24,8 @@ export function useVendorActions(id: string) {
 
   const reject = useMutation({
     mutationFn: () => rejectVendor(id),
-    onSuccess: (data) => {
-      queryClient.setQueryData(['vendor', id], data);
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['vendor', id] });
       void queryClient.invalidateQueries({ queryKey: ['vendors'] });
       void queryClient.invalidateQueries({ queryKey: ['vendor-status-counts'] });
     },
@@ -97,4 +97,28 @@ export function useVendorVehicleMutations(vendorId: string) {
   });
 
   return { createVehicle, updateVehicle, removeVehicle };
+}
+
+export function useVendorDriverAssignmentMutations(vendorId: string) {
+  const queryClient = useQueryClient();
+
+  const assignDrivers = useMutation({
+    mutationFn: (driverIds: string[]) => assignVendorDrivers(vendorId, driverIds),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['vendor', vendorId] });
+      void queryClient.invalidateQueries({ queryKey: ['vendors'] });
+      void queryClient.invalidateQueries({ queryKey: ['drivers'] });
+    },
+  });
+
+  const unassignDriver = useMutation({
+    mutationFn: (driverId: string) => unassignVendorDriver(vendorId, driverId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['vendor', vendorId] });
+      void queryClient.invalidateQueries({ queryKey: ['vendors'] });
+      void queryClient.invalidateQueries({ queryKey: ['drivers'] });
+    },
+  });
+
+  return { assignDrivers, unassignDriver };
 }

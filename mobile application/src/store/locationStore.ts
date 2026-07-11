@@ -1,6 +1,7 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
+
+import { createSafeStorage } from '../utils/safeStorage';
 
 import {
   findServiceableCity,
@@ -84,7 +85,7 @@ export const useLocationStore = create<LocationState>()(
     }),
     {
       name: 'race-location',
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => createSafeStorage()),
       partialize: state => ({
         selectedLocation: state.selectedLocation,
         isServiceable: state.isServiceable,
