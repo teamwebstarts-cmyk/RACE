@@ -1,4 +1,4 @@
-import { AdminPermission, AdminRole, getPermissionsForRole } from '../modules/admin/shared/rbac';
+import { AdminPermission, AdminRole, getPermissionsForRole } from '../services/src/admin/rbac';
 import { env } from './env';
 
 /** Fixed platform admin identity — not stored in MongoDB. */

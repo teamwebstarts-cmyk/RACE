@@ -173,6 +173,7 @@ export default function ProfileAddressFields({
         visible={showLocationPicker}
         title="Select your address"
         confirmLabel="Confirm address"
+        openSearchOnShow
         onClose={() => setShowLocationPicker(false)}
         onLocationSelected={handleLocationSelect}
       />

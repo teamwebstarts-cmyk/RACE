@@ -1,0 +1,29 @@
+import { Router } from 'express';
+
+import { vehicleController } from './vehicle';
+import {
+  createVehicleSchema,
+  updateVehicleSchema,
+  vehicleIdSchema,
+} from '../../services/src/vehicleValidator';
+import { validate } from '../../middleware/src/validation';
+import { authMiddleware } from '../../middleware/src/auth';
+
+const router = Router();
+
+router.get('/:id/verify', validate(vehicleIdSchema, 'params'), vehicleController.verifyQr);
+
+router.use(authMiddleware);
+
+router.post('/', validate(createVehicleSchema), vehicleController.create);
+router.get('/', vehicleController.list);
+router.get('/:id', validate(vehicleIdSchema, 'params'), vehicleController.getById);
+router.put(
+  '/:id',
+  validate(vehicleIdSchema, 'params'),
+  validate(updateVehicleSchema),
+  vehicleController.update,
+);
+router.delete('/:id', validate(vehicleIdSchema, 'params'), vehicleController.remove);
+
+export default router;

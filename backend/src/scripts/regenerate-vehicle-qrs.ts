@@ -1,6 +1,6 @@
 import { connectDatabase, disconnectDatabase } from '../config/database';
 import { env } from '../config/env';
-import { vehicleService } from '../modules/vehicles/vehicle.service';
+import { vehicleService } from '../services/src/vehicle';
 
 async function main(): Promise<void> {
   await connectDatabase();

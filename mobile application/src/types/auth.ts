@@ -28,6 +28,7 @@ export type User = AuthUser;
 
 export interface SendOtpRequest {
   mobileNumber: string;
+  role: 'customer' | 'vendor' | 'driver';
 }
 
 export interface SendOtpResponse {
@@ -42,6 +43,7 @@ export interface SendOtpResponse {
 export interface VerifyOtpRequest {
   mobileNumber: string;
   otp: string;
+  role: 'customer' | 'vendor' | 'driver';
 }
 
 export interface VerifyOtpResponse {

@@ -1,5 +1,5 @@
 import { env } from './env';
-import { logger } from '../shared/utils/logger';
+import { logger } from '../utils/src/logger';
 
 export interface CacheClient {
   get(key: string): Promise<string | null>;

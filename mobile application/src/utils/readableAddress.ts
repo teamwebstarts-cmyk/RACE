@@ -54,6 +54,7 @@ export function formatReadableAddress(
   maxLen = 48,
 ): string {
   if (!address?.trim()) return '—';
+  if (/^lat\s*:/i.test(address.trim())) return 'Selected location';
 
   const parts = splitAddressParts(address);
   const cleaned = parts.filter(part => !isNoisePart(part));

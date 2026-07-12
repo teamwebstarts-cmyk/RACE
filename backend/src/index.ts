@@ -3,12 +3,12 @@ import { createServer } from 'http';
 import { connectDatabase, disconnectDatabase } from './config/database';
 import { connectCache, disconnectCache } from './config/cache';
 import { env } from './config/env';
-import { initializeSocket } from './shared/socket.service';
-import { logger } from './shared/utils/logger';
+import { initializeSocket } from './services/src/socket';
+import { logger } from './utils/src/logger';
 
 async function bootstrap(): Promise<void> {
   await connectDatabase();
-  const { ensureDatabaseIndexes } = await import('./database/indexes');
+  const { ensureDatabaseIndexes } = await import('./database/src/indexes');
   await ensureDatabaseIndexes();
   await connectCache();
 

@@ -1,1 +1,1 @@
-export { connectDatabase, disconnectDatabase, getDatabaseConnection } from '../database/connection';
+export { connectDatabase, disconnectDatabase, getDatabaseConnection } from '../database/src/connection';

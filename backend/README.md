@@ -66,11 +66,14 @@ See `.env.example` for all variables.
 
 ## Architecture
 
+Layered layout (see `src/STRUCTURE.md`):
+
 ```
-Controller → Service → Repository → Model
-                ↓
-            Validator (Zod DTO)
+controller → services → models
+middleware / auth / storage / utils
 ```
+
+App roles: `customer` | `vendor` | `driver`. Admin RBAC is separate.
 
 ## Jira Readiness
 

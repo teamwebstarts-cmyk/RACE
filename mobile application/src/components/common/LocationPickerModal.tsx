@@ -37,10 +37,36 @@ export interface LocationPickerModalProps {
   confirmLabel?: string;
   initialLocation?: Pick<LocationResult, 'latitude' | 'longitude' | 'address'>;
   accentColor?: string;
+  /** Open the search overlay as soon as the modal appears */
+  openSearchOnShow?: boolean;
 }
 
-function splitAddress(address: string): { title: string; subtitle: string } {
-  const readable = formatLocationDisplay(address);
+function splitAddress(location: LocationResult | null): { title: string; subtitle: string } {
+  if (!location) {
+    return { title: 'Selected location', subtitle: '' };
+  }
+
+  const structured = [
+    location.name || [location.streetNumber, location.route].filter(Boolean).join(' '),
+    location.sublocality,
+    location.city,
+    location.state,
+    location.pincode,
+  ]
+    .map(part => part?.trim())
+    .filter(Boolean);
+
+  if (structured.length) {
+    return {
+      title: structured[0] ?? 'Selected location',
+      subtitle: structured.slice(1).join(', '),
+    };
+  }
+
+  const readable = formatLocationDisplay(location.displayLabel || location.address);
+  if (/^lat\s*:/i.test(readable) || readable === '—') {
+    return { title: 'Selected location', subtitle: 'Search or drag the map to refine' };
+  }
   const parts = readable.split(',').map(part => part.trim()).filter(Boolean);
   if (parts.length <= 1) {
     return { title: readable || 'Selected location', subtitle: '' };
@@ -59,6 +85,7 @@ export default function LocationPickerModal({
   confirmLabel = 'Confirm location',
   initialLocation,
   accentColor = LOCATION_ACCENT,
+  openSearchOnShow = false,
 }: LocationPickerModalProps) {
   const apiKey = getGoogleMapsApiKey();
   const insets = useSafeAreaInsets();
@@ -110,6 +137,11 @@ export default function LocationPickerModal({
       return;
     }
 
+    setSearchFailed(!apiKey);
+    if (openSearchOnShow) {
+      setShowSearch(true);
+    }
+
     const lat = initialLocation?.latitude ?? BHUBANESWAR_DEFAULT.latitude;
     const lng = initialLocation?.longitude ?? BHUBANESWAR_DEFAULT.longitude;
     regionRef.current = {
@@ -119,7 +151,14 @@ export default function LocationPickerModal({
       longitudeDelta: BHUBANESWAR_DEFAULT.longitudeDelta,
     };
     void resolveRegion(regionRef.current);
-  }, [visible, initialLocation?.latitude, initialLocation?.longitude, resolveRegion]);
+  }, [
+    visible,
+    initialLocation?.latitude,
+    initialLocation?.longitude,
+    resolveRegion,
+    openSearchOnShow,
+    apiKey,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -181,7 +220,7 @@ export default function LocationPickerModal({
     onClose();
   }, [onClose, onLocationSelected, selected]);
 
-  const addressParts = splitAddress(selected?.address ?? '');
+  const addressParts = splitAddress(selected);
   const mapRegion = {
     latitude: regionRef.current.latitude,
     longitude: regionRef.current.longitude,
@@ -296,12 +335,14 @@ export default function LocationPickerModal({
                 keyboardShouldPersistTaps="always"
                 listViewDisplayed
                 GooglePlacesDetailsQuery={{
-                  fields: 'formatted_address,geometry,address_components,place_id',
+                  fields: 'formatted_address,geometry,address_components,place_id,name',
                 }}
               />
             ) : (
               <Text style={styles.fallbackSearchText}>
-                Search unavailable. Drag the map or use GPS.
+                Address search needs a Google Maps API key in `.env` (`EXPO_PUBLIC_GOOGLE_MAPS_KEY`).
+                You can still drag the map or use GPS — street, city, state and PIN will fill from the
+                device location service.
               </Text>
             )}
           </View>

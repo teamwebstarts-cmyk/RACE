@@ -7,11 +7,13 @@ import type { User, VerifyOtpResponse } from '../types/auth';
 
 export interface SendOtpPayload {
   mobileNumber: string;
+  role?: 'customer' | 'vendor' | 'driver';
 }
 
 export interface VerifyOtpPayload {
   mobileNumber: string;
   otp: string;
+  role?: 'customer' | 'vendor' | 'driver';
 }
 
 export interface SendOtpResult {
@@ -24,7 +26,10 @@ export interface SendOtpResult {
 
 export async function sendOtp(payload: SendOtpPayload): Promise<SendOtpResult> {
   return unwrapApi(
-    api.post('/api/v1/auth/send-otp', { mobileNumber: payload.mobileNumber }),
+    api.post('/api/v1/auth/send-otp', {
+      mobileNumber: payload.mobileNumber,
+      role: payload.role ?? 'customer',
+    }),
   );
 }
 
@@ -33,6 +38,7 @@ export async function verifyOtp(payload: VerifyOtpPayload): Promise<VerifyOtpRes
     api.post('/api/v1/auth/verify-otp', {
       mobileNumber: payload.mobileNumber,
       otp: payload.otp,
+      role: payload.role ?? 'customer',
     }),
   );
   await saveTokens(result.accessToken, result.refreshToken);

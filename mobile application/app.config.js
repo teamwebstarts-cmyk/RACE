@@ -60,7 +60,7 @@ module.exports = {
       ],
     ],
     extra: {
-      apiUrl: process.env.EXPO_PUBLIC_API_URL ?? 'http://192.168.1.7:3000',
+      apiUrl: process.env.EXPO_PUBLIC_API_URL ?? 'http://192.168.1.3:3000',
       googleMapsApiKey,
     },
   },

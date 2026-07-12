@@ -107,9 +107,19 @@ export default function PartnerOtpVerificationScreen({ navigation, route }: Prop
       setError('');
 
       try {
-        const result = await verifyOtpMutation.mutateAsync({ mobileNumber, otp: code });
-        setVerified(true);
         const role = resolvePartnerRole();
+        if (!role) {
+          setError('Select Vendor or Driver before continuing');
+          verifyLockRef.current = false;
+          return;
+        }
+
+        const result = await verifyOtpMutation.mutateAsync({
+          mobileNumber,
+          otp: code,
+          role,
+        });
+        setVerified(true);
         const backendRole = result.user.role;
         const isApprovedPartner =
           (backendRole === 'driver' || backendRole === 'vendor') &&
@@ -157,7 +167,13 @@ export default function PartnerOtpVerificationScreen({ navigation, route }: Prop
     verifyLockRef.current = false;
 
     try {
-      const result = await sendOtpMutation.mutateAsync({ mobileNumber });
+      const role = resolvePartnerRole();
+      if (!role) {
+        setError('Select Vendor or Driver before continuing');
+        return;
+      }
+
+      const result = await sendOtpMutation.mutateAsync({ mobileNumber, role });
       setSecondsLeft(RESEND_SECONDS);
       setOtp('');
       navigation.setParams({

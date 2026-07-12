@@ -26,7 +26,10 @@ function toAuthUser(profile: Profile): AuthUser {
 
 export async function sendOtp(payload: SendOtpRequest): Promise<SendOtpResponse> {
   return unwrapApi(
-    api.post('/api/v1/auth/send-otp', { mobileNumber: payload.mobileNumber }),
+    api.post('/api/v1/auth/send-otp', {
+      mobileNumber: payload.mobileNumber,
+      role: payload.role,
+    }),
   );
 }
 
@@ -34,6 +37,7 @@ export async function verifyOtp(payload: VerifyOtpRequest): Promise<VerifyOtpRes
   return authService.verifyOtp({
     mobileNumber: payload.mobileNumber,
     otp: payload.otp,
+    role: payload.role,
   });
 }
 

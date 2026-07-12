@@ -5,11 +5,11 @@ import helmet from 'helmet';
 import path from 'path';
 
 import { env } from './config/env';
-import { errorHandler, notFoundHandler } from './middleware/error.middleware';
-import { loggerMiddleware } from './middleware/logger.middleware';
-import { globalRateLimiter } from './middleware/rateLimiter.middleware';
-import apiRoutes from './routes/index';
-import healthRoutes from './routes/health.routes';
+import { errorHandler, notFoundHandler } from './middleware/src/error';
+import { loggerMiddleware } from './middleware/src/logger';
+import { globalRateLimiter } from './middleware/src/rateLimiter';
+import apiRoutes from './controller/src/routesIndex';
+import healthRoutes from './controller/src/healthRoutes';
 
 export function createApp() {
   const app = express();

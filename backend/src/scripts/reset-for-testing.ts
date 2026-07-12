@@ -1,28 +1,25 @@
 import dotenv from 'dotenv';
 
-import { connectDatabase, disconnectDatabase, getDatabaseConnection } from '../database/connection';
-import { AdminNotificationModel } from '../modules/admin/models/admin-notification.model';
-import { ActivityLogModel } from '../modules/admin/models/activity-log.model';
-import { BookingModel } from '../modules/bookings/booking.model';
-import { TransactionModel } from '../modules/admin/models/transaction.model';
-import { VendorVehicleModel } from '../modules/admin/models/vendor-vehicle.model';
-import { BookingModel } from '../modules/bookings/booking.model';
-import { DriverBookingModel } from '../modules/bookings/driver/driver-booking.model';
-import { TowingBookingModel } from '../modules/bookings/towing/towing-booking.model';
-import { VendorVehicleModel } from '../modules/admin/models/vendor-vehicle.model';
-import { TransactionModel } from '../modules/admin/models/transaction.model';
-import { SavedLocationModel } from '../modules/locations/location.model';
-import { NotificationPrefsModel } from '../modules/notifications/notification-prefs.model';
-import { NotificationModel } from '../modules/notifications/notification.model';
-import { PaymentMethodModel } from '../modules/payments/payment.model';
-import { PaymentTransactionModel } from '../modules/payments/payment-transaction.model';
-import { WalletModel } from '../modules/payments/wallet.model';
-import { UserSubscriptionModel } from '../modules/subscriptions/subscription.model';
-import { VendorDocumentModel } from '../modules/vendors/vendor-document.model';
-import { UserModel } from '../modules/users/user.model';
-import { VehicleQrCodeModel } from '../modules/vehicles/vehicle-qr.model';
-import { VehicleModel } from '../modules/vehicles/vehicle.model';
-import { OtpLogModel } from '../models/otp-log.model';
+import { connectDatabase, disconnectDatabase, getDatabaseConnection } from '../database/src/connection';
+import { AdminNotificationModel } from '../models/src/adminNotification';
+import { ActivityLogModel } from '../models/src/activityLog';
+import { BookingModel } from '../models/src/booking';
+import { TransactionModel } from '../models/src/transaction';
+import { VendorVehicleModel } from '../models/src/vendorVehicle';
+import { DriverBookingModel } from '../models/src/driverBooking';
+import { TowingBookingModel } from '../models/src/towingBooking';
+import { SavedLocationModel } from '../models/src/location';
+import { NotificationPrefsModel } from '../models/src/notificationPrefs';
+import { NotificationModel } from '../models/src/notification';
+import { PaymentMethodModel } from '../models/src/payment';
+import { PaymentTransactionModel } from '../models/src/paymentTransaction';
+import { WalletModel } from '../models/src/wallet';
+import { UserSubscriptionModel } from '../models/src/subscription';
+import { VendorDocumentModel } from '../models/src/vendorDocument';
+import { UserModel } from '../models/src/user';
+import { VehicleQrCodeModel } from '../models/src/vehicleQr';
+import { VehicleModel } from '../models/src/vehicle';
+import { OtpLogModel } from '../models/src/otpLog';
 
 dotenv.config();
 

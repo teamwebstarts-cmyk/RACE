@@ -30,6 +30,7 @@ export default function PartnerLoginScreen({ navigation, route }: Props) {
   const loading = useAppSelector((state) => state.auth.loading);
   const signupAccountType = useAppSelector((state) => state.onboarding.signupAccountType);
   const setSelectedRole = usePartnerOnboardingStore((state) => state.setSelectedRole);
+  const selectedRole = usePartnerOnboardingStore((state) => state.selectedRole);
 
   const [mobileNumber, setMobileNumber] = useState('');
   const [error, setError] = useState('');
@@ -43,15 +44,23 @@ export default function PartnerLoginScreen({ navigation, route }: Props) {
     }
   }, [route.params?.role, setSelectedRole]);
 
+  const partnerRole =
+    route.params?.role ??
+    (signupAccountType === 'vendor' || signupAccountType === 'driver'
+      ? signupAccountType
+      : null) ??
+    selectedRole;
+
   const roleLabel =
-    signupAccountType === 'vendor'
-      ? 'Vendor'
-      : signupAccountType === 'driver'
-        ? 'Driver'
-        : null;
+    partnerRole === 'vendor' ? 'Vendor' : partnerRole === 'driver' ? 'Driver' : null;
 
   const handleSendOtp = async () => {
     setError('');
+
+    if (!partnerRole) {
+      setError('Select Vendor or Driver before continuing');
+      return;
+    }
 
     if (!isValid) {
       setError('Enter a valid 10-digit mobile number');
@@ -59,7 +68,10 @@ export default function PartnerLoginScreen({ navigation, route }: Props) {
     }
 
     try {
-      const result = await sendOtpMutation.mutateAsync({ mobileNumber });
+      const result = await sendOtpMutation.mutateAsync({
+        mobileNumber,
+        role: partnerRole,
+      });
       navigation.navigate('PartnerOtpVerification', {
         mobileNumber,
         isExistingUser: result.isExistingUser ?? false,

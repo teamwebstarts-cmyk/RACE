@@ -86,8 +86,25 @@ export default function PartnerRoleSelectionScreen({ navigation }: Props) {
       headerExtra={<PartnerProgressBar total={4} activeIndex={1} />}
       footer={
         <Pressable
-          onPress={() => goToLogin()}
-          style={({ pressed }) => [styles.footerLink, pressed && styles.pressed]}>
+          disabled={!selectedRole}
+          onPress={() => {
+            if (!selectedRole) {
+              return;
+            }
+            setSelectedRole(selectedRole);
+            dispatch(
+              setSignupPath({
+                accountType: selectedRole,
+                vendorType: null,
+              }),
+            );
+            goToLogin(selectedRole);
+          }}
+          style={({ pressed }) => [
+            styles.footerLink,
+            !selectedRole && styles.footerLinkDisabled,
+            pressed && selectedRole && styles.pressed,
+          ]}>
           <Text style={styles.footerText}>
             Already have an account? <Text style={styles.footerLinkText}>Login</Text>
           </Text>
@@ -168,6 +185,9 @@ const styles = StyleSheet.create({
   footerLink: {
     alignItems: 'center',
     paddingVertical: spacing.xs,
+  },
+  footerLinkDisabled: {
+    opacity: 0.45,
   },
   footerText: {
     color: colors.dark,

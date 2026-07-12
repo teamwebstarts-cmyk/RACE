@@ -108,7 +108,7 @@ export default function VendorBusinessAddressScreen({ navigation, route }: Props
         Icon={MapPin}
         value={vendorAddress.addressLine1}
         onChangeText={(addressLine1) => setVendorAddress({ addressLine1 })}
-        placeholder="Enter address line 1"
+        placeholder="House / street / building"
         error={errors.addressLine1}
       />
       <FormField
@@ -116,14 +116,14 @@ export default function VendorBusinessAddressScreen({ navigation, route }: Props
         optional
         value={vendorAddress.addressLine2}
         onChangeText={(addressLine2) => setVendorAddress({ addressLine2 })}
-        placeholder="Enter address line 2 (optional)"
+        placeholder="Area / locality (optional)"
       />
       <FormField
         label="City"
         required
         value={vendorAddress.city}
         onChangeText={(city) => setVendorAddress({ city })}
-        placeholder="Enter city"
+        placeholder="City"
         error={errors.city}
       />
       <FormField
@@ -152,7 +152,7 @@ export default function VendorBusinessAddressScreen({ navigation, route }: Props
         onChangeText={(pinCode) =>
           setVendorAddress({ pinCode: pinCode.replace(/\D/g, '').slice(0, 6) })
         }
-        placeholder="Enter PIN code"
+        placeholder="6-digit PIN code"
         error={errors.pinCode}
       />
       <FormField
@@ -174,6 +174,7 @@ export default function VendorBusinessAddressScreen({ navigation, route }: Props
         visible={showLocationPicker}
         title="Select your address"
         confirmLabel="Confirm address"
+        openSearchOnShow
         onClose={() => setShowLocationPicker(false)}
         onLocationSelected={handleLocationSelect}
       />
