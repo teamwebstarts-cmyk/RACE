@@ -1,8 +1,8 @@
 import type { UnifiedBookingStatus } from './bookingStatusConstants';
 
-/** Customer + admin list: driver not accepted yet → show as pending (Ola/Uber style). */
+/** Customer + admin list: searching / not accepted yet → pending (Ola/Uber style). */
 export function mapPublicBookingStatus(status: string): string {
-  if (status === 'DRIVER_ASSIGNED') {
+  if (status === 'DRIVER_ASSIGNED' || status === 'CONFIRMED') {
     return 'PENDING';
   }
   return status;

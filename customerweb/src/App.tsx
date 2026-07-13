@@ -13,6 +13,7 @@ import { SplashPage } from './pages/auth/SplashPage';
 import { VehicleRegistrationPage } from './pages/auth/VehicleRegistrationPage';
 import { BookingDetailPage } from './pages/bookings/BookingDetailPage';
 import { BookingsPage } from './pages/bookings/BookingsPage';
+import { CreateBookingPage } from './pages/bookings/CreateBookingPage';
 import { HomePage } from './pages/home/HomePage';
 import { SelectLocationPage } from './pages/home/SelectLocationPage';
 import { AddVehiclePage } from './pages/profile/AddVehiclePage';
@@ -112,6 +113,7 @@ export default function App() {
           <Route path="services/:categoryId" element={<CategoryDetailPage />} />
           <Route path="services/:categoryId/:serviceId" element={<ServiceDetailPage />} />
           <Route path="bookings" element={<BookingsPage />} />
+          <Route path="bookings/new" element={<CreateBookingPage />} />
           <Route path="bookings/:id" element={<BookingDetailPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="profile/personal" element={<PersonalInfoPage />} />

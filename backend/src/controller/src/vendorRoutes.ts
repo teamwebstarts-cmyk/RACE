@@ -11,6 +11,10 @@ import {
   uploadVendorDriverDocumentSchema,
 } from '../../services/src/vendorDriversValidator';
 import {
+  createVendorVehicleSchema,
+  updateVendorVehicleSchema,
+} from '../../services/src/vendorVehiclesValidator';
+import {
   registerVendorSchema,
   saveVendorDraftSchema,
   updateVendorSchema,
@@ -58,5 +62,22 @@ router.post(
   vendorController.claimDriver,
 );
 router.delete('/drivers/:id', requireRole('vendor'), vendorController.removeDriver);
+
+router.get('/vehicles', requireRole('vendor'), vendorController.listVehicles);
+router.post(
+  '/vehicles',
+  requireRole('vendor'),
+  validate(createVendorVehicleSchema),
+  vendorController.createVehicle,
+);
+router.put(
+  '/vehicles/:id',
+  requireRole('vendor'),
+  validate(updateVendorVehicleSchema),
+  vendorController.updateVehicle,
+);
+router.delete('/vehicles/:id', requireRole('vendor'), vendorController.removeVehicle);
+
+router.get('/bookings/offers', requireRole('vendor'), vendorController.listBookingOffers);
 
 export default router;

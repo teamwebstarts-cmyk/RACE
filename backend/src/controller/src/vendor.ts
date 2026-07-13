@@ -5,6 +5,7 @@ import { sendSuccess } from '../../utils/src/apiResponse';
 import { AppError } from '../../utils/src/errors';
 import { getAuthUser, getParamId } from '../../utils/src/request';
 import { vendorDriversService } from '../../services/src/vendorDrivers';
+import { vendorVehiclesService } from '../../services/src/vendorVehicles';
 import { vendorService } from '../../services/src/vendor';
 
 export class VendorController {
@@ -154,6 +155,44 @@ export class VendorController {
       },
     );
     return sendSuccess(res, driver, 201);
+  });
+
+  listVehicles = asyncHandler(async (req: Request, res: Response) => {
+    const user = getAuthUser(req);
+    const vehicles = await vendorVehiclesService.list(user.id);
+    return sendSuccess(res, vehicles);
+  });
+
+  createVehicle = asyncHandler(async (req: Request, res: Response) => {
+    const user = getAuthUser(req);
+    const vehicle = await vendorVehiclesService.create(user.id, req.body);
+    return sendSuccess(res, vehicle, 201);
+  });
+
+  updateVehicle = asyncHandler(async (req: Request, res: Response) => {
+    const user = getAuthUser(req);
+    const vehicle = await vendorVehiclesService.update(
+      user.id,
+      getParamId(req.params.id),
+      req.body,
+    );
+    return sendSuccess(res, vehicle);
+  });
+
+  removeVehicle = asyncHandler(async (req: Request, res: Response) => {
+    const user = getAuthUser(req);
+    const result = await vendorVehiclesService.remove(user.id, getParamId(req.params.id));
+    return sendSuccess(res, result);
+  });
+
+  listBookingOffers = asyncHandler(async (req: Request, res: Response) => {
+    const user = getAuthUser(req);
+    if (user.role !== 'vendor') {
+      throw new AppError('Vendor access only', 403);
+    }
+    const { listOpenBookingOffers } = await import('../../services/src/bookings/driverAssignment');
+    const offers = await listOpenBookingOffers();
+    return sendSuccess(res, offers);
   });
 }
 

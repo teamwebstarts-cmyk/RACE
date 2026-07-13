@@ -7,7 +7,8 @@ import {
   appendStatusHistory,
   assertValidStatusTransition,
 } from './bookings/booking';
-import { releaseDriver, unassignDriverFromBooking } from './bookings/driverAssignment';
+import { releaseDriver, unassignDriverFromBooking, claimOpenBookingOffer, listOpenBookingOffers } from './bookings/driverAssignment';
+import { UserModel } from '../../models/src/user';
 import type { UnifiedBookingStatus } from './bookingStatusConstants';
 import type {
   DriverBookingsQueryDto,
@@ -86,6 +87,16 @@ export class DriverService {
       location: { latitude: dto.latitude, longitude: dto.longitude },
       updatedAt: updatedAt.toISOString(),
     };
+  }
+
+  async listOpenOffers(driverId: string, role: string) {
+    assertDriverRole(role);
+    await assertDriverApproved(driverId);
+
+    const driver = await UserModel.findById(driverId).exec();
+    if (!driver) throw new NotFoundError('Driver not found');
+
+    return listOpenBookingOffers({ forDriver: driver });
   }
 
   async listBookings(driverId: string, role: string, query: DriverBookingsQueryDto) {
@@ -235,8 +246,19 @@ export class DriverService {
     return updated;
   }
 
-  /** Accept allotted job: DRIVER_ASSIGNED → DRIVER_EN_ROUTE (customer tracking updates). */
+  /** Accept: open CONFIRMED offer (claim) or allotted DRIVER_ASSIGNED → DRIVER_EN_ROUTE. */
   async acceptBooking(driverId: string, role: string, bookingId: string, bookingType: 'towing' | 'driver') {
+    assertDriverRole(role);
+    await assertDriverApproved(driverId);
+
+    const Model = bookingType === 'towing' ? towingBookingRepository : driverBookingRepository;
+    const booking = await Model.findById(bookingId);
+    if (!booking) throw new NotFoundError('Booking not found');
+
+    if (booking.status === 'CONFIRMED' && !booking.driverId) {
+      return claimOpenBookingOffer(bookingId, bookingType, driverId);
+    }
+
     return this.updateBookingStatus(driverId, role, bookingId, {
       status: 'DRIVER_EN_ROUTE',
       bookingType,

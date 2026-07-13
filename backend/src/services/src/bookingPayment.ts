@@ -3,7 +3,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { BadRequestError, ForbiddenError, NotFoundError } from '../../utils/src/errors';
 import { logger } from '../../utils/src/logger';
 import { assertValidStatusTransition } from './bookings/booking';
-import { autoAssignDriver } from './bookings/driverAssignment';
 import type { UnifiedBookingStatus } from './bookingStatusConstants';
 import { driverBookingRepository } from './driverBookingRepository';
 import { towingBookingRepository } from './towingBookingRepository';
@@ -170,21 +169,10 @@ export class BookingPaymentService {
         status: 'CONFIRMED',
       });
 
-      const fullBooking = await towingBookingRepository.findById(transaction.bookingId.toString());
-      const pickup = fullBooking?.pickup;
-      if (pickup?.latitude !== undefined && pickup?.longitude !== undefined) {
-        const assignResult = await autoAssignDriver(
-          transaction.bookingId.toString(),
-          'towing',
-          pickup.latitude,
-          pickup.longitude,
-        );
-        if (!assignResult.assigned) {
-          logger.warn(
-            `Driver auto-assign failed for booking ${transaction.bookingId}: ${assignResult.reason}`,
-          );
-        }
-      }
+      // Leave as CONFIRMED open offer — nearby drivers/vendors race to accept (Uber-style).
+      logger.info(
+        `Towing booking ${transaction.bookingId} confirmed — open for nearby partner accept`,
+      );
     } else {
       await driverBookingService.applyPaymentUpdate(transaction.bookingId.toString(), {
         advancePaid: true,
@@ -193,21 +181,9 @@ export class BookingPaymentService {
         status: 'CONFIRMED',
       });
 
-      const fullBooking = await driverBookingRepository.findById(transaction.bookingId.toString());
-      const pickup = fullBooking?.pickup;
-      if (pickup?.latitude !== undefined && pickup?.longitude !== undefined) {
-        const assignResult = await autoAssignDriver(
-          transaction.bookingId.toString(),
-          'driver',
-          pickup.latitude,
-          pickup.longitude,
-        );
-        if (!assignResult.assigned) {
-          logger.warn(
-            `Driver auto-assign failed for booking ${transaction.bookingId}: ${assignResult.reason}`,
-          );
-        }
-      }
+      logger.info(
+        `Driver booking ${transaction.bookingId} confirmed — open for nearby partner accept`,
+      );
     }
 
     return mapTransaction(transaction);

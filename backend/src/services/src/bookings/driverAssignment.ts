@@ -1,7 +1,7 @@
 import { Types } from 'mongoose';
 
 import { logger } from '../../../utils/src/logger';
-import { BadRequestError, NotFoundError } from '../../../utils/src/errors';
+import { BadRequestError, ConflictError, NotFoundError } from '../../../utils/src/errors';
 import { UserModel, type IUser } from '../../../models/src/user';
 import { TowingBookingModel } from '../../../models/src/towingBooking';
 import { DriverBookingModel } from '../../../models/src/driverBooking';
@@ -13,6 +13,8 @@ import type { ActiveBookingType } from '../../../models/src/user';
 
 const FALLBACK_DISTANCE_KM = 999;
 const EARTH_RADIUS_KM = 6371;
+/** Open-offer radius (km). Drivers without GPS still see all eligible offers. */
+const DEFAULT_OFFER_RADIUS_KM = 50;
 
 /** Drivers eligible for towing / roadside tow bookings */
 export const TOWING_DRIVER_TYPES = ['Tow Driver'] as const;
@@ -64,6 +66,206 @@ function driverDistanceFromPickup(
     return haversineDistanceKm(pickupLatitude, pickupLongitude, lat, lng);
   }
   return FALLBACK_DISTANCE_KM;
+}
+
+export type OpenBookingOffer = {
+  bookingType: 'towing' | 'driver';
+  id: string;
+  bookingNumber: string;
+  status: string;
+  pickup?: {
+    label?: string;
+    address?: string;
+    latitude?: number;
+    longitude?: number;
+  };
+  dropoff?: {
+    label?: string;
+    address?: string;
+    latitude?: number;
+    longitude?: number;
+  } | null;
+  estimatedFare?: number;
+  createdAt: string;
+  distanceKm?: number;
+  serviceLabel: string;
+};
+
+function mapOffer(
+  bookingType: 'towing' | 'driver',
+  booking: {
+    id: string;
+    bookingNumber: string;
+    status: string;
+    pickup?: { address?: string; latitude?: number; longitude?: number };
+    dropoff?: { address?: string; latitude?: number; longitude?: number } | null;
+    estimatedFare?: number;
+    createdAt: Date;
+  },
+  distanceKm?: number,
+): OpenBookingOffer {
+  return {
+    bookingType,
+    id: booking.id,
+    bookingNumber: booking.bookingNumber,
+    status: booking.status,
+    pickup: booking.pickup,
+    dropoff: booking.dropoff ?? null,
+    estimatedFare: booking.estimatedFare,
+    createdAt: booking.createdAt.toISOString(),
+    distanceKm,
+    serviceLabel: bookingType === 'towing' ? 'Towing' : 'Driver hire',
+  };
+}
+
+/** Confirmed bookings with no driver — Uber-style nearby feed. */
+export async function listOpenBookingOffers(options?: {
+  bookingType?: ActiveBookingType;
+  latitude?: number;
+  longitude?: number;
+  radiusKm?: number;
+  forDriver?: IUser;
+}): Promise<OpenBookingOffer[]> {
+  const includeTowing = !options?.bookingType || options.bookingType === 'towing';
+  const includeDriver = !options?.bookingType || options.bookingType === 'driver';
+  const radiusKm = options?.radiusKm ?? DEFAULT_OFFER_RADIUS_KM;
+
+  const openFilter = {
+    status: 'CONFIRMED',
+    $or: [{ driverId: null }, { driverId: { $exists: false } }],
+  };
+
+  const [towing, driver] = await Promise.all([
+    includeTowing
+      ? TowingBookingModel.find(openFilter).sort({ createdAt: -1 }).exec()
+      : Promise.resolve([]),
+    includeDriver
+      ? DriverBookingModel.find(openFilter).sort({ createdAt: -1 }).exec()
+      : Promise.resolve([]),
+  ]);
+
+  const offers: OpenBookingOffer[] = [];
+
+  const consider = (
+    bookingType: 'towing' | 'driver',
+    booking: {
+      id: string;
+      bookingNumber: string;
+      status: string;
+      pickup?: { address?: string; latitude?: number; longitude?: number };
+      dropoff?: { address?: string; latitude?: number; longitude?: number } | null;
+      estimatedFare?: number;
+      createdAt: Date;
+    },
+  ) => {
+    if (options?.forDriver && !isDriverEligibleForBooking(options.forDriver, bookingType)) {
+      return;
+    }
+    const lat = booking.pickup?.latitude;
+    const lng = booking.pickup?.longitude;
+    let distanceKm: number | undefined;
+
+    if (
+      options?.latitude !== undefined &&
+      options?.longitude !== undefined &&
+      lat !== undefined &&
+      lng !== undefined
+    ) {
+      distanceKm = haversineDistanceKm(options.latitude, options.longitude, lat, lng);
+      if (distanceKm > radiusKm) return;
+    } else if (options?.forDriver && lat !== undefined && lng !== undefined) {
+      distanceKm = driverDistanceFromPickup(options.forDriver, lat, lng);
+      if (distanceKm !== FALLBACK_DISTANCE_KM && distanceKm > radiusKm) return;
+    }
+
+    offers.push(mapOffer(bookingType, booking, distanceKm));
+  };
+
+  for (const booking of towing) consider('towing', booking);
+  for (const booking of driver) consider('driver', booking);
+
+  offers.sort((a, b) => {
+    const da = a.distanceKm ?? FALLBACK_DISTANCE_KM;
+    const db = b.distanceKm ?? FALLBACK_DISTANCE_KM;
+    if (da !== db) return da - db;
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
+
+  return offers;
+}
+
+/**
+ * Race-to-accept open offer: CONFIRMED → DRIVER_EN_ROUTE atomically.
+ * Customer then sees partner details.
+ */
+export async function claimOpenBookingOffer(
+  bookingId: string,
+  bookingType: ActiveBookingType,
+  driverId: string,
+): Promise<{ id: string; status: string; bookingNumber: string }> {
+  const driver = await UserModel.findOne({ _id: driverId, role: 'driver' }).exec();
+  if (!driver) throw new NotFoundError('Driver not found');
+  if (driver.driverProfile?.status !== 'APPROVED') {
+    throw new BadRequestError('Driver account pending admin approval');
+  }
+  if (!driver.isAvailable || driver.activeBookingId) {
+    throw new BadRequestError('You already have an active booking or are offline');
+  }
+  if (!isDriverEligibleForBooking(driver, bookingType)) {
+    throw new BadRequestError(
+      bookingType === 'towing'
+        ? 'Only tow drivers can accept towing jobs'
+        : 'Only Full-Time / Part-Time drivers can accept driver-hire jobs',
+    );
+  }
+
+  const driverObjectId = new Types.ObjectId(driverId);
+  const Model = bookingType === 'towing' ? TowingBookingModel : DriverBookingModel;
+
+  const claimed = await Model.findOneAndUpdate(
+    {
+      _id: bookingId,
+      status: 'CONFIRMED',
+      $or: [{ driverId: null }, { driverId: { $exists: false } }],
+    },
+    {
+      $set: {
+        driverId: driverObjectId,
+        status: 'DRIVER_EN_ROUTE',
+      },
+      $push: {
+        statusHistory: {
+          $each: [
+            { status: 'DRIVER_ASSIGNED', timestamp: new Date() },
+            { status: 'DRIVER_EN_ROUTE', timestamp: new Date() },
+          ],
+        },
+      },
+    },
+    { new: true },
+  ).exec();
+
+  if (!claimed) {
+    throw new ConflictError('This job was just taken by another partner');
+  }
+
+  await UserModel.findByIdAndUpdate(driverId, {
+    isAvailable: false,
+    activeBookingId: new Types.ObjectId(bookingId),
+    activeBookingType: bookingType,
+  }).exec();
+
+  emitBookingStatusUpdate(bookingId, 'DRIVER_EN_ROUTE', {
+    internalStatus: 'DRIVER_EN_ROUTE',
+    driverAccepted: true,
+    message: 'Partner accepted your booking',
+  });
+
+  return {
+    id: claimed.id,
+    status: claimed.status,
+    bookingNumber: claimed.bookingNumber,
+  };
 }
 
 // TODO: Replace with MongoDB $geoNear when driver app sends live location consistently

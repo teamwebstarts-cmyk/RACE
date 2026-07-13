@@ -12,6 +12,16 @@ import {
   type CategoryId,
 } from '../../data/catalog';
 
+type BookingNavType = 'towing' | 'driver' | null;
+
+function resolveBookingType(categoryId: string): BookingNavType {
+  if (categoryId === 'towing') return 'towing';
+  if (categoryId === 'driver') return 'driver';
+  // Roadside catalog items are non-towing for now (flat tyre, battery, etc.)
+  if (categoryId === 'roadside') return null;
+  return null;
+}
+
 export function ServiceDetailPage() {
   const { categoryId = '', serviceId = '' } = useParams();
   const navigate = useNavigate();
@@ -26,6 +36,38 @@ export function ServiceDetailPage() {
   const Icon = getServiceIcon(service.id);
   const future = isFutureCategory(category.id);
   const emergency = isEmergencyService(service.id);
+  const bookingType = resolveBookingType(category.id);
+  const canBook = !future && bookingType !== null;
+
+  const goToBooking = () => {
+    if (!bookingType) return;
+    const params = new URLSearchParams({
+      category: category.id,
+      service: service.id,
+      type: bookingType,
+    });
+    navigate(`/app/bookings/new?${params.toString()}`);
+  };
+
+  const goComingSoon = () => {
+    navigate('/app/services/coming-soon', {
+      state: { title: service.label },
+    });
+  };
+
+  let nextCopy: string;
+  if (future) {
+    nextCopy = 'This service is listed on your dashboard and will open for booking soon.';
+  } else if (emergency && bookingType === 'towing') {
+    nextCopy =
+      'For urgent help, open SOS now. You can also book a tow if you prefer a scheduled partner dispatch.';
+  } else if (canBook) {
+    nextCopy =
+      'Confirm pickup details, pay a small advance, and we will match you with a nearby partner.';
+  } else {
+    nextCopy =
+      'This roadside option is listed on the dashboard. Multi-step booking for this service ships next.';
+  }
 
   return (
     <div className="page">
@@ -63,11 +105,7 @@ export function ServiceDetailPage() {
             <div className="card-soft" style={{ marginBottom: 20 }}>
               <strong>What happens next</strong>
               <p className="muted" style={{ marginTop: 8, fontSize: 14 }}>
-                {future
-                  ? 'This service is listed on your dashboard and will open for booking soon.'
-                  : emergency
-                    ? 'For urgent help, open SOS now. Full booking flow for this service is rolling out next.'
-                    : 'Service details are live on the dashboard. Multi-step booking for this option ships next.'}
+                {nextCopy}
               </p>
             </div>
 
@@ -77,16 +115,17 @@ export function ServiceDetailPage() {
                   Open SOS now
                 </Button>
               ) : null}
-              <Button
-                block
-                onClick={() =>
-                  navigate('/app/services/coming-soon', {
-                    state: { title: service.label },
-                  })
-                }
-              >
-                {future ? 'Notify me when available' : 'Continue to booking'}
-              </Button>
+
+              {canBook ? (
+                <Button block onClick={goToBooking}>
+                  {emergency ? 'Book towing instead' : 'Continue to booking'}
+                </Button>
+              ) : (
+                <Button block onClick={goComingSoon}>
+                  {future ? 'Notify me when available' : 'Continue to booking'}
+                </Button>
+              )}
+
               <Button
                 variant="outline"
                 block

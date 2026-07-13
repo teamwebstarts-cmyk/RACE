@@ -41,6 +41,7 @@ router.get(
   validate(driverBookingsQuerySchema, 'query'),
   driverController.listBookings,
 );
+router.get('/bookings/offers', driverController.listOpenOffers);
 router.get('/bookings/active', driverController.getActiveBooking);
 router.patch(
   '/bookings/:id/status',

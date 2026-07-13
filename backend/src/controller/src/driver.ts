@@ -38,6 +38,12 @@ export class DriverController {
     return sendSuccess(res, bookings);
   });
 
+  listOpenOffers = asyncHandler(async (req: Request, res: Response) => {
+    const user = getAuthUser(req);
+    const offers = await driverService.listOpenOffers(user.id, user.role);
+    return sendSuccess(res, offers);
+  });
+
   getActiveBooking = asyncHandler(async (req: Request, res: Response) => {
     const user = getAuthUser(req);
     const result = await driverService.getActiveBooking(user.id, user.role);
