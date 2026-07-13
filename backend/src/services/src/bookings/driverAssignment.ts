@@ -94,7 +94,8 @@ export type OpenBookingOffer = {
 function mapOffer(
   bookingType: 'towing' | 'driver',
   booking: {
-    id: string;
+    id?: string;
+    _id?: { toString(): string };
     bookingNumber: string;
     status: string;
     pickup?: { address?: string; latitude?: number; longitude?: number };
@@ -106,7 +107,7 @@ function mapOffer(
 ): OpenBookingOffer {
   return {
     bookingType,
-    id: booking.id,
+    id: booking.id ?? booking._id?.toString() ?? '',
     bookingNumber: booking.bookingNumber,
     status: booking.status,
     pickup: booking.pickup,
@@ -149,7 +150,8 @@ export async function listOpenBookingOffers(options?: {
   const consider = (
     bookingType: 'towing' | 'driver',
     booking: {
-      id: string;
+      id?: string;
+      _id?: { toString(): string };
       bookingNumber: string;
       status: string;
       pickup?: { address?: string; latitude?: number; longitude?: number };
@@ -197,12 +199,25 @@ export async function listOpenBookingOffers(options?: {
 /**
  * Race-to-accept open offer: CONFIRMED → DRIVER_EN_ROUTE atomically.
  * Customer then sees partner details.
+ * Optional vendorId / fleet vehicle when a vendor dispatches their fleet.
  */
 export async function claimOpenBookingOffer(
   bookingId: string,
   bookingType: ActiveBookingType,
   driverId: string,
-): Promise<{ id: string; status: string; bookingNumber: string }> {
+  options?: {
+    vendorId?: string;
+    fleetVehicleId?: string;
+    fleetVehicleLabel?: string;
+  },
+): Promise<{
+  id: string;
+  status: string;
+  bookingNumber: string;
+  driverId: string;
+  vendorId?: string;
+  assignedFleetVehicleLabel?: string;
+}> {
   const driver = await UserModel.findOne({ _id: driverId, role: 'driver' }).exec();
   if (!driver) throw new NotFoundError('Driver not found');
   if (driver.driverProfile?.status !== 'APPROVED') {
@@ -220,30 +235,41 @@ export async function claimOpenBookingOffer(
   }
 
   const driverObjectId = new Types.ObjectId(driverId);
-  const Model = bookingType === 'towing' ? TowingBookingModel : DriverBookingModel;
+  const $set: Record<string, unknown> = {
+    driverId: driverObjectId,
+    status: 'DRIVER_EN_ROUTE',
+  };
+  if (options?.vendorId) {
+    $set.vendorId = new Types.ObjectId(options.vendorId);
+  }
+  if (options?.fleetVehicleId) {
+    $set.assignedFleetVehicleId = new Types.ObjectId(options.fleetVehicleId);
+  }
+  if (options?.fleetVehicleLabel) {
+    $set.assignedFleetVehicleLabel = options.fleetVehicleLabel;
+  }
 
-  const claimed = await Model.findOneAndUpdate(
-    {
-      _id: bookingId,
-      status: 'CONFIRMED',
-      $or: [{ driverId: null }, { driverId: { $exists: false } }],
-    },
-    {
-      $set: {
-        driverId: driverObjectId,
-        status: 'DRIVER_EN_ROUTE',
-      },
-      $push: {
-        statusHistory: {
-          $each: [
-            { status: 'DRIVER_ASSIGNED', timestamp: new Date() },
-            { status: 'DRIVER_EN_ROUTE', timestamp: new Date() },
-          ],
-        },
+  const update = {
+    $set,
+    $push: {
+      statusHistory: {
+        $each: [
+          { status: 'DRIVER_ASSIGNED', timestamp: new Date() },
+          { status: 'DRIVER_EN_ROUTE', timestamp: new Date() },
+        ],
       },
     },
-    { new: true },
-  ).exec();
+  };
+  const filter = {
+    _id: bookingId,
+    status: 'CONFIRMED',
+    $or: [{ driverId: null }, { driverId: { $exists: false } }],
+  };
+
+  const claimed =
+    bookingType === 'towing'
+      ? await TowingBookingModel.findOneAndUpdate(filter, update, { new: true }).exec()
+      : await DriverBookingModel.findOneAndUpdate(filter, update, { new: true }).exec();
 
   if (!claimed) {
     throw new ConflictError('This job was just taken by another partner');
@@ -259,12 +285,16 @@ export async function claimOpenBookingOffer(
     internalStatus: 'DRIVER_EN_ROUTE',
     driverAccepted: true,
     message: 'Partner accepted your booking',
+    assignedFleetVehicleLabel: options?.fleetVehicleLabel,
   });
 
   return {
     id: claimed.id,
     status: claimed.status,
     bookingNumber: claimed.bookingNumber,
+    driverId,
+    vendorId: options?.vendorId,
+    assignedFleetVehicleLabel: options?.fleetVehicleLabel,
   };
 }
 

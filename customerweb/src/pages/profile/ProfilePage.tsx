@@ -2,6 +2,7 @@ import {
   Bell,
   Car,
   ChevronRight,
+  CreditCard,
   HelpCircle,
   LogOut,
   MapPin,
@@ -22,6 +23,7 @@ const MENU = [
       { to: '/app/profile/personal', label: 'Personal information', Icon: User },
       { to: '/app/profile/vehicles', label: 'My vehicles', Icon: Car },
       { to: '/app/profile/locations', label: 'Saved locations', Icon: MapPin },
+      { to: '/app/profile/subscriptions', label: 'Subscriptions', Icon: CreditCard },
     ],
   },
   {

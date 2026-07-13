@@ -66,6 +66,7 @@ export interface TowingBookingResponseDto {
     phone: string;
     rating: number;
   };
+  assignedFleetVehicleLabel?: string;
   scheduledAt?: string;
   statusHistory: Array<{ status: string; timestamp: string; note?: string }>;
   cancelledAt?: string;

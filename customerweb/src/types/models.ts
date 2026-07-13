@@ -82,4 +82,5 @@ export interface Booking {
   advancePaid?: boolean;
   paymentStatus?: string;
   driver?: { id: string; name: string; rating?: number; phone?: string };
+  assignedFleetVehicleLabel?: string;
 }

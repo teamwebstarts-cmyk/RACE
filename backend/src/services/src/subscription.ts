@@ -5,6 +5,7 @@ import {
   UserSubscriptionModel,
   type ISubscriptionPlan,
   type IUserSubscription,
+  type IVendorPlanBenefits,
 } from '../../models/src/subscription';
 import type {
   PlanResponseDto,
@@ -12,10 +13,12 @@ import type {
   UserSubscriptionResponseDto,
 } from './subscriptionValidator';
 
-const DEFAULT_PLANS = [
+/** Canonical RACE plans — customer towing/driver + vendor partner tiers. */
+export const DEFAULT_PLANS = [
   {
     slug: 'towing_basic_monthly',
     name: 'Basic',
+    audience: 'customer' as const,
     category: 'towing' as const,
     price: 299,
     billingCycle: 'monthly' as const,
@@ -32,6 +35,7 @@ const DEFAULT_PLANS = [
   {
     slug: 'towing_premium_monthly',
     name: 'Premium',
+    audience: 'customer' as const,
     category: 'towing' as const,
     price: 599,
     billingCycle: 'monthly' as const,
@@ -48,6 +52,7 @@ const DEFAULT_PLANS = [
   {
     slug: 'towing_family_monthly',
     name: 'Family',
+    audience: 'customer' as const,
     category: 'towing' as const,
     price: 999,
     billingCycle: 'monthly' as const,
@@ -63,21 +68,24 @@ const DEFAULT_PLANS = [
   },
   {
     slug: 'driver_monthly',
-    name: 'Monthly Driver',
+    name: 'Monthly Driver Package',
+    audience: 'customer' as const,
     category: 'driver' as const,
     price: 1499,
     billingCycle: 'monthly' as const,
     features: [
-      { text: 'Up to 4 hours/day', included: true },
+      { text: 'Up to 4 hours/day included', included: true },
       { text: 'Professional & verified drivers', included: true },
+      { text: 'Hatchback / Sedan / SUV packages', included: true },
       { text: '24/7 customer support', included: true },
     ],
-    isMostPopular: false,
+    isMostPopular: true,
     actionType: 'purchase' as const,
   },
   {
     slug: 'driver_corporate_monthly',
-    name: 'Corporate',
+    name: 'Corporate Package',
+    audience: 'customer' as const,
     category: 'driver' as const,
     price: 4999,
     billingCycle: 'monthly' as const,
@@ -85,9 +93,79 @@ const DEFAULT_PLANS = [
       { text: 'Dedicated account manager', included: true },
       { text: 'Priority booking & support', included: true },
       { text: 'Custom billing & invoicing', included: true },
+      { text: 'Fleet-ready driver coverage', included: true },
     ],
     isMostPopular: false,
     actionType: 'contact' as const,
+  },
+  {
+    slug: 'vendor_starter_monthly',
+    name: 'Partner Starter',
+    audience: 'vendor' as const,
+    category: 'partner' as const,
+    price: 999,
+    billingCycle: 'monthly' as const,
+    features: [
+      { text: 'Reduced commission (10%)', included: true },
+      { text: 'Priority leads', included: false },
+      { text: 'Featured listing', included: false },
+      { text: 'Performance badge', included: false },
+    ],
+    benefits: {
+      commissionRate: 10,
+      reducedCommission: true,
+      priorityLeads: false,
+      featuredListing: false,
+      performanceBadge: false,
+    },
+    isMostPopular: false,
+    actionType: 'purchase' as const,
+  },
+  {
+    slug: 'vendor_pro_monthly',
+    name: 'Partner Pro',
+    audience: 'vendor' as const,
+    category: 'partner' as const,
+    price: 2499,
+    billingCycle: 'monthly' as const,
+    features: [
+      { text: 'Reduced commission (8%)', included: true },
+      { text: 'Priority leads', included: true },
+      { text: 'Featured listing', included: true },
+      { text: 'Performance badge', included: false },
+    ],
+    benefits: {
+      commissionRate: 8,
+      reducedCommission: true,
+      priorityLeads: true,
+      featuredListing: true,
+      performanceBadge: false,
+    },
+    isMostPopular: true,
+    actionType: 'purchase' as const,
+  },
+  {
+    slug: 'vendor_elite_monthly',
+    name: 'Partner Elite',
+    audience: 'vendor' as const,
+    category: 'partner' as const,
+    price: 4999,
+    billingCycle: 'monthly' as const,
+    features: [
+      { text: 'Reduced commission (5%)', included: true },
+      { text: 'Priority leads', included: true },
+      { text: 'Featured listing', included: true },
+      { text: 'Performance badge', included: true },
+    ],
+    benefits: {
+      commissionRate: 5,
+      reducedCommission: true,
+      priorityLeads: true,
+      featuredListing: true,
+      performanceBadge: true,
+    },
+    isMostPopular: false,
+    actionType: 'purchase' as const,
   },
 ];
 
@@ -96,11 +174,21 @@ function mapPlan(plan: ISubscriptionPlan): PlanResponseDto {
     id: plan.id,
     slug: plan.slug,
     name: plan.name,
+    audience: plan.audience ?? 'customer',
     category: plan.category,
     price: plan.price,
     currency: plan.currency,
     billingCycle: plan.billingCycle,
     features: plan.features,
+    benefits: plan.benefits
+      ? {
+          commissionRate: plan.benefits.commissionRate,
+          priorityLeads: Boolean(plan.benefits.priorityLeads),
+          featuredListing: Boolean(plan.benefits.featuredListing),
+          performanceBadge: Boolean(plan.benefits.performanceBadge),
+          reducedCommission: Boolean(plan.benefits.reducedCommission),
+        }
+      : undefined,
     isMostPopular: plan.isMostPopular,
     actionType: plan.actionType,
   };
@@ -111,6 +199,7 @@ function mapUserSub(sub: IUserSubscription): UserSubscriptionResponseDto {
     id: sub.id,
     planSlug: sub.planSlug,
     planName: sub.planName,
+    audience: sub.audience ?? 'customer',
     category: sub.category,
     billingCycle: sub.billingCycle,
     price: sub.price,
@@ -122,40 +211,93 @@ function mapUserSub(sub: IUserSubscription): UserSubscriptionResponseDto {
 }
 
 export class SubscriptionService {
+  /** Upsert canonical plans so admin seed and runtime stay aligned. */
   async ensurePlansSeeded(): Promise<void> {
-    const count = await SubscriptionPlanModel.countDocuments();
-    if (count > 0) return;
+    for (const plan of DEFAULT_PLANS) {
+      await SubscriptionPlanModel.findOneAndUpdate(
+        { slug: plan.slug },
+        {
+          $set: {
+            name: plan.name,
+            audience: plan.audience,
+            category: plan.category,
+            price: plan.price,
+            currency: 'INR',
+            billingCycle: plan.billingCycle,
+            features: plan.features,
+            benefits: 'benefits' in plan ? plan.benefits : undefined,
+            isMostPopular: plan.isMostPopular,
+            actionType: plan.actionType,
+            isActive: true,
+          },
+        },
+        { upsert: true, new: true },
+      );
+    }
 
-    await SubscriptionPlanModel.insertMany(DEFAULT_PLANS);
+    // Deactivate legacy conflicting demo slugs if present
+    await SubscriptionPlanModel.updateMany(
+      {
+        slug: {
+          $in: [
+            'customer-basic',
+            'customer-plus',
+            'customer-annual',
+            'vendor-starter',
+            'vendor-pro',
+            'vendor-enterprise',
+          ],
+        },
+      },
+      { $set: { isActive: false } },
+    );
   }
 
-  async listPlans(billingCycle?: string): Promise<PlanResponseDto[]> {
+  async listPlans(filters?: {
+    billingCycle?: string;
+    audience?: string;
+    category?: string;
+  }): Promise<PlanResponseDto[]> {
     await this.ensurePlansSeeded();
     const filter: Record<string, unknown> = { isActive: true };
-    if (billingCycle) {
-      filter.billingCycle = billingCycle;
-    }
-    const plans = await SubscriptionPlanModel.find(filter).sort({ category: 1, price: 1 });
+    if (filters?.billingCycle) filter.billingCycle = filters.billingCycle;
+    if (filters?.audience) filter.audience = filters.audience;
+    if (filters?.category) filter.category = filters.category;
+    const plans = await SubscriptionPlanModel.find(filter).sort({
+      audience: 1,
+      category: 1,
+      price: 1,
+    });
     return plans.map(mapPlan);
   }
 
-  async getUserSubscription(userId: string): Promise<UserSubscriptionResponseDto | null> {
-    const sub = await UserSubscriptionModel.findOne({
+  async getUserSubscription(
+    userId: string,
+    options?: { audience?: string; category?: string },
+  ): Promise<UserSubscriptionResponseDto | null> {
+    const query: Record<string, unknown> = {
+      userId,
+      status: 'active',
+      expiresAt: { $gt: new Date() },
+    };
+    if (options?.audience) query.audience = options.audience;
+    if (options?.category) query.category = options.category;
+
+    const sub = await UserSubscriptionModel.findOne(query).sort({ createdAt: -1 });
+    return sub ? mapUserSub(sub) : null;
+  }
+
+  async listUserSubscriptions(userId: string): Promise<UserSubscriptionResponseDto[]> {
+    const subs = await UserSubscriptionModel.find({
       userId,
       status: 'active',
       expiresAt: { $gt: new Date() },
     }).sort({ createdAt: -1 });
-
-    return sub ? mapUserSub(sub) : null;
+    return subs.map(mapUserSub);
   }
 
   async subscribe(userId: string, dto: SubscribeDto): Promise<UserSubscriptionResponseDto> {
     await this.ensurePlansSeeded();
-
-    const existing = await this.getUserSubscription(userId);
-    if (existing) {
-      throw new ConflictError('You already have an active subscription');
-    }
 
     const plan = await SubscriptionPlanModel.findOne({
       slug: dto.planSlug,
@@ -168,6 +310,16 @@ export class SubscriptionService {
 
     if (plan.actionType === 'contact') {
       throw new ConflictError('Please contact support for corporate plans');
+    }
+
+    const existing = await this.getUserSubscription(userId, {
+      audience: plan.audience,
+      category: plan.category,
+    });
+    if (existing) {
+      throw new ConflictError(
+        `You already have an active ${plan.category} subscription. Cancel it before switching plans.`,
+      );
     }
 
     const billingCycle = dto.billingCycle ?? plan.billingCycle;
@@ -187,6 +339,7 @@ export class SubscriptionService {
       planId: plan.id,
       planSlug: plan.slug,
       planName: plan.name,
+      audience: plan.audience,
       category: plan.category,
       billingCycle,
       price,
@@ -206,11 +359,14 @@ export class SubscriptionService {
     return mapUserSub(sub);
   }
 
-  async cancel(userId: string): Promise<UserSubscriptionResponseDto> {
-    const sub = await UserSubscriptionModel.findOne({
-      userId,
-      status: 'active',
-    });
+  async cancel(
+    userId: string,
+    options?: { category?: string },
+  ): Promise<UserSubscriptionResponseDto> {
+    const query: Record<string, unknown> = { userId, status: 'active' };
+    if (options?.category) query.category = options.category;
+
+    const sub = await UserSubscriptionModel.findOne(query).sort({ createdAt: -1 });
 
     if (!sub) {
       throw new NotFoundError('No active subscription found');
@@ -221,6 +377,21 @@ export class SubscriptionService {
     await sub.save();
 
     return mapUserSub(sub);
+  }
+
+  /** Active vendor plan benefits for commission / lead ranking. */
+  async getVendorBenefits(vendorUserId: string): Promise<IVendorPlanBenefits | null> {
+    const sub = await UserSubscriptionModel.findOne({
+      userId: vendorUserId,
+      audience: 'vendor',
+      status: 'active',
+      expiresAt: { $gt: new Date() },
+    }).sort({ createdAt: -1 });
+
+    if (!sub) return null;
+
+    const plan = await SubscriptionPlanModel.findById(sub.planId);
+    return plan?.benefits ?? null;
   }
 }
 

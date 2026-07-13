@@ -14,6 +14,7 @@ import {
   createVendorVehicleSchema,
   updateVendorVehicleSchema,
 } from '../../services/src/vendorVehiclesValidator';
+import { vendorAssignBookingSchema } from '../../services/src/vendorBookingsValidator';
 import {
   registerVendorSchema,
   saveVendorDraftSchema,
@@ -79,5 +80,11 @@ router.put(
 router.delete('/vehicles/:id', requireRole('vendor'), vendorController.removeVehicle);
 
 router.get('/bookings/offers', requireRole('vendor'), vendorController.listBookingOffers);
+router.post(
+  '/bookings/:id/assign',
+  requireRole('vendor'),
+  validate(vendorAssignBookingSchema),
+  vendorController.assignBooking,
+);
 
 export default router;

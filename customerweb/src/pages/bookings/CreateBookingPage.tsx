@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 
 import { PageShell } from '../../components/layout/PageShell';
 import { Button } from '../../components/ui/Button';
@@ -212,6 +212,10 @@ export function CreateBookingPage() {
                   </option>
                 ))}
               </select>
+              <p className="muted" style={{ marginTop: 8, fontSize: 13 }}>
+                Hatchback packages from ~₹1,499/mo on a driver subscription — see{' '}
+                <Link to="/app/profile/subscriptions">Subscriptions</Link>.
+              </p>
             </div>
           ) : null}
 

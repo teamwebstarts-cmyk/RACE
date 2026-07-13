@@ -79,6 +79,7 @@ export interface DriverBookingResponseDto {
   remainingPaid: boolean;
   paymentStatus: string;
   status: string;
+  vendorId?: string;
   driverId?: string;
   driver?: {
     id: string;
@@ -86,6 +87,7 @@ export interface DriverBookingResponseDto {
     phone: string;
     rating: number;
   };
+  assignedFleetVehicleLabel?: string;
   scheduledAt?: string;
   statusHistory: Array<{ status: string; timestamp: string; note?: string }>;
   cancelledAt?: string;

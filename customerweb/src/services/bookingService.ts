@@ -53,6 +53,7 @@ interface CombinedBookingItem {
   paymentStatus?: string;
   driverId?: string;
   driver?: { id: string; name: string; rating?: number; phone?: string } | null;
+  assignedFleetVehicleLabel?: string;
 }
 
 function mapDriver(
@@ -86,6 +87,7 @@ function mapBooking(item: CombinedBookingItem): Booking {
     advancePaid: item.advancePaid,
     paymentStatus: item.paymentStatus,
     driver: mapDriver(item),
+    assignedFleetVehicleLabel: item.assignedFleetVehicleLabel,
   };
 }
 

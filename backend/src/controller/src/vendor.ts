@@ -6,6 +6,7 @@ import { AppError } from '../../utils/src/errors';
 import { getAuthUser, getParamId } from '../../utils/src/request';
 import { vendorDriversService } from '../../services/src/vendorDrivers';
 import { vendorVehiclesService } from '../../services/src/vendorVehicles';
+import { vendorBookingsService } from '../../services/src/vendorBookings';
 import { vendorService } from '../../services/src/vendor';
 
 export class VendorController {
@@ -187,12 +188,18 @@ export class VendorController {
 
   listBookingOffers = asyncHandler(async (req: Request, res: Response) => {
     const user = getAuthUser(req);
-    if (user.role !== 'vendor') {
-      throw new AppError('Vendor access only', 403);
-    }
-    const { listOpenBookingOffers } = await import('../../services/src/bookings/driverAssignment');
-    const offers = await listOpenBookingOffers();
+    const offers = await vendorBookingsService.listOffers(user.id);
     return sendSuccess(res, offers);
+  });
+
+  assignBooking = asyncHandler(async (req: Request, res: Response) => {
+    const user = getAuthUser(req);
+    const result = await vendorBookingsService.assignBooking(
+      user.id,
+      getParamId(req.params.id),
+      req.body,
+    );
+    return sendSuccess(res, result);
   });
 }
 

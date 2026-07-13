@@ -1,4 +1,4 @@
-import { Car, ChevronRight, LogOut, Shield, Users } from 'lucide-react';
+import { Car, ChevronRight, CreditCard, LogOut, Shield, Users } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { Button } from '../../components/ui/Button';
@@ -47,6 +47,11 @@ export function AccountPage() {
             <Link to="/app/account/vehicles" className="account-link">
               <Car size={18} color="#F5A800" />
               <span>Fleet vehicles</span>
+              <ChevronRight size={16} />
+            </Link>
+            <Link to="/app/account/subscriptions" className="account-link">
+              <CreditCard size={18} color="#F5A800" />
+              <span>Partner plans</span>
               <ChevronRight size={16} />
             </Link>
             <Link to="/app/account/verification" className="account-link">

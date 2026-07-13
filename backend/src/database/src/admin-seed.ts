@@ -8,6 +8,7 @@ import {
   SubscriptionPlanModel,
   UserSubscriptionModel,
 } from '../../models/src/subscription';
+import { DEFAULT_PLANS } from '../../services/src/subscription';
 import { TransactionModel } from '../../models/src/transaction';
 import { PlatformSettingsModel } from '../../models/src/platformSettings';
 import { NotificationModel } from '../../models/src/notification';
@@ -17,84 +18,6 @@ import { logger } from '../../utils/src/logger';
 const CITIES = ['Bhubaneswar', 'Cuttack', 'Puri', 'Rourkela', 'Berhampur'];
 const SERVICES = ['Towing Service', 'Roadside Assistance', 'Battery Jump Start', 'Flat Tyre Repair', 'Fuel Delivery'];
 const STATUSES = ['CREATED', 'ASSIGNED', 'EN_ROUTE', 'SERVICE_COMPLETED', 'PAID'] as const;
-
-const CUSTOMER_PLANS = [
-  {
-    slug: 'customer-basic',
-    name: 'Basic Towing',
-    category: 'towing' as const,
-    price: 299,
-    billingCycle: 'monthly' as const,
-    features: [
-      { text: '2 roadside assists per month', included: true },
-      { text: '24/7 support', included: true },
-    ],
-    isMostPopular: false,
-  },
-  {
-    slug: 'customer-plus',
-    name: 'Plus Care',
-    category: 'towing' as const,
-    price: 599,
-    billingCycle: 'monthly' as const,
-    features: [
-      { text: '5 roadside assists per month', included: true },
-      { text: 'Priority dispatch', included: true },
-    ],
-    isMostPopular: true,
-  },
-  {
-    slug: 'customer-annual',
-    name: 'Annual Shield',
-    category: 'towing' as const,
-    price: 4999,
-    billingCycle: 'yearly' as const,
-    features: [
-      { text: 'Unlimited towing within city', included: true },
-      { text: 'Family vehicle coverage', included: true },
-    ],
-    isMostPopular: false,
-  },
-];
-
-const VENDOR_PLANS = [
-  {
-    slug: 'vendor-starter',
-    name: 'Partner Starter',
-    category: 'driver' as const,
-    price: 999,
-    billingCycle: 'monthly' as const,
-    features: [
-      { text: 'Up to 3 drivers', included: true },
-      { text: 'Basic analytics', included: true },
-    ],
-    isMostPopular: false,
-  },
-  {
-    slug: 'vendor-pro',
-    name: 'Partner Pro',
-    category: 'driver' as const,
-    price: 2499,
-    billingCycle: 'monthly' as const,
-    features: [
-      { text: 'Up to 15 drivers', included: true },
-      { text: 'Priority listing', included: true },
-    ],
-    isMostPopular: true,
-  },
-  {
-    slug: 'vendor-enterprise',
-    name: 'Enterprise Fleet',
-    category: 'driver' as const,
-    price: 19999,
-    billingCycle: 'yearly' as const,
-    features: [
-      { text: 'Unlimited drivers', included: true },
-      { text: 'Dedicated account manager', included: true },
-    ],
-    isMostPopular: false,
-  },
-];
 
 export async function seedAdminPlatform(): Promise<void> {
   logger.info('Clearing admin platform collections...');
@@ -284,10 +207,9 @@ export async function seedAdminPlatform(): Promise<void> {
   }
 
   const subscriptionPlans = await SubscriptionPlanModel.insertMany(
-    [...CUSTOMER_PLANS, ...VENDOR_PLANS].map((plan) => ({
+    DEFAULT_PLANS.map((plan) => ({
       ...plan,
       currency: 'INR',
-      actionType: 'purchase' as const,
       isActive: true,
     })),
   );
@@ -295,7 +217,8 @@ export async function seedAdminPlatform(): Promise<void> {
   if (customers.length > 0) {
     for (let i = 0; i < 18; i++) {
       const customer = customers[i % customers.length];
-      const plan = subscriptionPlans[i % subscriptionPlans.length];
+      const customerPlans = subscriptionPlans.filter((p) => p.audience === 'customer');
+      const plan = customerPlans[i % customerPlans.length] ?? subscriptionPlans[0];
       const startedAt = new Date(Date.now() - (i + 1) * 7 * 86400000);
       const expiresAt = new Date(
         startedAt.getTime() + (plan.billingCycle === 'monthly' ? 30 : 365) * 86400000,
@@ -306,6 +229,7 @@ export async function seedAdminPlatform(): Promise<void> {
         planId: plan._id,
         planSlug: plan.slug,
         planName: plan.name,
+        audience: plan.audience,
         category: plan.category,
         billingCycle: plan.billingCycle,
         price: plan.price,

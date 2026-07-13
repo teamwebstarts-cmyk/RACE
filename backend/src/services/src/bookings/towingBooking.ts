@@ -53,6 +53,7 @@ function mapTowingBooking(
     vendorId: booking.vendorId?.toString(),
     driverId: booking.driverId?.toString(),
     driver,
+    assignedFleetVehicleLabel: booking.assignedFleetVehicleLabel,
     scheduledAt: booking.scheduledAt?.toISOString(),
     statusHistory: booking.statusHistory.map((entry) => ({
       status: entry.status,

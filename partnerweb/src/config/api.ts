@@ -36,4 +36,8 @@ export const API_ENDPOINTS = {
   vendorVehicles: '/api/v1/vendor/vehicles',
   vendorVehicle: (id: string) => `/api/v1/vendor/vehicles/${id}`,
   vendorBookingOffers: '/api/v1/vendor/bookings/offers',
+  vendorBookingAssign: (id: string) => `/api/v1/vendor/bookings/${id}/assign`,
+  subscriptionPlans: '/api/v1/subscriptions/plans',
+  subscriptionCurrent: '/api/v1/subscriptions',
+  subscriptionCancel: '/api/v1/subscriptions/cancel',
 } as const;

@@ -116,7 +116,7 @@ export function BookingDetailPage() {
           ) : null}
           {booking.driver ? (
             <div className="card">
-              <strong>Partner</strong>
+              <strong>Partner assigned</strong>
               <p style={{ marginTop: 6, fontWeight: 600 }}>{booking.driver.name}</p>
               {booking.driver.phone ? (
                 <p className="muted" style={{ marginTop: 4 }}>
@@ -126,6 +126,11 @@ export function BookingDetailPage() {
               {typeof booking.driver.rating === 'number' ? (
                 <p className="muted" style={{ marginTop: 4 }}>
                   Rating {booking.driver.rating.toFixed(1)}
+                </p>
+              ) : null}
+              {booking.assignedFleetVehicleLabel ? (
+                <p className="muted" style={{ marginTop: 8 }}>
+                  Vehicle: {booking.assignedFleetVehicleLabel}
                 </p>
               ) : null}
             </div>

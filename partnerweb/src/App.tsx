@@ -3,6 +3,7 @@ import { Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import { MainLayout } from './components/navigation/MainLayout';
 import { useAuthBootstrap } from './hooks/useAuthBootstrap';
 import { AccountPage } from './pages/account/AccountPage';
+import { SubscriptionsPage } from './pages/account/SubscriptionsPage';
 import { VendorDriversPage } from './pages/account/VendorDriversPage';
 import { VendorVehiclesPage } from './pages/account/VendorVehiclesPage';
 import { VerificationPage } from './pages/account/VerificationPage';
@@ -107,6 +108,7 @@ export default function App() {
           <Route path="account" element={<AccountPage />} />
           <Route path="account/drivers" element={<VendorDriversPage />} />
           <Route path="account/vehicles" element={<VendorVehiclesPage />} />
+          <Route path="account/subscriptions" element={<SubscriptionsPage />} />
           <Route path="account/verification" element={<VerificationPage />} />
         </Route>
       </Route>

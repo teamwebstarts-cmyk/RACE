@@ -39,6 +39,9 @@ export interface ITowingBooking extends Document {
   status: UnifiedBookingStatus;
   vendorId?: Types.ObjectId;
   driverId?: Types.ObjectId;
+  /** Vendor fleet vehicle assigned to fulfill this job */
+  assignedFleetVehicleId?: Types.ObjectId;
+  assignedFleetVehicleLabel?: string;
   scheduledAt?: Date;
   statusHistory: ITowingStatusHistoryEntry[];
   cancelledAt?: Date;
@@ -105,6 +108,8 @@ const TowingBookingSchema = new Schema<ITowingBooking>(
     },
     vendorId: { type: Schema.Types.ObjectId, ref: 'Vendor', index: true },
     driverId: { type: Schema.Types.ObjectId, ref: 'Driver', index: true },
+    assignedFleetVehicleId: { type: Schema.Types.ObjectId, ref: 'VendorVehicle' },
+    assignedFleetVehicleLabel: { type: String, trim: true },
     scheduledAt: { type: Date },
     statusHistory: { type: [StatusHistorySchema], default: [] },
     cancelledAt: { type: Date },

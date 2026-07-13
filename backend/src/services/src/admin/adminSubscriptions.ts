@@ -33,8 +33,8 @@ export const adminSubscriptionsService = {
 
   async listPlans(filters: { tab?: string; page?: number; pageSize?: number }) {
     const query: Record<string, unknown> = { isActive: true };
-    if (filters.tab === 'VENDOR') query.category = 'driver';
-    if (filters.tab === 'CUSTOMER') query.category = 'towing';
+    if (filters.tab === 'VENDOR') query.audience = 'vendor';
+    if (filters.tab === 'CUSTOMER') query.audience = 'customer';
 
     const subscriberCounts = await UserSubscriptionModel.aggregate<{ _id: Types.ObjectId; count: number }>([
       { $match: { status: 'active' } },
@@ -44,13 +44,14 @@ export const adminSubscriptionsService = {
 
     return paginate(SubscriptionPlanModel, query, filters, (doc) => {
       const activeSubscriptions = countByPlan.get(doc._id.toString()) ?? 0;
-      const tab = doc.category === 'towing' ? 'CUSTOMER' : 'VENDOR';
+      const tab = doc.audience === 'vendor' ? 'VENDOR' : 'CUSTOMER';
       const cycleLabel = doc.billingCycle === 'monthly' ? '/mo' : '/yr';
 
       return {
         id: doc._id.toString(),
         planName: doc.name,
         type: tab === 'CUSTOMER' ? 'Customer' : 'Vendor',
+        category: doc.category,
         activeSubscriptions,
         price: doc.price,
         priceLabel: `₹${doc.price.toLocaleString('en-IN')}${cycleLabel}`,
@@ -65,15 +66,21 @@ export const adminSubscriptionsService = {
     input: {
       name: string;
       slug: string;
-      category: 'towing' | 'driver';
+      category: 'towing' | 'driver' | 'partner';
+      audience?: 'customer' | 'vendor';
       price: number;
       billingCycle: 'monthly' | 'yearly';
       features?: { text: string; included: boolean }[];
     },
     actor: { id: string; name: string },
   ) {
+    const audience =
+      input.audience ??
+      (input.category === 'partner' ? 'vendor' : 'customer');
+
     const plan = await SubscriptionPlanModel.create({
       ...input,
+      audience,
       currency: 'INR',
       isActive: true,
       actionType: 'purchase',
@@ -138,6 +145,7 @@ export const adminSubscriptionsService = {
       planId: plan._id,
       planSlug: plan.slug,
       planName: plan.name,
+      audience: plan.audience ?? (plan.category === 'partner' ? 'vendor' : 'customer'),
       category: plan.category,
       billingCycle: plan.billingCycle,
       price: plan.price,

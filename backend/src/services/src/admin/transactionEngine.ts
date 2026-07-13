@@ -3,6 +3,7 @@ import { Types } from 'mongoose';
 import { BookingModel } from '../../../models/src/booking';
 import { TransactionModel } from '../../../models/src/transaction';
 import { PlatformSettingsModel } from '../../../models/src/platformSettings';
+import { subscriptionService } from '../subscription';
 import { NotFoundError } from '../../../utils/src/errors';
 
 async function nextTransactionCode(): Promise<string> {
@@ -10,7 +11,19 @@ async function nextTransactionCode(): Promise<string> {
   return `TXN${String(count + 1).padStart(6, '0')}`;
 }
 
-async function getCommissionRate(): Promise<number> {
+/** Global rate, overridden by active vendor subscription benefits.commissionRate. */
+export async function getCommissionRate(vendorId?: string | Types.ObjectId): Promise<number> {
+  if (vendorId) {
+    try {
+      const benefits = await subscriptionService.getVendorBenefits(vendorId.toString());
+      if (benefits?.reducedCommission && typeof benefits.commissionRate === 'number') {
+        return benefits.commissionRate / 100;
+      }
+    } catch {
+      // Fall through to platform default.
+    }
+  }
+
   const settings = await PlatformSettingsModel.findOne().lean();
   return (settings?.commissionRate ?? 12.5) / 100;
 }
@@ -28,7 +41,7 @@ export async function generateBookingFinancials(bookingId: string | Types.Object
   });
   if (existing) return;
 
-  const commissionRate = await getCommissionRate();
+  const commissionRate = await getCommissionRate(booking.vendorId);
   const commission = Math.round(total * commissionRate);
   const vendorPayout = total - commission;
   const now = new Date();

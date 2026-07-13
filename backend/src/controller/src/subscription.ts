@@ -7,14 +7,28 @@ import { subscriptionService } from '../../services/src/subscription';
 
 export class SubscriptionController {
   listPlans = asyncHandler(async (req: Request, res: Response) => {
-    const billingCycle = req.query.billingCycle as string | undefined;
-    const plans = await subscriptionService.listPlans(billingCycle);
+    const plans = await subscriptionService.listPlans({
+      billingCycle: req.query.billingCycle as string | undefined,
+      audience: req.query.audience as string | undefined,
+      category: req.query.category as string | undefined,
+    });
     return sendSuccess(res, plans);
   });
 
   getCurrent = asyncHandler(async (req: Request, res: Response) => {
     const user = getAuthUser(req);
-    const subscription = await subscriptionService.getUserSubscription(user.id);
+    const audience = req.query.audience as string | undefined;
+    const category = req.query.category as string | undefined;
+
+    if (req.query.all === '1' || req.query.all === 'true') {
+      const subscriptions = await subscriptionService.listUserSubscriptions(user.id);
+      return sendSuccess(res, subscriptions);
+    }
+
+    const subscription = await subscriptionService.getUserSubscription(user.id, {
+      audience,
+      category,
+    });
     return sendSuccess(res, subscription);
   });
 
@@ -26,7 +40,9 @@ export class SubscriptionController {
 
   cancel = asyncHandler(async (req: Request, res: Response) => {
     const user = getAuthUser(req);
-    const subscription = await subscriptionService.cancel(user.id);
+    const subscription = await subscriptionService.cancel(user.id, {
+      category: req.body?.category,
+    });
     return sendSuccess(res, subscription);
   });
 }

@@ -43,6 +43,8 @@ export type DriverFareBreakdown = {
   includedKm: number;
   vehicleCategory: string;
   packageFare: number;
+  driverPayout: number;
+  platformFee: number;
   extraHoursCharge: number;
   extraKmCharge: number;
   totalFare: number;
@@ -58,18 +60,83 @@ const TOWING_MINIMUM_FARE = 299;
 const TOWING_FALLBACK_FARE = 499;
 const NIGHT_SURCHARGE_RATE = 0.2;
 
+/**
+ * RACE driver-hire packages from market pricing sheet.
+ * Customer pay + driver received; platform fee = customer - driver.
+ * SUV 8h+ extrapolated (+₹100 over sedan) until sheet is completed.
+ */
 const DRIVER_PACKAGES: Array<{
   packageHours: DriverPackageHours;
   includedKm: number;
   hatchback: number;
   sedan: number;
   suv: number;
+  hatchbackDriver: number;
+  sedanDriver: number;
+  suvDriver: number;
+  extraHourRate: number;
+  extraKmRate: number;
 }> = [
-  { packageHours: 2, includedKm: 20, hatchback: 400, sedan: 500, suv: 600 },
-  { packageHours: 4, includedKm: 40, hatchback: 600, sedan: 700, suv: 800 },
-  { packageHours: 8, includedKm: 80, hatchback: 1000, sedan: 1100, suv: 1400 },
-  { packageHours: 12, includedKm: 120, hatchback: 1500, sedan: 1600, suv: 2000 },
-  { packageHours: 24, includedKm: 240, hatchback: 2000, sedan: 2100, suv: 2800 },
+  {
+    packageHours: 2,
+    includedKm: 20,
+    hatchback: 400,
+    sedan: 500,
+    suv: 600,
+    hatchbackDriver: 300,
+    sedanDriver: 400,
+    suvDriver: 500,
+    extraHourRate: 50,
+    extraKmRate: 10,
+  },
+  {
+    packageHours: 4,
+    includedKm: 40,
+    hatchback: 600,
+    sedan: 700,
+    suv: 800,
+    hatchbackDriver: 500,
+    sedanDriver: 500,
+    suvDriver: 600,
+    extraHourRate: 50,
+    extraKmRate: 10,
+  },
+  {
+    packageHours: 8,
+    includedKm: 80,
+    hatchback: 1000,
+    sedan: 1100,
+    suv: 1200,
+    hatchbackDriver: 800,
+    sedanDriver: 900,
+    suvDriver: 1000,
+    extraHourRate: 100,
+    extraKmRate: 7,
+  },
+  {
+    packageHours: 12,
+    includedKm: 120,
+    hatchback: 1500,
+    sedan: 1600,
+    suv: 1700,
+    hatchbackDriver: 1200,
+    sedanDriver: 1200,
+    suvDriver: 1400,
+    extraHourRate: 100,
+    extraKmRate: 5,
+  },
+  {
+    packageHours: 24,
+    includedKm: 240,
+    hatchback: 2000,
+    sedan: 2100,
+    suv: 2200,
+    hatchbackDriver: 1600,
+    sedanDriver: 1600,
+    suvDriver: 1800,
+    extraHourRate: 100,
+    extraKmRate: 5,
+  },
 ];
 
 function roundToNearestTen(amount: number): number {
@@ -207,22 +274,27 @@ export function calculateDriverFare(
   }
 
   const packageFare = pkg[vehicleCategory];
+  const driverKey = `${vehicleCategory}Driver` as
+    | 'hatchbackDriver'
+    | 'sedanDriver'
+    | 'suvDriver';
+  const driverPayoutBase = pkg[driverKey];
   let extraHoursCharge = 0;
   let extraKmCharge = 0;
 
   if (actualHours !== undefined && actualHours > packageHours) {
     const extraHours = actualHours - packageHours;
-    const hourlyRate = packageHours <= 4 ? 50 : 100;
-    extraHoursCharge = Math.round(extraHours * hourlyRate);
+    extraHoursCharge = Math.round(extraHours * pkg.extraHourRate);
   }
 
   if (actualKm !== undefined && actualKm > pkg.includedKm) {
     const extraKm = actualKm - pkg.includedKm;
-    const kmRate = packageHours <= 4 ? 10 : 5;
-    extraKmCharge = Math.round(extraKm * kmRate);
+    extraKmCharge = Math.round(extraKm * pkg.extraKmRate);
   }
 
   const totalFare = packageFare + extraHoursCharge + extraKmCharge;
+  const driverPayout = driverPayoutBase + extraHoursCharge + extraKmCharge;
+  const platformFee = Math.max(0, totalFare - driverPayout);
   const { advanceAmount, remainingAmount } = splitAdvance(totalFare);
 
   return {
@@ -232,6 +304,8 @@ export function calculateDriverFare(
       includedKm: pkg.includedKm,
       vehicleCategory,
       packageFare,
+      driverPayout,
+      platformFee,
       extraHoursCharge,
       extraKmCharge,
       totalFare,

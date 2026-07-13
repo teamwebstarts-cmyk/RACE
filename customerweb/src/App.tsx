@@ -26,6 +26,7 @@ import {
 import { MyVehiclesPage } from './pages/profile/MyVehiclesPage';
 import { PersonalInfoPage } from './pages/profile/PersonalInfoPage';
 import { ProfilePage } from './pages/profile/ProfilePage';
+import { SubscriptionsPage } from './pages/profile/SubscriptionsPage';
 import { VehicleDetailPage } from './pages/profile/VehicleDetailPage';
 import { ComingSoonPage } from './pages/services/ComingSoonPage';
 import { CategoryDetailPage } from './pages/services/CategoryDetailPage';
@@ -121,6 +122,7 @@ export default function App() {
           <Route path="profile/vehicles/add" element={<AddVehiclePage />} />
           <Route path="profile/vehicles/:id" element={<VehicleDetailPage />} />
           <Route path="profile/locations" element={<SavedLocationsPage />} />
+          <Route path="profile/subscriptions" element={<SubscriptionsPage />} />
           <Route path="profile/notifications" element={<NotificationsPage />} />
           <Route path="profile/settings" element={<SettingsPage />} />
           <Route path="profile/help" element={<HelpSupportPage />} />

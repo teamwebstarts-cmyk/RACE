@@ -29,4 +29,6 @@ export const API_ENDPOINTS = {
   notifications: '/api/v1/profile/notifications',
   savedLocations: '/api/v1/profile/locations',
   subscriptionPlans: '/api/v1/subscriptions/plans',
+  subscriptionCurrent: '/api/v1/subscriptions',
+  subscriptionCancel: '/api/v1/subscriptions/cancel',
 } as const;

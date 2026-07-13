@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { Navigation } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { Button } from '../../components/ui/Button';
@@ -12,11 +12,27 @@ import {
   listDriverJobs,
   rejectDriverJob,
 } from '../../services/driverService';
-import { listVendorBookingOffers } from '../../services/vendorBookingsService';
+import { listVendorDrivers } from '../../services/vendorDriversService';
+import { listVendorVehicles } from '../../services/vendorVehiclesService';
+import {
+  assignVendorBooking,
+  listVendorBookingOffers,
+} from '../../services/vendorBookingsService';
 import { useAuthStore } from '../../store/authStore';
-import type { DriverJobBooking } from '../../types/partner';
+import type { DriverJobBooking, FleetDriver, FleetVehicle } from '../../types/partner';
 
 const ACTIVE_STATUSES = new Set(['DRIVER_EN_ROUTE', 'DRIVER_ARRIVED', 'IN_PROGRESS']);
+
+function eligibleDrivers(drivers: FleetDriver[], bookingType: 'towing' | 'driver') {
+  return drivers.filter((d) => {
+    if (d.isBusy) return false;
+    const type = d.driverType.toLowerCase();
+    if (bookingType === 'towing') {
+      return type.includes('tow');
+    }
+    return type.includes('full') || type.includes('part');
+  });
+}
 
 export function JobsPage() {
   const navigate = useNavigate();
@@ -25,10 +41,16 @@ export function JobsPage() {
   const isVendor = user?.role === 'vendor';
   const [offers, setOffers] = useState<DriverJobBooking[]>([]);
   const [myJobs, setMyJobs] = useState<DriverJobBooking[]>([]);
+  const [fleetDrivers, setFleetDrivers] = useState<FleetDriver[]>([]);
+  const [fleetVehicles, setFleetVehicles] = useState<FleetVehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [pendingApproval, setPendingApproval] = useState(false);
   const [actingId, setActingId] = useState<string | null>(null);
+  const [assigningId, setAssigningId] = useState<string | null>(null);
+  const [selectedDriverId, setSelectedDriverId] = useState('');
+  const [selectedVehicleId, setSelectedVehicleId] = useState('');
 
   const load = useCallback(async () => {
     if (!isDriver && !isVendor) {
@@ -47,7 +69,14 @@ export function JobsPage() {
         setOffers(open);
         setMyJobs(mine);
       } else {
-        setOffers(await listVendorBookingOffers());
+        const [open, drivers, vehicles] = await Promise.all([
+          listVendorBookingOffers(),
+          listVendorDrivers().catch(() => [] as FleetDriver[]),
+          listVendorVehicles().catch(() => [] as FleetVehicle[]),
+        ]);
+        setOffers(open);
+        setFleetDrivers(drivers);
+        setFleetVehicles(vehicles.filter((v) => v.status === 'ACTIVE'));
         setMyJobs([]);
       }
     } catch (err) {
@@ -72,6 +101,27 @@ export function JobsPage() {
     const timer = window.setInterval(() => void load(), 8000);
     return () => window.clearInterval(timer);
   }, [load]);
+
+  const assigningOffer = useMemo(
+    () => offers.find((o) => o.id === assigningId) ?? null,
+    [offers, assigningId],
+  );
+
+  const driversForAssign = useMemo(() => {
+    if (!assigningOffer) return [];
+    return eligibleDrivers(fleetDrivers, assigningOffer.bookingType);
+  }, [assigningOffer, fleetDrivers]);
+
+  useEffect(() => {
+    if (!assigningOffer) return;
+    const eligible = eligibleDrivers(fleetDrivers, assigningOffer.bookingType);
+    setSelectedDriverId((prev) =>
+      eligible.some((d) => d.id === prev) ? prev : eligible[0]?.id || '',
+    );
+    setSelectedVehicleId((prev) =>
+      fleetVehicles.some((v) => v.id === prev) ? prev : fleetVehicles[0]?.id || '',
+    );
+  }, [assigningOffer, fleetDrivers, fleetVehicles]);
 
   const onAccept = async (job: DriverJobBooking) => {
     if (!isDriver) return;
@@ -100,6 +150,34 @@ export function JobsPage() {
     }
   };
 
+  const onVendorAssign = async () => {
+    if (!assigningOffer || !selectedDriverId) {
+      setError('Select a driver for this service');
+      return;
+    }
+    setActingId(assigningOffer.id);
+    setError('');
+    setSuccess('');
+    try {
+      const result = await assignVendorBooking({
+        bookingId: assigningOffer.id,
+        bookingType: assigningOffer.bookingType,
+        driverId: selectedDriverId,
+        vehicleId: selectedVehicleId || undefined,
+      });
+      setSuccess(
+        result.message ||
+          `Assigned ${result.driver?.name || 'driver'} — customer can see details now.`,
+      );
+      setAssigningId(null);
+      await load();
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Could not assign driver'));
+    } finally {
+      setActingId(null);
+    }
+  };
+
   if (!isDriver && !isVendor) {
     return (
       <div className="page-section">
@@ -119,7 +197,7 @@ export function JobsPage() {
           <h1>Jobs</h1>
           <p className="muted">
             {isVendor
-              ? 'Nearby customer requests — assign a fleet driver when ready.'
+              ? 'Select a driver and vehicle for each customer request — they will see the details instantly.'
               : 'Nearby customer requests — accept to claim the job (first come, first served).'}
           </p>
         </div>
@@ -129,11 +207,12 @@ export function JobsPage() {
       </div>
 
       {error ? <div className="toast-error">{error}</div> : null}
+      {success ? <div className="toast-success">{success}</div> : null}
 
       {pendingApproval ? (
         <EmptyState
           title="Waiting for approval"
-          description="Your driver account is pending admin approval. Jobs will appear here once approved."
+          description="Your account is pending admin approval. Jobs will appear here once approved."
         />
       ) : loading && offers.length === 0 && myJobs.length === 0 ? (
         <div className="loading-inline">
@@ -145,12 +224,13 @@ export function JobsPage() {
           {offers.length === 0 ? (
             <EmptyState
               title="No open requests nearby"
-              description="When a customer books towing or a driver near you, it shows up here instantly."
+              description="When a customer books towing or a driver near you, it shows up here."
             />
           ) : (
             <div className="job-list">
               {offers.map((job) => {
                 const busy = actingId === job.id;
+                const isAssigning = assigningId === job.id;
                 return (
                   <article key={`offer-${job.bookingType}-${job.id}`} className="job-card">
                     <div className="job-card-head">
@@ -164,30 +244,91 @@ export function JobsPage() {
                     <p className="muted" style={{ marginTop: 8 }}>
                       {job.pickup?.address || job.pickup?.label || 'Pickup location pending'}
                     </p>
-                    {typeof job.distanceKm === 'number' && job.distanceKm < 900 ? (
-                      <p className="muted" style={{ fontSize: 13, marginTop: 4 }}>
-                        ~{job.distanceKm} km away
-                      </p>
-                    ) : null}
                     {typeof job.estimatedFare === 'number' ? (
                       <p style={{ marginTop: 8, fontWeight: 700 }}>
                         ₹{Math.round(job.estimatedFare).toLocaleString('en-IN')}
                       </p>
                     ) : null}
-                    <div className="job-card-actions">
-                      {isDriver ? (
-                        <Button disabled={busy} onClick={() => void onAccept(job)}>
-                          {busy ? 'Accepting…' : 'Accept job'}
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="outline"
-                          onClick={() => navigate('/app/account/drivers')}
-                        >
-                          Assign via fleet drivers
-                        </Button>
-                      )}
-                    </div>
+
+                    {isVendor && isAssigning ? (
+                      <div className="driver-form" style={{ marginTop: 16 }}>
+                        <p className="muted" style={{ marginBottom: 12, fontSize: 13 }}>
+                          {job.bookingType === 'towing'
+                            ? 'Choose a Tow Driver and fleet vehicle for this towing request.'
+                            : 'Choose a Full-Time / Part-Time driver (and vehicle if needed).'}
+                        </p>
+                        <div className="field">
+                          <label htmlFor={`driver-${job.id}`}>Driver</label>
+                          <select
+                            id={`driver-${job.id}`}
+                            value={selectedDriverId}
+                            onChange={(e) => setSelectedDriverId(e.target.value)}
+                          >
+                            <option value="">Select driver</option>
+                            {driversForAssign.map((d) => (
+                              <option key={d.id} value={d.id}>
+                                {d.name} · {d.driverType}
+                                {!d.isAvailable ? ' (offline)' : ''}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        {driversForAssign.length === 0 ? (
+                          <p className="field-error" style={{ marginBottom: 12 }}>
+                            No eligible drivers in your fleet for this service.{' '}
+                            <button
+                              type="button"
+                              className="btn btn-ghost"
+                              style={{ minHeight: 0, padding: 0 }}
+                              onClick={() => navigate('/app/account/drivers')}
+                            >
+                              Add drivers
+                            </button>
+                          </p>
+                        ) : null}
+                        <div className="field">
+                          <label htmlFor={`vehicle-${job.id}`}>Fleet vehicle</label>
+                          <select
+                            id={`vehicle-${job.id}`}
+                            value={selectedVehicleId}
+                            onChange={(e) => setSelectedVehicleId(e.target.value)}
+                          >
+                            <option value="">No vehicle / optional</option>
+                            {fleetVehicles.map((v) => (
+                              <option key={v.id} value={v.id}>
+                                {v.registrationNo} · {v.type} · {v.model}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="job-card-actions">
+                          <Button disabled={busy || !selectedDriverId} onClick={() => void onVendorAssign()}>
+                            {busy ? 'Assigning…' : 'Assign & notify customer'}
+                          </Button>
+                          <Button variant="outline" disabled={busy} onClick={() => setAssigningId(null)}>
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="job-card-actions">
+                        {isDriver ? (
+                          <Button disabled={busy} onClick={() => void onAccept(job)}>
+                            {busy ? 'Accepting…' : 'Accept job'}
+                          </Button>
+                        ) : (
+                          <Button
+                            onClick={() => {
+                              setSuccess('');
+                              setError('');
+                              setAssigningId(job.id);
+                            }}
+                          >
+                            Select driver & vehicle
+                          </Button>
+                        )}
+                      </div>
+                    )}
                   </article>
                 );
               })}
@@ -215,9 +356,7 @@ export function JobsPage() {
                         </div>
                         <p className="job-status">{job.status.replace(/_/g, ' ')}</p>
                         <p className="muted" style={{ marginTop: 8 }}>
-                          {job.pickup?.address ||
-                            job.pickup?.label ||
-                            'Pickup location pending'}
+                          {job.pickup?.address || job.pickup?.label || 'Pickup location pending'}
                         </p>
                         <div className="job-card-actions">
                           {canDecide ? (
@@ -235,10 +374,7 @@ export function JobsPage() {
                             </>
                           ) : null}
                           {isActive ? (
-                            <Button
-                              variant="outline"
-                              onClick={() => navigate('/app/jobs/active')}
-                            >
+                            <Button variant="outline" onClick={() => navigate('/app/jobs/active')}>
                               <Navigation size={16} style={{ marginRight: 6 }} />
                               Open active
                             </Button>
