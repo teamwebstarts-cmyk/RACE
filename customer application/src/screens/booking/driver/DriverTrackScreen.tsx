@@ -52,6 +52,7 @@ export default function DriverTrackScreen({ navigation, route }: Props) {
   const displayDriverName =
     driverName ?? booking?.driver?.name ?? 'Assigning driver';
   const hasAssignedDriver = Boolean(driverName ?? booking?.driver?.name);
+  const fleetVehicleLabel = booking?.assignedFleetVehicleLabel;
   const activeStep = useMemo(() => stepIndexForStatus(status), [status]);
   const isCompleted = isCompletedUnifiedStatus(status);
 
@@ -218,6 +219,11 @@ export default function DriverTrackScreen({ navigation, route }: Props) {
             {hasAssignedDriver ? (
               <Text style={{ fontSize: t.caption, color: colors.grey, marginBottom: t.px(2) }}>
                 ★ {driverRating.toFixed(1)} · Assigned driver
+              </Text>
+            ) : null}
+            {fleetVehicleLabel ? (
+              <Text style={{ fontSize: t.caption, color: colors.grey, marginBottom: t.px(2) }}>
+                Vehicle: {fleetVehicleLabel}
               </Text>
             ) : null}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.px(4) }}>

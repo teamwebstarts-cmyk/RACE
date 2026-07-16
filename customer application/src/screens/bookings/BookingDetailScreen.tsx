@@ -252,7 +252,7 @@ export default function BookingDetailScreen({ navigation, route }: Props) {
 
       <View style={[styles.card, { borderRadius: px(14), padding: px(14), marginBottom: px(14) }, shadows.card]}>
         <Text style={{ fontSize: px(14), fontWeight: typography.weights.bold, color: colors.dark, marginBottom: px(10) }}>
-          Driver
+          Assigned partner
         </Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: px(12) }}>
           <DriverAvatar size={px(48)} />
@@ -266,9 +266,23 @@ export default function BookingDetailScreen({ navigation, route }: Props) {
                 {booking.driver?.rating ?? 4.8} · {booking.driver?.experience ?? 'RACE verified'}
               </Text>
             </View>
+            {booking.assignedFleetVehicleLabel ? (
+              <Text style={{ fontSize: px(12), color: colors.grey, marginTop: px(4) }}>
+                Vehicle: {booking.assignedFleetVehicleLabel}
+              </Text>
+            ) : null}
+            {booking.vendorId && !booking.driver?.name ? (
+              <Text style={{ fontSize: px(12), color: colors.grey, marginTop: px(4) }}>
+                Vendor assigned — driver details updating
+              </Text>
+            ) : null}
           </View>
           <Pressable
-            onPress={() => void Linking.openURL(`tel:${brand.phoneRaw}`)}
+            onPress={() =>
+              void Linking.openURL(
+                `tel:${booking.driver?.phone ? booking.driver.phone : brand.phoneRaw}`,
+              )
+            }
             style={{
               paddingHorizontal: px(12),
               paddingVertical: px(8),

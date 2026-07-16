@@ -20,6 +20,7 @@ import GoogleIcon from '../../components/auth/GoogleIcon';
 import { AuthBackHeader } from '../../components/auth/StepHeader';
 import { useAuthActions } from '../../hooks/useAuth';
 import { getApiErrorMessage } from '../../services/api';
+import { getRoleMismatchMessage, isRoleMismatchError } from '../../utils/roleMismatch';
 import { useSignupDraftStore } from '../../store/signupDraftStore';
 import type { AuthStackParamList } from '../../types/navigation';
 import { formatPhoneE164, getPhoneDigits } from '../../utils/phone';
@@ -76,8 +77,16 @@ export default function CreateAccountScreen({ navigation }: Props) {
         isExistingUser: result.isExistingUser,
       });
     } catch (error) {
-      const message = getApiErrorMessage(error, 'Unable to send OTP');
-      setErrors({ phone: message });
+      if (isRoleMismatchError(error)) {
+        setErrors({
+          phone: getRoleMismatchMessage(
+            error,
+            'This number is registered as a partner. Use the RACE Partner app.',
+          ),
+        });
+      } else {
+        setErrors({ phone: getApiErrorMessage(error, 'Unable to send OTP') });
+      }
     }
   };
 

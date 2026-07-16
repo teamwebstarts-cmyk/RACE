@@ -24,6 +24,7 @@ import type {
   PartnerRootStackParamList,
   PartnerRole,
 } from '../../../types/partnerNavigation';
+import { getRoleMismatchMessage, isRoleMismatchError } from '../../../utils/roleMismatch';
 import { colors, radius, spacing, typography } from '../../../theme';
 
 type Props = NativeStackScreenProps<PartnerAuthStackParamList, 'PartnerOtpVerification'>;
@@ -141,7 +142,16 @@ export default function PartnerOtpVerificationScreen({ navigation, route }: Prop
         dispatch(completeOnboarding(result.user));
         goToPartnerMain();
       } catch (err) {
-        setError(getApiErrorMessage(err, 'Invalid OTP'));
+        if (isRoleMismatchError(err)) {
+          setError(
+            getRoleMismatchMessage(
+              err,
+              'This number belongs to another app role. Use the RACE Customer app or a different number.',
+            ),
+          );
+        } else {
+          setError(getApiErrorMessage(err, 'Invalid OTP'));
+        }
         setOtp('');
         verifyLockRef.current = false;
       }
@@ -180,7 +190,16 @@ export default function PartnerOtpVerificationScreen({ navigation, route }: Prop
         isExistingUser: result.isExistingUser,
       });
     } catch (err) {
-      setError(getApiErrorMessage(err, 'Unable to resend OTP'));
+      if (isRoleMismatchError(err)) {
+        setError(
+          getRoleMismatchMessage(
+            err,
+            'This number belongs to another app role. Use the RACE Customer app or a different number.',
+          ),
+        );
+      } else {
+        setError(getApiErrorMessage(err, 'Unable to resend OTP'));
+      }
     }
   };
 

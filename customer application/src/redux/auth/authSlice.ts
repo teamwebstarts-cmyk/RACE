@@ -1,4 +1,4 @@
-import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, current, type PayloadAction } from '@reduxjs/toolkit';
 
 import { useAuthStore } from '../../store/authStore';
 import type { AuthUser } from '../../types/auth';
@@ -83,7 +83,7 @@ const authSlice = createSlice({
       state.onboardingRequired = false;
       state.loading = false;
 
-      const user = action.payload ?? state.user;
+      const user = action.payload ?? (state.user ? current(state.user) : null);
       if (user) {
         syncZustandPatch(user, false);
       }

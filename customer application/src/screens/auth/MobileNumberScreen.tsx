@@ -20,6 +20,7 @@ import AuthToast, { AuthLoadingOverlay } from '../../components/auth/AuthToast';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import { clearSignupPath } from '../../redux/onboarding/onboardingSlice';
 import { getApiErrorMessage, useSendOtpMutation } from '../../services/auth/useAuthMutations';
+import { getRoleMismatchMessage, isRoleMismatchError } from '../../utils/roleMismatch';
 import type { AuthStackParamList } from '../../types/navigation';
 import { colors, radius, spacing, typography } from '../../theme';
 
@@ -67,6 +68,15 @@ export default function MobileNumberScreen({ navigation }: Props) {
         isExistingUser: result.isExistingUser ?? false,
       });
     } catch (err) {
+      if (isRoleMismatchError(err)) {
+        setError(
+          getRoleMismatchMessage(
+            err,
+            'This number is registered as a partner. Use the RACE Partner app or a different number.',
+          ),
+        );
+        return;
+      }
       setError(getApiErrorMessage(err, 'Unable to send OTP'));
     }
   };

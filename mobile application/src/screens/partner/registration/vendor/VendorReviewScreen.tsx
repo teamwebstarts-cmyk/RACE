@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
-import { CheckCircle2 } from 'lucide-react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { CheckCircle2, Square, CheckSquare } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import PartnerRegistrationLayout from '../../../../components/partner/PartnerRegistrationLayout';
@@ -19,6 +19,10 @@ import type {
 } from '../../../../types/partnerNavigation';
 import type { VendorType } from '../../../../types/vendor';
 import { partnerRegistrationGoBack } from '../../../../utils/partnerRegistration';
+import {
+  mapVendorTypeFromBusinessLabel,
+  VENDOR_UI_TO_BACKEND_DOC,
+} from '../../../../constants/backendRequiredDocuments';
 import { PARTNER_WAITING_ADMIN_APPROVAL } from '../../../../constants/partnerCopy';
 import { colors, radius, spacing, typography } from '../../../../theme';
 
@@ -33,33 +37,19 @@ function ReviewRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function mapBusinessType(value: string): VendorType {
-  const lower = value.toLowerCase();
-  if (lower.includes('tow') && lower.includes('truck')) return 'tow_truck_driver';
-  if (lower.includes('mechanic')) return 'mechanic';
-  if (lower.includes('full')) return 'full_time_driver';
-  if (lower.includes('part')) return 'part_time_driver';
-  return 'towing_company';
-}
-
-const VENDOR_DOC_TYPE_MAP: Record<string, string> = {
-  aadhaar: 'aadhaar',
-  pan: 'pan',
-  gst: 'gst',
-  business_registration: 'shop_license',
-  shop_photo: 'vehicle_photo',
-  cancelled_cheque: 'cancelled_cheque',
-  profile_photo: 'selfie',
-};
-
 export default function VendorReviewScreen({ navigation, route }: Props) {
   const dispatch = useAppDispatch();
   const authUser = useAppSelector(state => state.auth.user);
   const { vendorBusiness, vendorAddress, vendorDocuments } = usePartnerRegistrationStore();
   const [submitting, setSubmitting] = useState(false);
+  const [acceptTerms, setAcceptTerms] = useState(false);
   const handleBack = () => partnerRegistrationGoBack(navigation, 'VendorReview', route.params);
 
   const submit = async () => {
+    if (!acceptTerms) {
+      Alert.alert('Terms required', 'Please accept the Terms & Conditions to submit.');
+      return;
+    }
     setSubmitting(true);
     try {
       const address = [
@@ -73,13 +63,15 @@ export default function VendorReviewScreen({ navigation, route }: Props) {
         .join(', ');
 
       await registerVendor({
-        vendorType: mapBusinessType(vendorBusiness.businessType || 'towing company'),
+        vendorType: mapVendorTypeFromBusinessLabel(
+          vendorBusiness.businessType || 'towing company',
+        ) as VendorType,
         businessName: vendorBusiness.businessName,
         ownerName: vendorBusiness.ownerName || authUser?.fullName || 'Vendor',
         mobileNumber: vendorBusiness.mobileNumber || authUser?.mobileNumber || '',
         email: vendorBusiness.email || undefined,
         address: address || undefined,
-        acceptTerms: true,
+        acceptTerms: true as const,
       });
 
       try {
@@ -96,7 +88,7 @@ export default function VendorReviewScreen({ navigation, route }: Props) {
       }
 
       for (const doc of vendorDocuments) {
-        const documentType = VENDOR_DOC_TYPE_MAP[doc.id] ?? 'other';
+        const documentType = VENDOR_UI_TO_BACKEND_DOC[doc.id] ?? 'other';
         try {
           await uploadVendorDocument(documentType, {
             uri: doc.uri,
@@ -189,6 +181,21 @@ export default function VendorReviewScreen({ navigation, route }: Props) {
           />
         ))}
       </View>
+
+      <Pressable
+        onPress={() => setAcceptTerms(prev => !prev)}
+        style={styles.termsRow}
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked: acceptTerms }}>
+        {acceptTerms ? (
+          <CheckSquare size={22} color={colors.primary} strokeWidth={2.2} />
+        ) : (
+          <Square size={22} color={colors.grey} strokeWidth={2.2} />
+        )}
+        <Text style={styles.termsText}>
+          I accept the Terms & Conditions and confirm the details above are accurate.
+        </Text>
+      </Pressable>
     </PartnerRegistrationLayout>
   );
 }
@@ -243,5 +250,18 @@ const styles = StyleSheet.create({
     color: colors.dark,
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.semibold,
+  },
+  termsRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    marginTop: spacing.lg,
+    paddingVertical: spacing.sm,
+  },
+  termsText: {
+    flex: 1,
+    color: colors.dark,
+    fontSize: typography.sizes.sm,
+    lineHeight: typography.lineHeights.relaxed,
   },
 });

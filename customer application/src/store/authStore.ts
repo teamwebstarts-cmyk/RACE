@@ -139,11 +139,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }),
 
   patchAuth: patch =>
-    set(state => ({
-      user: patch.user ?? state.user,
-      isAuthenticated: true,
-      onboardingRequired: patch.onboardingRequired ?? state.onboardingRequired,
-    })),
+    set(state => {
+      const onboardingRequired =
+        patch.onboardingRequired ?? state.onboardingRequired;
+
+      return {
+        user: patch.user ?? state.user,
+        isAuthenticated: true,
+        onboardingRequired,
+        customerOnboardingStep:
+          onboardingRequired === false ? 'done' : state.customerOnboardingStep,
+      };
+    }),
 
   clearAuth: () =>
     set(state => ({

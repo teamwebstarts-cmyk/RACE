@@ -1,4 +1,5 @@
 import React from 'react';
+import { Alert } from 'react-native';
 import { FileStack } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -9,7 +10,7 @@ import {
   PartnerSectionHeader,
 } from '../../../../components/partner/PartnerRegistrationSections';
 import { DRIVER_REGISTRATION_STEPS } from '../../../../constants/partnerRegistration';
-import { DRIVER_DOCUMENTS } from '../../../../constants/partnerRegistrationDocuments';
+import { DRIVER_DOCUMENTS, getRequiredDocumentIds } from '../../../../constants/partnerRegistrationDocuments';
 import { usePartnerRegistrationStore } from '../../../../store/partnerRegistrationStore';
 import type { PartnerRegistrationStackParamList } from '../../../../types/partnerNavigation';
 import { partnerRegistrationGoBack } from '../../../../utils/partnerRegistration';
@@ -17,11 +18,24 @@ import { partnerRegistrationGoBack } from '../../../../utils/partnerRegistration
 type Props = NativeStackScreenProps<PartnerRegistrationStackParamList, 'DriverDocuments'>;
 
 export default function DriverDocumentsScreen({ navigation, route }: Props) {
-  const driverDocuments = usePartnerRegistrationStore((s) => s.driverDocuments);
-  const addDriverDocument = usePartnerRegistrationStore((s) => s.addDriverDocument);
+  const driverDocuments = usePartnerRegistrationStore(s => s.driverDocuments);
+  const addDriverDocument = usePartnerRegistrationStore(s => s.addDriverDocument);
 
-  const uploadedIds = driverDocuments.map((doc) => doc.id);
+  const uploadedIds = driverDocuments.map(doc => doc.id);
   const handleBack = () => partnerRegistrationGoBack(navigation, 'DriverDocuments', route.params);
+
+  const handleContinue = () => {
+    const required = getRequiredDocumentIds(DRIVER_DOCUMENTS);
+    const missing = required.filter(id => !uploadedIds.includes(id));
+    if (missing.length > 0) {
+      const labels = missing
+        .map(id => DRIVER_DOCUMENTS.find(d => d.id === id)?.label ?? id)
+        .join(', ');
+      Alert.alert('Required documents', `Upload these before continuing: ${labels}`);
+      return;
+    }
+    navigation.navigate('DriverReview', route.params);
+  };
 
   return (
     <PartnerRegistrationLayout
@@ -31,23 +45,19 @@ export default function DriverDocumentsScreen({ navigation, route }: Props) {
       activeStep={3}
       onBack={handleBack}
       footer={
-        <PartnerRegistrationFooter
-          showBack
-          onBack={handleBack}
-          onContinue={() => navigation.navigate('DriverReview', route.params)}
-        />
+        <PartnerRegistrationFooter showBack onBack={handleBack} onContinue={handleContinue} />
       }>
       <PartnerSectionHeader
         Icon={FileStack}
         title="Upload Documents"
-        subtitle="Optional for now — you can upload clear photos later, or continue without them"
+        subtitle="Upload clear photos of each required document before continuing"
       />
 
       <PartnerDocumentUploadList
         documents={DRIVER_DOCUMENTS}
         uploadedIds={uploadedIds}
         onUpload={(id, uri, name, mimeType) => {
-          const label = DRIVER_DOCUMENTS.find((doc) => doc.id === id)?.label ?? id;
+          const label = DRIVER_DOCUMENTS.find(doc => doc.id === id)?.label ?? id;
           addDriverDocument({ id, label, uri, name, mimeType });
         }}
       />

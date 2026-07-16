@@ -84,14 +84,14 @@ function PartnerAccountStackNavigator() {
 
 export default function PartnerNavigator() {
   const user = useAppSelector(state => state.auth.user);
-  const isDriver = user?.role === 'driver';
+  const isPartner = user?.role === 'driver' || user?.role === 'vendor';
 
   return (
     <Tab.Navigator
       tabBar={props => <PartnerTabBar {...props} />}
       screenOptions={{ headerShown: false }}>
       <Tab.Screen name="PartnerHome" component={PartnerHomeScreen} options={{ title: 'Dashboard' }} />
-      {isDriver ? (
+      {isPartner ? (
         <Tab.Screen
           name="PartnerJobs"
           component={PartnerJobsStackNavigator}

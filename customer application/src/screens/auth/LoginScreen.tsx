@@ -18,6 +18,7 @@ import GoldButton from '../../components/auth/GoldButton';
 import GoogleIcon from '../../components/auth/GoogleIcon';
 import { sendOtp } from '../../services/authService';
 import { getApiErrorMessage } from '../../services/api';
+import { getRoleMismatchMessage, isRoleMismatchError } from '../../utils/roleMismatch';
 import type { AuthStackParamList } from '../../types/navigation';
 import {
   formatPhoneE164,
@@ -61,7 +62,16 @@ export default function LoginScreen({ navigation }: Props) {
         isExistingUser: result.isExistingUser,
       });
     } catch (error) {
-      setPhoneError(getApiErrorMessage(error, 'Unable to send OTP'));
+      if (isRoleMismatchError(error)) {
+        setPhoneError(
+          getRoleMismatchMessage(
+            error,
+            'This number is registered as a partner. Use the RACE Partner app or a different number.',
+          ),
+        );
+      } else {
+        setPhoneError(getApiErrorMessage(error, 'Unable to send OTP'));
+      }
     } finally {
       setIsSubmitting(false);
     }

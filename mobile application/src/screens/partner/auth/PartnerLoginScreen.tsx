@@ -20,6 +20,7 @@ import {
 } from '../../../services/auth/useAuthMutations';
 import { usePartnerOnboardingStore } from '../../../store/partnerOnboardingStore';
 import type { PartnerAuthStackParamList } from '../../../types/partnerNavigation';
+import { getRoleMismatchMessage, isRoleMismatchError } from '../../../utils/roleMismatch';
 import { colors, radius, spacing, typography } from '../../../theme';
 
 type Props = NativeStackScreenProps<PartnerAuthStackParamList, 'PartnerLogin'>;
@@ -77,6 +78,15 @@ export default function PartnerLoginScreen({ navigation, route }: Props) {
         isExistingUser: result.isExistingUser ?? false,
       });
     } catch (err) {
+      if (isRoleMismatchError(err)) {
+        setError(
+          getRoleMismatchMessage(
+            err,
+            'This number belongs to another app role. Use the RACE Customer app or a different number.',
+          ),
+        );
+        return;
+      }
       setError(getApiErrorMessage(err, 'Unable to send OTP'));
     }
   };

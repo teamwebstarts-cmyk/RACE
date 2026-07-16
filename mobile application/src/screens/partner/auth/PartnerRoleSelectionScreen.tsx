@@ -62,6 +62,18 @@ export default function PartnerRoleSelectionScreen({ navigation }: Props) {
     navigation.navigate('PartnerLogin', role ? { role } : undefined);
   };
 
+  /** Role selection is often the auth stack root (e.g. after logout). */
+  const handleBack = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'PartnerWelcome' }],
+    });
+  };
+
   const handleContinue = () => {
     if (!selectedRole) {
       return;
@@ -81,7 +93,7 @@ export default function PartnerRoleSelectionScreen({ navigation }: Props) {
     <PartnerScreenLayout
       title="Choose Your Role"
       subtitle="Select how you want to partner with RACE Service."
-      onBack={() => navigation.goBack()}
+      onBack={handleBack}
       keyboardAvoiding={false}
       headerExtra={<PartnerProgressBar total={4} activeIndex={1} />}
       footer={

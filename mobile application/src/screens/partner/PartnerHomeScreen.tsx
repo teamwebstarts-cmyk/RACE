@@ -345,6 +345,11 @@ export default function PartnerHomeScreen() {
             <>
               {isDriver ? <View style={styles.spacer} /> : null}
               <PrimaryButton
+                label="Open customer requests"
+                onPress={() => navigation.navigate('PartnerJobs')}
+              />
+              <View style={styles.spacer} />
+              <PrimaryButton
                 label="Manage drivers"
                 variant="outline"
                 onPress={() =>

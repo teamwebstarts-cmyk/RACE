@@ -17,6 +17,7 @@ import PartnerDocumentUploadList, {
 import AppScreenLayout from '../../components/ui/AppScreenLayout';
 import PrimaryButton from '../../components/ui/PrimaryButton';
 import GlassCard from '../../components/ui/GlassCard';
+import { useAppSelector } from '../../redux/hooks';
 import { getApiErrorMessage } from '../../services/auth/useAuthMutations';
 import { uploadVendorDriverDocument } from '../../services/vendor/vendorDriversApi';
 import {
@@ -50,10 +51,12 @@ function isValidIndianMobile(phone: string): boolean {
 }
 
 export default function VendorDriversScreen({}: Props) {
-  const { data: vendor, isLoading: vendorLoading } = useVendorStatusQuery(true);
+  const user = useAppSelector(state => state.auth.user);
+  const isVendor = user?.role === 'vendor';
+  const { data: vendor, isLoading: vendorLoading } = useVendorStatusQuery(isVendor);
   const isApproved = vendor?.status === 'approved';
 
-  const { data: drivers = [], isLoading, isRefetching, refetch } = useVendorDriversQuery(true);
+  const { data: drivers = [], isLoading, isRefetching, refetch } = useVendorDriversQuery(isVendor);
   const createMutation = useCreateVendorDriverMutation();
   const removeMutation = useRemoveVendorDriverMutation();
 
@@ -148,6 +151,25 @@ export default function VendorDriversScreen({}: Props) {
     ]);
   };
 
+
+  if (!isVendor) {
+    return (
+      <AppScreenLayout
+        scrollable={false}
+        header={
+          <View style={styles.headerPad}>
+            <Text style={styles.title}>My Drivers</Text>
+          </View>
+        }>
+        <View style={styles.pendingCard}>
+          <Text style={styles.pendingTitle}>Vendor accounts only</Text>
+          <Text style={{ color: colors.grey, fontSize: typography.sizes.sm, flex: 1 }}>
+            Fleet driver management is available after signing in as a vendor.
+          </Text>
+        </View>
+      </AppScreenLayout>
+    );
+  }
 
   return (
     <AppScreenLayout

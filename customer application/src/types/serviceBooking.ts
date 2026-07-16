@@ -40,11 +40,14 @@ export interface ServiceBooking {
     createdAt: string;
   };
   driverId?: string;
+  vendorId?: string;
+  assignedFleetVehicleLabel?: string;
   driver?: {
     id: string;
     name: string;
     phone: string;
     rating: number;
+    experience?: string;
   };
 }
 

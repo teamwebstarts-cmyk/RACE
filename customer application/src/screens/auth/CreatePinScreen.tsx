@@ -13,6 +13,8 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import GoldButton from '../../components/auth/GoldButton';
 import { AuthBackHeader } from '../../components/auth/StepHeader';
+import { useAppDispatch } from '../../redux/hooks';
+import { completeOnboarding } from '../../redux/auth/authSlice';
 import { markCustomerOnboardingComplete } from '../../store/customerOnboarding';
 import { useAuthStore } from '../../store/authStore';
 import type { AuthStackParamList } from '../../types/navigation';
@@ -57,6 +59,7 @@ function PinDots({
 }
 
 export default function CreatePinScreen({ navigation }: Props) {
+  const dispatch = useAppDispatch();
   const { width, height } = useWindowDimensions();
   const s = width / REF_W;
   const px = (n: number) => Math.round(n * s);
@@ -150,9 +153,7 @@ export default function CreatePinScreen({ navigation }: Props) {
     }
     await markCustomerOnboardingComplete();
     useAuthStore.getState().setCustomerOnboardingStep('done');
-    const { store } = await import('../../redux/store');
-    const { completeOnboarding } = await import('../../redux/auth/authSlice');
-    store.dispatch(completeOnboarding());
+    dispatch(completeOnboarding());
   };
 
   return (

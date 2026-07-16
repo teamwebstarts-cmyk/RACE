@@ -9,6 +9,7 @@ import { useAuthStore } from '../store/authStore';
 import PartnerAuthNavigator from './PartnerAuthNavigator';
 import PartnerRegistrationNavigator from './PartnerRegistrationNavigator';
 import PartnerSelectSheet from '../components/partner/PartnerSelectSheet';
+import WrongAppRoleScreen from '../screens/partner/auth/WrongAppRoleScreen';
 import type { PartnerRootStackParamList } from '../types/partnerNavigation';
 import { colors } from '../theme';
 
@@ -40,12 +41,22 @@ export default function PartnerAppNavigator() {
     isAuthenticated &&
     !onboardingRequired &&
     (user?.role === 'driver' || user?.role === 'vendor');
+  const showWrongApp =
+    Boolean(accessToken) && isAuthenticated && user?.role === 'customer';
 
   if (isLoading) {
     return (
       <View style={styles.loader}>
         <ActivityIndicator size="large" color={colors.primary} />
       </View>
+    );
+  }
+
+  if (showWrongApp) {
+    return (
+      <NavigationContainer theme={navigationTheme}>
+        <WrongAppRoleScreen />
+      </NavigationContainer>
     );
   }
 

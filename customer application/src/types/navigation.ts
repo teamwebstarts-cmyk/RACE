@@ -144,6 +144,7 @@ export type RootStackParamList = {
   Splash: undefined;
   Auth: NavigatorScreenParams<AuthStackParamList> | undefined;
   Main: undefined;
+  WrongApp: undefined;
 };
 
 export type HomeStackParamList = {

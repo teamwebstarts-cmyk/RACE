@@ -15,6 +15,7 @@ import GoldButton from '../../components/auth/GoldButton';
 import { useAuthActions } from '../../hooks/useAuth';
 import { sendOtp } from '../../services/authService';
 import { getApiErrorMessage } from '../../services/api';
+import { getRoleMismatchMessage, isRoleMismatchError } from '../../utils/roleMismatch';
 import { useAuthStore } from '../../store/authStore';
 import { getCustomerOnboardingRouteFromStep } from '../../store/customerOnboardingRoute';
 import type { AuthStackParamList } from '../../types/navigation';
@@ -68,7 +69,16 @@ export default function OTPScreen({ navigation, route }: Props) {
           navigation.navigate(getCustomerOnboardingRouteFromStep(step));
         }
       } catch (err) {
-        setError(getApiErrorMessage(err, 'Invalid OTP. Please try again'));
+        if (isRoleMismatchError(err)) {
+          setError(
+            getRoleMismatchMessage(
+              err,
+              'This number is registered as a partner. Use the RACE Partner app or a different number.',
+            ),
+          );
+        } else {
+          setError(getApiErrorMessage(err, 'Invalid OTP. Please try again'));
+        }
       } finally {
         isVerifyingRef.current = false;
       }

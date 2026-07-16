@@ -14,6 +14,7 @@ import { DriverBookingProvider } from '../context/DriverBookingContext';
 import { RoadsideBookingProvider } from '../context/RoadsideBookingContext';
 import { TowingBookingProvider } from '../context/TowingBookingContext';
 import { useAuth } from '../hooks/useAuth';
+import { useAppSelector } from '../redux/hooks';
 import { getCustomerOnboardingRouteFromStep } from '../store/customerOnboardingRoute';
 import { useAuthStore } from '../store/authStore';
 import CreateAccountScreen from '../screens/auth/CreateAccountScreen';
@@ -22,6 +23,7 @@ import LoginScreen from '../screens/auth/LoginScreen';
 import OnboardingScreen from '../screens/auth/OnboardingScreen';
 import OTPScreen from '../screens/auth/OTPScreen';
 import SplashScreen from '../screens/auth/SplashScreen';
+import WrongAppRoleScreen from '../screens/auth/WrongAppRoleScreen';
 import TowingServiceScreen from '../screens/TowingServiceScreen';
 import TowingChooseVehicleScreen from '../screens/booking/towing/TowingChooseVehicleScreen';
 import TowingConfirmedScreen from '../screens/booking/towing/TowingConfirmedScreen';
@@ -547,9 +549,12 @@ const navigationTheme = {
 
 export default function AppNavigator() {
   const { isAuthenticated, customerOnboardingStep } = useAuth();
-  const showMainApp = isAuthenticated && customerOnboardingStep === 'done';
+  const user = useAppSelector(state => state.auth.user);
+  const isPartnerRole = user?.role === 'vendor' || user?.role === 'driver';
+  const showWrongApp = isAuthenticated && isPartnerRole;
+  const showMainApp = isAuthenticated && customerOnboardingStep === 'done' && !isPartnerRole;
   const navigationRef = useRef<NavigationContainerRef<RootStackParamList>>(null);
-  const lastRootRoute = useRef<'Auth' | 'Main' | null>(null);
+  const lastRootRoute = useRef<'Auth' | 'Main' | 'WrongApp' | null>(null);
   const lastAuthenticated = useRef<boolean | null>(null);
 
   useEffect(() => {
@@ -558,7 +563,11 @@ export default function AppNavigator() {
       return;
     }
 
-    const nextRootRoute: 'Auth' | 'Main' = showMainApp ? 'Main' : 'Auth';
+    const nextRootRoute: 'Auth' | 'Main' | 'WrongApp' = showWrongApp
+      ? 'WrongApp'
+      : showMainApp
+        ? 'Main'
+        : 'Auth';
     const loggedOut = lastAuthenticated.current === true && !isAuthenticated;
     lastAuthenticated.current = isAuthenticated;
 
@@ -571,13 +580,14 @@ export default function AppNavigator() {
       index: 0,
       routes: [{ name: nextRootRoute }],
     });
-  }, [showMainApp, isAuthenticated]);
+  }, [showMainApp, showWrongApp, isAuthenticated]);
 
   return (
     <NavigationContainer ref={navigationRef} theme={navigationTheme}>
       <RootStack.Navigator screenOptions={{ headerShown: false }}>
         <RootStack.Screen name="Auth" component={AuthStackNavigator} />
         <RootStack.Screen name="Main" component={MainTabNavigator} />
+        <RootStack.Screen name="WrongApp" component={WrongAppRoleScreen} />
       </RootStack.Navigator>
     </NavigationContainer>
   );

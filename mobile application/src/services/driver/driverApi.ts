@@ -21,6 +21,8 @@ export type DriverJobBooking = {
   } | null;
   estimatedFare?: number;
   createdAt: string;
+  distanceKm?: number;
+  serviceLabel?: string;
 };
 
 export async function setDriverAvailability(isAvailable: boolean): Promise<{
@@ -40,6 +42,13 @@ export async function listDriverJobs(params?: {
   const { data } = await api.get<ApiSuccessResponse<DriverJobBooking[]>>(
     API_ENDPOINTS.driverMyBookings,
     { params },
+  );
+  return data.data ?? [];
+}
+
+export async function listDriverJobOffers(): Promise<DriverJobBooking[]> {
+  const { data } = await api.get<ApiSuccessResponse<DriverJobBooking[]>>(
+    API_ENDPOINTS.driverBookingOffers,
   );
   return data.data ?? [];
 }

@@ -22,6 +22,7 @@ import {
   useSendOtpMutation,
   useVerifyOtpMutation,
 } from '../../services/auth/useAuthMutations';
+import { getRoleMismatchMessage, isRoleMismatchError } from '../../utils/roleMismatch';
 import type { AuthStackParamList } from '../../types/navigation';
 import { colors, radius, spacing, typography } from '../../theme';
 
@@ -88,7 +89,16 @@ export default function OtpVerificationScreen({ navigation, route }: Props) {
       }
       // Returning users: RootNavigator switches to Main/Partner when isAuthenticated updates
     } catch (err) {
-      setError(getApiErrorMessage(err, 'Invalid OTP'));
+      if (isRoleMismatchError(err)) {
+        setError(
+          getRoleMismatchMessage(
+            err,
+            'This number is registered as a partner. Use the RACE Partner app or a different number.',
+          ),
+        );
+      } else {
+        setError(getApiErrorMessage(err, 'Invalid OTP'));
+      }
     }
   };
 

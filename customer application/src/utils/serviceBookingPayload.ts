@@ -12,6 +12,11 @@ import {
   requireBookingLocation,
   towingDateIdToScheduledAt,
 } from './bookingLocation';
+import {
+  validateDriverBookingRequest,
+  validateRoadsideBookingRequest,
+  validateTowingBookingRequest,
+} from './bookingValidation';
 import { isTowingRoadsideSlug } from './roadsideServiceMap';
 
 export function resolveBookingVehicleId(
@@ -60,6 +65,7 @@ export function buildTowingBookingRequest(
     payload.scheduledAt = towingDateIdToScheduledAt(booking.dateId);
   }
 
+  validateTowingBookingRequest(payload);
   return payload;
 }
 
@@ -85,6 +91,7 @@ export function buildDriverBookingRequest(
     payload.scheduledAt = scheduledAt;
   }
 
+  validateDriverBookingRequest(payload);
   return payload;
 }
 
@@ -116,5 +123,6 @@ export function buildRoadsideBookingRequest(
     );
   }
 
+  validateRoadsideBookingRequest(payload);
   return payload;
 }
