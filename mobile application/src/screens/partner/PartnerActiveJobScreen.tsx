@@ -3,9 +3,11 @@ import {
   ActivityIndicator,
   Alert,
   Linking,
+  Modal,
   Pressable,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { MapPin, Navigation, Phone } from 'lucide-react-native';
@@ -55,6 +57,8 @@ export default function PartnerActiveJobScreen({ navigation, route }: Props) {
   const { data: activeJob, isLoading, refetch } = useDriverActiveJobQuery(true);
   const statusMutation = useUpdateDriverBookingStatusMutation();
   const [acting, setActing] = useState(false);
+  const [otpModal, setOtpModal] = useState(false);
+  const [tripOtp, setTripOtp] = useState('');
 
   const job =
     activeJob && (!bookingId || activeJob.id === bookingId) ? activeJob : null;
@@ -69,7 +73,7 @@ export default function PartnerActiveJobScreen({ navigation, route }: Props) {
     return STATUS_ACTIONS[job.status as JobStatus] ?? null;
   }, [job]);
 
-  const onStatusUpdate = async (nextStatus: JobStatus) => {
+  const onStatusUpdate = async (nextStatus: JobStatus, otp?: string) => {
     if (!job) return;
     setActing(true);
     try {
@@ -77,8 +81,11 @@ export default function PartnerActiveJobScreen({ navigation, route }: Props) {
         bookingId: job.id,
         bookingType: job.bookingType,
         status: nextStatus,
+        tripOtp: otp,
       });
       await refetch();
+      setOtpModal(false);
+      setTripOtp('');
       if (nextStatus === 'COMPLETED') {
         Alert.alert('Job completed', 'You are available for new bookings.', [
           { text: 'OK', onPress: () => navigation.goBack() },
@@ -89,6 +96,23 @@ export default function PartnerActiveJobScreen({ navigation, route }: Props) {
     } finally {
       setActing(false);
     }
+  };
+
+  const onActionPress = () => {
+    if (!action) return;
+    if (action.next === 'IN_PROGRESS') {
+      setOtpModal(true);
+      return;
+    }
+    void onStatusUpdate(action.next);
+  };
+
+  const submitTripOtp = () => {
+    if (!/^\d{4}$/.test(tripOtp.trim())) {
+      Alert.alert('Trip OTP', 'Enter the 4-digit code from the customer app.');
+      return;
+    }
+    void onStatusUpdate('IN_PROGRESS', tripOtp.trim());
   };
 
   if (isLoading) {
@@ -173,7 +197,7 @@ export default function PartnerActiveJobScreen({ navigation, route }: Props) {
       {action ? (
         <PrimaryButton
           label={acting ? 'Updating…' : action.label}
-          onPress={() => void onStatusUpdate(action.next)}
+          onPress={onActionPress}
           disabled={acting}
         />
       ) : job.status === 'COMPLETED' ? (
@@ -186,6 +210,31 @@ export default function PartnerActiveJobScreen({ navigation, route }: Props) {
         <Phone size={18} color={colors.primary} />
         <Text style={styles.callLabel}>Call support</Text>
       </Pressable>
+
+      <Modal visible={otpModal} transparent animationType="fade" onRequestClose={() => setOtpModal(false)}>
+        <Pressable style={styles.modalOverlay} onPress={() => setOtpModal(false)}>
+          <Pressable style={styles.otpSheet} onPress={e => e.stopPropagation()}>
+            <Text style={styles.otpTitle}>Verify trip OTP</Text>
+            <Text style={styles.otpHint}>
+              Ask the customer for the 4-digit code shown in their RACE app.
+            </Text>
+            <TextInput
+              value={tripOtp}
+              onChangeText={text => setTripOtp(text.replace(/\D/g, '').slice(0, 4))}
+              keyboardType="number-pad"
+              maxLength={4}
+              placeholder="0000"
+              placeholderTextColor={colors.textMuted}
+              style={styles.otpInput}
+            />
+            <PrimaryButton
+              label={acting ? 'Verifying…' : 'Start trip'}
+              onPress={submitTripOtp}
+              disabled={acting}
+            />
+          </Pressable>
+        </Pressable>
+      </Modal>
     </AppScreenLayout>
   );
 }
@@ -297,5 +346,39 @@ const styles = StyleSheet.create({
     color: colors.grey,
     textAlign: 'center',
     marginBottom: spacing.md,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    justifyContent: 'center',
+    padding: spacing.lg,
+  },
+  otpSheet: {
+    backgroundColor: colors.background,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    gap: spacing.md,
+  },
+  otpTitle: {
+    color: colors.dark,
+    fontWeight: typography.weights.bold,
+    fontSize: typography.sizes.lg,
+  },
+  otpHint: {
+    color: colors.grey,
+    fontSize: typography.sizes.sm,
+    lineHeight: 18,
+  },
+  otpInput: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    fontSize: 28,
+    fontWeight: typography.weights.extrabold,
+    letterSpacing: 8,
+    textAlign: 'center',
+    color: colors.dark,
   },
 });

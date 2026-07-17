@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -9,7 +9,15 @@ import {
   Text,
   View,
 } from 'react-native';
-import { Navigation } from 'lucide-react-native';
+import {
+  Briefcase,
+  Calendar,
+  Car,
+  MapPin,
+  Navigation,
+  Plus,
+  Truck,
+} from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import axios from 'axios';
@@ -24,13 +32,7 @@ import {
   useRejectDriverJobMutation,
 } from '../../services/driver/useDriverQueries';
 import type { DriverJobBooking } from '../../services/driver/driverApi';
-import type { FleetDriver } from '../../services/vendor/vendorDriversApi';
-import {
-  useAssignVendorBookingMutation,
-  useVendorBookingOffersQuery,
-  useVendorFleetDriversQuery,
-  useVendorFleetVehiclesQuery,
-} from '../../services/vendor/useVendorBookingsQueries';
+import { useVendorBookingOffersQuery } from '../../services/vendor/useVendorBookingsQueries';
 import { formatReadableAddress } from '../../utils/readableAddress';
 import type { PartnerJobsStackParamList } from '../../types/partnerNavigation';
 import { colors, radius, spacing, typography } from '../../theme';
@@ -38,15 +40,59 @@ import { getApiErrorMessage } from '../../services/auth/useAuthMutations';
 
 const ACTIVE_STATUSES = new Set(['DRIVER_EN_ROUTE', 'DRIVER_ARRIVED', 'IN_PROGRESS']);
 
-function eligibleDrivers(drivers: FleetDriver[], bookingType: 'towing' | 'driver') {
-  return drivers.filter(d => {
-    if (d.isBusy) return false;
-    const type = d.driverType.toLowerCase();
-    if (bookingType === 'towing') {
-      return type.includes('tow');
-    }
-    return type.includes('full') || type.includes('part');
-  });
+type JobTab = 'all' | 'new' | 'nearby' | 'assigned' | 'in_progress' | 'completed';
+
+const STATUS_TABS: Array<{ key: JobTab; label: string }> = [
+  { key: 'all', label: 'All' },
+  { key: 'new', label: 'New' },
+  { key: 'nearby', label: 'Nearby' },
+  { key: 'assigned', label: 'Assigned' },
+  { key: 'in_progress', label: 'In progress' },
+  { key: 'completed', label: 'Completed' },
+];
+
+const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
+  NEW: { bg: '#DBEAFE', text: '#1D4ED8' },
+  NEARBY: { bg: '#DCFCE7', text: '#15803D' },
+  ASSIGNED: { bg: '#F3E8FF', text: '#7E22CE' },
+  'IN PROGRESS': { bg: '#FFEDD5', text: '#C2410C' },
+  COMPLETED: { bg: '#F3F4F6', text: '#4B5563' },
+};
+
+function statusLabelFor(job: DriverJobBooking, isOffer: boolean): string {
+  if (isOffer) {
+    if (typeof job.distanceKm === 'number' && job.distanceKm <= 5) return 'NEARBY';
+    return 'NEW';
+  }
+  if (job.status === 'DRIVER_ASSIGNED') return 'ASSIGNED';
+  if (ACTIVE_STATUSES.has(job.status)) return 'IN PROGRESS';
+  if (job.status === 'COMPLETED' || job.status === 'RATED') return 'COMPLETED';
+  return 'NEW';
+}
+
+function tabFor(job: DriverJobBooking, isOffer: boolean): JobTab {
+  const label = statusLabelFor(job, isOffer);
+  if (label === 'NEARBY') return 'nearby';
+  if (label === 'NEW') return 'new';
+  if (label === 'ASSIGNED') return 'assigned';
+  if (label === 'IN PROGRESS') return 'in_progress';
+  if (label === 'COMPLETED') return 'completed';
+  return 'all';
+}
+
+function formatJobTime(iso?: string) {
+  if (!iso) return '';
+  const date = new Date(iso);
+  if (Number.isNaN(+date)) return '';
+  const today = new Date();
+  const sameDay =
+    date.getFullYear() === today.getFullYear() &&
+    date.getMonth() === today.getMonth() &&
+    date.getDate() === today.getDate();
+  const time = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  return sameDay
+    ? `Today, ${time}`
+    : date.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
 function isPendingApprovalError(error: unknown): boolean {
@@ -65,20 +111,15 @@ export default function PartnerJobsScreen() {
   const isDriver = user?.role === 'driver';
   const isVendor = user?.role === 'vendor';
 
+  const [filter, setFilter] = useState<JobTab>('all');
+  const [actingId, setActingId] = useState<string | null>(null);
+
   const driverJobsQuery = useDriverJobsQuery(isDriver);
   const driverOffersQuery = useDriverJobOffersQuery(isDriver);
   const vendorOffersQuery = useVendorBookingOffersQuery(isVendor);
-  const fleetDriversQuery = useVendorFleetDriversQuery(isVendor);
-  const fleetVehiclesQuery = useVendorFleetVehiclesQuery(isVendor);
 
   const acceptMutation = useAcceptDriverJobMutation();
   const rejectMutation = useRejectDriverJobMutation();
-  const assignMutation = useAssignVendorBookingMutation();
-
-  const [actingId, setActingId] = useState<string | null>(null);
-  const [assigningId, setAssigningId] = useState<string | null>(null);
-  const [selectedDriverId, setSelectedDriverId] = useState('');
-  const [selectedVehicleId, setSelectedVehicleId] = useState('');
 
   const offers: DriverJobBooking[] = isVendor
     ? (vendorOffersQuery.data ?? [])
@@ -92,10 +133,7 @@ export default function PartnerJobsScreen() {
 
   const loadError =
     (!pendingApproval &&
-      (driverJobsQuery.error ||
-        driverOffersQuery.error ||
-        vendorOffersQuery.error ||
-        fleetDriversQuery.error)) ||
+      (driverJobsQuery.error || driverOffersQuery.error || vendorOffersQuery.error)) ||
     null;
 
   const isLoading = isVendor
@@ -103,45 +141,65 @@ export default function PartnerJobsScreen() {
     : driverJobsQuery.isLoading && driverOffersQuery.isLoading;
 
   const isRefetching = isVendor
-    ? vendorOffersQuery.isRefetching ||
-      fleetDriversQuery.isRefetching ||
-      fleetVehiclesQuery.isRefetching
+    ? vendorOffersQuery.isRefetching
     : driverJobsQuery.isRefetching || driverOffersQuery.isRefetching;
 
   const refetchAll = () => {
     if (isVendor) {
       void vendorOffersQuery.refetch();
-      void fleetDriversQuery.refetch();
-      void fleetVehiclesQuery.refetch();
     } else if (isDriver) {
       void driverJobsQuery.refetch();
       void driverOffersQuery.refetch();
     }
   };
 
-  const assigningOffer = useMemo(
-    () => offers.find(o => o.id === assigningId) ?? null,
-    [offers, assigningId],
+  const allVendorCards = useMemo(
+    () => offers.map(job => ({ job, isOffer: true as const })),
+    [offers],
   );
 
-  const fleetDrivers = fleetDriversQuery.data ?? [];
-  const fleetVehicles = fleetVehiclesQuery.data ?? [];
+  const allDriverCards = useMemo(() => {
+    const offerCards = offers.map(job => ({ job, isOffer: true as const }));
+    const mineCards = myJobs.map(job => ({ job, isOffer: false as const }));
+    return [...offerCards, ...mineCards];
+  }, [offers, myJobs]);
 
-  const driversForAssign = useMemo(() => {
-    if (!assigningOffer) return [];
-    return eligibleDrivers(fleetDrivers, assigningOffer.bookingType);
-  }, [assigningOffer, fleetDrivers]);
+  const cards = isVendor ? allVendorCards : allDriverCards;
 
-  useEffect(() => {
-    if (!assigningOffer) return;
-    const eligible = eligibleDrivers(fleetDrivers, assigningOffer.bookingType);
-    setSelectedDriverId(prev =>
-      eligible.some(d => d.id === prev) ? prev : eligible[0]?.id || '',
-    );
-    setSelectedVehicleId(prev =>
-      fleetVehicles.some(v => v.id === prev) ? prev : fleetVehicles[0]?.id || '',
-    );
-  }, [assigningOffer, fleetDrivers, fleetVehicles]);
+  const counts = useMemo(() => {
+    const base: Record<JobTab, number> = {
+      all: cards.length,
+      new: 0,
+      nearby: 0,
+      assigned: 0,
+      in_progress: 0,
+      completed: 0,
+    };
+    cards.forEach(({ job, isOffer }) => {
+      const tab = tabFor(job, isOffer);
+      base[tab] += 1;
+    });
+    return base;
+  }, [cards]);
+
+  const filteredCards = useMemo(() => {
+    if (filter === 'all') return cards;
+    return cards.filter(({ job, isOffer }) => tabFor(job, isOffer) === filter);
+  }, [cards, filter]);
+
+  const summary = useMemo(() => {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const jobsToday = cards.filter(({ job }) => {
+      if (!job.createdAt) return false;
+      return new Date(job.createdAt) >= todayStart;
+    }).length;
+    return {
+      jobsToday,
+      open: counts.new + counts.nearby,
+      inProgress: counts.assigned + counts.in_progress,
+    };
+  }, [cards, counts]);
 
   const onAccept = async (job: DriverJobBooking) => {
     setActingId(job.id);
@@ -184,45 +242,46 @@ export default function PartnerJobsScreen() {
     ]);
   };
 
-  const onVendorAssign = async () => {
-    if (!assigningOffer || !selectedDriverId) {
-      Alert.alert('Select a driver', 'Choose an eligible fleet driver for this service.');
-      return;
-    }
-    setActingId(assigningOffer.id);
-    try {
-      const result = await assignMutation.mutateAsync({
-        bookingId: assigningOffer.id,
-        bookingType: assigningOffer.bookingType,
-        driverId: selectedDriverId,
-        vehicleId: selectedVehicleId || undefined,
-      });
-      setAssigningId(null);
-      Alert.alert(
-        'Assigned',
-        result.message ||
-          `Assigned ${result.driver?.name || 'driver'} — customer can see partner details now.`,
-      );
-    } catch (error) {
-      Alert.alert('Assign failed', getApiErrorMessage(error, 'Could not assign driver'));
-      refetchAll();
-    } finally {
-      setActingId(null);
-    }
-  };
-
-  const subtitle = isVendor
-    ? 'Select a driver and vehicle for each customer request'
-    : isDriver
-      ? 'Nearby open requests and your allotted jobs'
-      : 'Sign in as a vendor or driver to see jobs';
-
   return (
     <AppScreenLayout
       header={
         <View style={styles.headerPad}>
-          <Text style={styles.title}>Jobs</Text>
-          <Text style={styles.subtitle}>{subtitle}</Text>
+          <View style={styles.headerTop}>
+            <View style={styles.headerCopy}>
+              <Text style={styles.title}>Jobs</Text>
+              <Text style={styles.subtitle}>
+                {isVendor
+                  ? 'Manage and assign roadside assistance requests.'
+                  : 'Accept allotted bookings — customer tracking updates live'}
+              </Text>
+            </View>
+            {isVendor ? (
+              <Pressable
+                onPress={() => navigation.navigate('VendorVehicles')}
+                style={styles.addVehicleBtn}>
+                <Plus size={16} color={colors.dark} strokeWidth={2.6} />
+                <Text style={styles.addVehicleLabel}>Vehicle</Text>
+              </Pressable>
+            ) : null}
+          </View>
+
+          {isVendor ? (
+            <View style={styles.summaryCard}>
+              <View style={styles.summaryIcon}>
+                <Briefcase size={18} color="#2563EB" strokeWidth={2.2} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.summaryTitle}>
+                  Jobs today: <Text style={styles.summaryCount}>{summary.jobsToday}</Text>
+                </Text>
+                <Text style={styles.summaryMeta}>
+                  <Text style={styles.openMeta}>{summary.open} Open</Text>
+                  {' · '}
+                  <Text style={styles.progressMeta}>{summary.inProgress} In progress</Text>
+                </Text>
+              </View>
+            </View>
+          ) : null}
         </View>
       }
       scrollable={false}
@@ -241,203 +300,155 @@ export default function PartnerJobsScreen() {
             Your account is pending admin approval. Jobs will appear here once approved.
           </Text>
         </View>
-      ) : isLoading ? (
-        <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.xxl }} />
       ) : (
-        <ScrollView
-          contentContainerStyle={styles.list}
-          refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={refetchAll} />
-          }>
-          {loadError ? (
-            <Text style={styles.errorText}>
-              {getApiErrorMessage(loadError, 'Unable to load jobs')}
-            </Text>
-          ) : null}
-
-          <Text style={styles.sectionTitle}>
-            {isVendor ? 'Open customer requests' : 'Nearby requests'}
-          </Text>
-          {offers.length === 0 ? (
-            <View style={styles.emptyInline}>
-              <View style={styles.iconWrap}>
-                <Navigation size={36} color={colors.primary} strokeWidth={2} />
-              </View>
-              <Text style={styles.emptyTitle}>No open requests</Text>
-              <Text style={styles.emptySubtitle}>
-                When a customer books towing or a driver near you, it shows up here.
-              </Text>
-            </View>
-          ) : (
-            offers.map(job => {
-              const busy = actingId === job.id;
-              const isAssigning = assigningId === job.id;
+        <>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.tabsRow}>
+            {STATUS_TABS.map(tab => {
+              const active = filter === tab.key;
               return (
-                <GlassCard key={`offer-${job.bookingType}-${job.id}`} style={styles.jobCard}>
-                  <View style={styles.jobHeader}>
-                    <Text style={styles.jobNumber}>#{job.bookingNumber}</Text>
-                    <View style={styles.typePill}>
-                      <Text style={styles.typePillText}>
-                        {job.serviceLabel ||
-                          (job.bookingType === 'towing' ? 'Towing' : 'Driver')}
-                      </Text>
-                    </View>
-                  </View>
-                  <Text style={styles.status}>Open · waiting for partner</Text>
-                  <Text style={styles.address}>
-                    Pickup:{' '}
-                    {formatReadableAddress(job.pickup?.address || job.pickup?.label)}
+                <Pressable
+                  key={tab.key}
+                  onPress={() => setFilter(tab.key)}
+                  style={[styles.tab, active && styles.tabActive]}>
+                  <Text style={[styles.tabText, active && styles.tabTextActive]}>
+                    {tab.label} ({counts[tab.key]})
                   </Text>
-                  {job.dropoff ? (
-                    <Text style={styles.address}>
-                      Drop: {formatReadableAddress(job.dropoff.address || job.dropoff.label)}
-                    </Text>
-                  ) : null}
-                  {typeof job.distanceKm === 'number' ? (
-                    <Text style={styles.meta}>{job.distanceKm.toFixed(1)} km away</Text>
-                  ) : null}
-                  {typeof job.estimatedFare === 'number' ? (
-                    <Text style={styles.fare}>Est. ₹{Math.round(job.estimatedFare)}</Text>
-                  ) : null}
+                </Pressable>
+              );
+            })}
+          </ScrollView>
 
-                  {isVendor ? (
-                    <>
-                      <Pressable
-                        disabled={busy}
-                        onPress={() =>
-                          setAssigningId(prev => (prev === job.id ? null : job.id))
-                        }
-                        style={[styles.acceptBtn, busy && styles.disabled]}>
-                        <Text style={styles.acceptLabel}>
-                          {isAssigning ? 'Cancel assign' : 'Assign driver'}
-                        </Text>
-                      </Pressable>
+          {isLoading ? (
+            <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.xxl }} />
+          ) : (
+            <ScrollView
+              contentContainerStyle={styles.list}
+              refreshControl={
+                <RefreshControl refreshing={isRefetching} onRefresh={refetchAll} />
+              }>
+              {loadError ? (
+                <Text style={styles.errorText}>
+                  {getApiErrorMessage(loadError, 'Unable to load jobs')}
+                </Text>
+              ) : null}
 
-                      {isAssigning ? (
-                        <View style={styles.assignPanel}>
-                          <Text style={styles.assignLabel}>Eligible drivers</Text>
-                          {driversForAssign.length === 0 ? (
-                            <Text style={styles.emptySubtitle}>
-                              No free drivers match this service. Add a{' '}
-                              {job.bookingType === 'towing' ? 'Tow Driver' : 'Full/Part-Time'}{' '}
-                              under My Drivers.
-                            </Text>
-                          ) : (
-                            driversForAssign.map(driver => {
-                              const selected = selectedDriverId === driver.id;
-                              return (
-                                <Pressable
-                                  key={driver.id}
-                                  onPress={() => setSelectedDriverId(driver.id)}
-                                  style={[
-                                    styles.optionRow,
-                                    selected && styles.optionRowSelected,
-                                  ]}>
-                                  <Text style={styles.optionTitle}>{driver.name}</Text>
-                                  <Text style={styles.optionMeta}>
-                                    {driver.driverType} · {driver.phone}
-                                  </Text>
-                                </Pressable>
-                              );
-                            })
-                          )}
+              {filteredCards.length === 0 ? (
+                <View style={styles.emptyInline}>
+                  <View style={styles.iconWrap}>
+                    <Navigation size={36} color={colors.primary} strokeWidth={2} />
+                  </View>
+                  <Text style={styles.emptyTitle}>No jobs yet</Text>
+                  <Text style={styles.emptySubtitle}>
+                    {isVendor
+                      ? 'Open roadside requests will appear here for fleet assignment.'
+                      : 'When a customer books near you, the job appears here.'}
+                  </Text>
+                </View>
+              ) : (
+                filteredCards.map(({ job, isOffer }) => {
+                  const label = statusLabelFor(job, isOffer);
+                  const statusStyle = STATUS_COLORS[label] ?? STATUS_COLORS.NEW;
+                  const Icon = job.bookingType === 'towing' ? Truck : Car;
+                  const serviceLabel =
+                    job.serviceLabel || (job.bookingType === 'towing' ? 'Car Tow' : 'Hire Driver');
+                  const busy = actingId === job.id;
+                  const canDecide = isDriver && (isOffer || job.status === 'DRIVER_ASSIGNED');
+                  const isActive = isDriver && !isOffer && ACTIVE_STATUSES.has(job.status);
 
-                          <Text style={[styles.assignLabel, { marginTop: spacing.md }]}>
-                            Fleet vehicle (optional)
+                  return (
+                    <GlassCard key={`${isOffer ? 'o' : 'm'}-${job.bookingType}-${job.id}`} style={styles.jobCard}>
+                      <View style={styles.jobTop}>
+                        <View style={[styles.serviceIcon, { backgroundColor: statusStyle.bg }]}>
+                          <Icon size={22} color={statusStyle.text} strokeWidth={2.2} />
+                        </View>
+                        <View style={styles.jobTopCopy}>
+                          <View style={styles.badgeRow}>
+                            <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
+                              <Text style={[styles.statusBadgeText, { color: statusStyle.text }]}>
+                                {label}
+                              </Text>
+                            </View>
+                            <Text style={styles.jobNumber}>#{job.bookingNumber}</Text>
+                          </View>
+                          {typeof job.distanceKm === 'number' ? (
+                            <View style={styles.distanceRow}>
+                              <MapPin size={13} color="#16A34A" strokeWidth={2.4} />
+                              <Text style={styles.distanceText}>
+                                {job.distanceKm.toFixed(1)} km away
+                              </Text>
+                            </View>
+                          ) : null}
+                        </View>
+                      </View>
+
+                      <View style={styles.routeBlock}>
+                        <View style={styles.routeRail}>
+                          <View style={styles.routeDot} />
+                          {job.dropoff ? (
+                            <>
+                              <View style={styles.routeLine} />
+                              <View style={[styles.routeDot, styles.routeDotEnd]} />
+                            </>
+                          ) : null}
+                        </View>
+                        <View style={styles.routeCopy}>
+                          <Text style={styles.routeText} numberOfLines={2}>
+                            {formatReadableAddress(job.pickup?.address || job.pickup?.label) ||
+                              'Pickup'}
                           </Text>
-                          {fleetVehicles.length === 0 ? (
-                            <Text style={styles.emptySubtitle}>
-                              No active fleet vehicles. You can still assign a driver.
+                          {job.dropoff ? (
+                            <Text style={[styles.routeText, { marginTop: spacing.sm }]} numberOfLines={2}>
+                              {formatReadableAddress(job.dropoff.address || job.dropoff.label) ||
+                                'Drop-off'}
                             </Text>
-                          ) : (
-                            fleetVehicles.map(vehicle => {
-                              const selected = selectedVehicleId === vehicle.id;
-                              return (
-                                <Pressable
-                                  key={vehicle.id}
-                                  onPress={() =>
-                                    setSelectedVehicleId(prev =>
-                                      prev === vehicle.id ? '' : vehicle.id,
-                                    )
-                                  }
-                                  style={[
-                                    styles.optionRow,
-                                    selected && styles.optionRowSelected,
-                                  ]}>
-                                  <Text style={styles.optionTitle}>
-                                    {vehicle.registrationNo}
-                                  </Text>
-                                  <Text style={styles.optionMeta}>
-                                    {vehicle.type} · {vehicle.model}
-                                  </Text>
-                                </Pressable>
-                              );
-                            })
-                          )}
+                          ) : null}
+                        </View>
+                      </View>
 
+                      <View style={styles.timeRow}>
+                        <Calendar size={13} color={colors.grey} strokeWidth={2.2} />
+                        <Text style={styles.timeText}>{formatJobTime(job.createdAt)}</Text>
+                      </View>
+
+                      <View style={styles.bottomRow}>
+                        <View>
+                          <Text style={styles.serviceLabel}>{serviceLabel}</Text>
+                          {typeof job.estimatedFare === 'number' ? (
+                            <>
+                              <Text style={styles.fare}>₹{Math.round(job.estimatedFare)}</Text>
+                              <Text style={styles.fareHint}>Estimated earnings</Text>
+                            </>
+                          ) : null}
+                        </View>
+                      </View>
+
+                      {isVendor && isOffer ? (
+                        <View style={styles.vendorActions}>
                           <Pressable
-                            disabled={busy || !selectedDriverId}
-                            onPress={() => void onVendorAssign()}
-                            style={[
-                              styles.acceptBtn,
-                              (busy || !selectedDriverId) && styles.disabled,
-                            ]}>
-                            <Text style={styles.acceptLabel}>
-                              {busy ? 'Assigning…' : 'Confirm assignment'}
-                            </Text>
+                            onPress={() =>
+                              navigation.navigate('VendorAssignJob', {
+                                bookingId: job.id,
+                                bookingType: job.bookingType,
+                                bookingNumber: job.bookingNumber,
+                                serviceLabel,
+                                pickupAddress: job.pickup?.address || job.pickup?.label,
+                                estimatedFare: job.estimatedFare,
+                              })
+                            }
+                            style={styles.assignBtn}>
+                            <Text style={styles.assignLabel}>Assign via fleet drivers</Text>
+                          </Pressable>
+                          <Pressable
+                            onPress={() => navigation.navigate('VendorVehicles')}
+                            style={styles.addVehicleOutline}>
+                            <Text style={styles.addVehicleOutlineLabel}>Add vehicle</Text>
                           </Pressable>
                         </View>
                       ) : null}
-                    </>
-                  ) : (
-                    <View style={styles.actions}>
-                      <Pressable
-                        disabled={busy}
-                        onPress={() => void onAccept(job)}
-                        style={[styles.acceptBtn, busy && styles.disabled]}>
-                        <Text style={styles.acceptLabel}>{busy ? '…' : 'Accept'}</Text>
-                      </Pressable>
-                      <Pressable
-                        disabled={busy}
-                        onPress={() => onReject(job)}
-                        style={[styles.rejectBtn, busy && styles.disabled]}>
-                        <Text style={styles.rejectLabel}>Reject</Text>
-                      </Pressable>
-                    </View>
-                  )}
-                </GlassCard>
-              );
-            })
-          )}
 
-          {isDriver ? (
-            <>
-              <Text style={[styles.sectionTitle, { marginTop: spacing.lg }]}>My jobs</Text>
-              {myJobs.length === 0 ? (
-                <Text style={styles.emptySubtitle}>No allotted jobs yet.</Text>
-              ) : (
-                myJobs.map(job => {
-                  const canDecide = job.status === 'DRIVER_ASSIGNED';
-                  const isActive = ACTIVE_STATUSES.has(job.status);
-                  const busy = actingId === job.id;
-                  return (
-                    <GlassCard key={`mine-${job.bookingType}-${job.id}`} style={styles.jobCard}>
-                      <View style={styles.jobHeader}>
-                        <Text style={styles.jobNumber}>#{job.bookingNumber}</Text>
-                        <View style={styles.typePill}>
-                          <Text style={styles.typePillText}>
-                            {job.bookingType === 'towing' ? 'Towing' : 'Driver'}
-                          </Text>
-                        </View>
-                      </View>
-                      <Text style={styles.status}>{job.status.replace(/_/g, ' ')}</Text>
-                      <Text style={styles.address}>
-                        Pickup:{' '}
-                        {formatReadableAddress(job.pickup?.address || job.pickup?.label)}
-                      </Text>
-                      {typeof job.estimatedFare === 'number' ? (
-                        <Text style={styles.fare}>Est. ₹{Math.round(job.estimatedFare)}</Text>
-                      ) : null}
                       {canDecide ? (
                         <View style={styles.actions}>
                           <Pressable
@@ -453,7 +464,9 @@ export default function PartnerJobsScreen() {
                             <Text style={styles.rejectLabel}>Reject</Text>
                           </Pressable>
                         </View>
-                      ) : isActive ? (
+                      ) : null}
+
+                      {isActive ? (
                         <Pressable
                           onPress={() =>
                             navigation.navigate('PartnerActiveJob', {
@@ -469,9 +482,9 @@ export default function PartnerJobsScreen() {
                   );
                 })
               )}
-            </>
-          ) : null}
-        </ScrollView>
+            </ScrollView>
+          )}
+        </>
       )}
     </AppScreenLayout>
   );
@@ -484,7 +497,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
     backgroundColor: colors.background,
+    gap: spacing.md,
   },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+  },
+  headerCopy: { flex: 1 },
   title: {
     color: colors.dark,
     fontSize: typography.sizes.xxl,
@@ -494,56 +514,214 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
     color: colors.grey,
     fontSize: typography.sizes.sm,
+    lineHeight: 20,
   },
+  addVehicleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.primary,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  addVehicleLabel: {
+    color: colors.dark,
+    fontWeight: typography.weights.bold,
+    fontSize: typography.sizes.sm,
+  },
+  summaryCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+  },
+  summaryIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#DBEAFE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  summaryTitle: {
+    color: colors.dark,
+    fontWeight: typography.weights.semibold,
+  },
+  summaryCount: {
+    fontWeight: typography.weights.extrabold,
+    fontSize: typography.sizes.lg,
+  },
+  summaryMeta: {
+    marginTop: 2,
+    fontSize: typography.sizes.sm,
+  },
+  openMeta: { color: '#2563EB', fontWeight: typography.weights.semibold },
+  progressMeta: { color: colors.primaryDark, fontWeight: typography.weights.semibold },
   content: { flexGrow: 1 },
+  tabsRow: {
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    gap: spacing.sm,
+  },
+  tab: {
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.lightGrey,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  tabActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  tabText: {
+    color: colors.grey,
+    fontWeight: typography.weights.semibold,
+    fontSize: typography.sizes.sm,
+  },
+  tabTextActive: { color: colors.dark },
   list: {
-    paddingTop: spacing.lg,
+    paddingHorizontal: spacing.xl,
     paddingBottom: spacing.xxl,
     gap: spacing.md,
   },
-  sectionTitle: {
-    color: colors.dark,
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
+  jobCard: { gap: spacing.md },
+  jobTop: {
+    flexDirection: 'row',
+    gap: spacing.md,
   },
-  jobCard: { gap: spacing.xs },
-  jobHeader: {
+  serviceIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  jobTopCopy: { flex: 1, gap: 4 },
+  badgeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: spacing.sm,
+    flexWrap: 'wrap',
+  },
+  statusBadge: {
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+  },
+  statusBadgeText: {
+    fontSize: 10,
+    fontWeight: typography.weights.bold,
+    letterSpacing: 0.4,
   },
   jobNumber: {
     color: colors.dark,
     fontWeight: typography.weights.bold,
-    fontSize: typography.sizes.lg,
   },
-  typePill: {
-    backgroundColor: colors.goldLight,
-    borderRadius: radius.pill,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 4,
+  distanceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
-  typePillText: {
-    color: colors.primaryDark,
+  distanceText: {
+    color: '#16A34A',
+    fontSize: typography.sizes.sm,
     fontWeight: typography.weights.semibold,
+  },
+  routeBlock: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  routeRail: {
+    width: 10,
+    alignItems: 'center',
+    paddingTop: 4,
+  },
+  routeDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#2563EB',
+  },
+  routeDotEnd: {
+    backgroundColor: colors.primary,
+  },
+  routeLine: {
+    width: 2,
+    flex: 1,
+    minHeight: 18,
+    backgroundColor: colors.border,
+    marginVertical: 2,
+  },
+  routeCopy: { flex: 1 },
+  routeText: {
+    color: colors.dark,
+    fontSize: typography.sizes.sm,
+    lineHeight: 20,
+  },
+  timeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  timeText: {
+    color: colors.grey,
+    fontSize: typography.sizes.sm,
+  },
+  bottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+  },
+  serviceLabel: {
+    color: '#2563EB',
+    fontWeight: typography.weights.semibold,
+    fontSize: typography.sizes.sm,
+  },
+  fare: {
+    marginTop: 2,
+    color: colors.dark,
+    fontWeight: typography.weights.extrabold,
+    fontSize: typography.sizes.xxl,
+  },
+  fareHint: {
+    color: colors.grey,
     fontSize: typography.sizes.xs,
   },
-  status: {
-    color: colors.secondary,
-    textTransform: 'capitalize',
-    fontWeight: typography.weights.semibold,
+  vendorActions: { gap: spacing.sm },
+  assignBtn: {
+    minHeight: 48,
+    borderRadius: radius.button,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  address: { color: colors.grey, fontSize: typography.sizes.sm },
-  meta: { color: colors.grey, fontSize: typography.sizes.xs },
-  fare: {
-    marginTop: spacing.xs,
+  assignLabel: {
     color: colors.dark,
+    fontWeight: typography.weights.bold,
+    fontSize: typography.sizes.md,
+  },
+  addVehicleOutline: {
+    minHeight: 44,
+    borderRadius: radius.button,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addVehicleOutlineLabel: {
+    color: colors.primaryDark,
     fontWeight: typography.weights.bold,
   },
   actions: {
     flexDirection: 'row',
     gap: spacing.sm,
-    marginTop: spacing.md,
   },
   acceptBtn: {
     flex: 1,
@@ -552,7 +730,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: spacing.md,
   },
   acceptLabel: {
     color: colors.dark,
@@ -566,53 +743,18 @@ const styles = StyleSheet.create({
     borderColor: colors.error,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: spacing.md,
   },
   rejectLabel: {
     color: colors.error,
     fontWeight: typography.weights.bold,
   },
   manageBtn: {
-    marginTop: spacing.md,
     paddingVertical: spacing.sm,
     alignItems: 'center',
   },
   manageLabel: {
     color: colors.primary,
     fontWeight: typography.weights.bold,
-  },
-  assignPanel: {
-    marginTop: spacing.sm,
-    gap: spacing.xs,
-    paddingTop: spacing.sm,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-  },
-  assignLabel: {
-    color: colors.dark,
-    fontWeight: typography.weights.semibold,
-    fontSize: typography.sizes.sm,
-  },
-  optionRow: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    backgroundColor: colors.background,
-  },
-  optionRowSelected: {
-    borderColor: colors.primary,
-    backgroundColor: colors.goldLight,
-  },
-  optionTitle: {
-    color: colors.dark,
-    fontWeight: typography.weights.bold,
-    fontSize: typography.sizes.sm,
-  },
-  optionMeta: {
-    color: colors.grey,
-    fontSize: typography.sizes.xs,
-    marginTop: 2,
   },
   disabled: { opacity: 0.5 },
   empty: {

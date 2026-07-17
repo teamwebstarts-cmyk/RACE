@@ -42,6 +42,7 @@ export interface ServiceBooking {
   driverId?: string;
   vendorId?: string;
   assignedFleetVehicleLabel?: string;
+  tripStartOtp?: string;
   driver?: {
     id: string;
     name: string;
@@ -134,6 +135,8 @@ export interface ServiceBookingTracking {
   };
   pickup: BookingLocation;
   dropoff?: BookingLocation;
+  assignedFleetVehicleLabel?: string;
+  tripStartOtp?: string;
 }
 
 export interface CancellationPolicy {

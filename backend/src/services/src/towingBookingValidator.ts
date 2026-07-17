@@ -67,6 +67,7 @@ export interface TowingBookingResponseDto {
     rating: number;
   };
   assignedFleetVehicleLabel?: string;
+  tripStartOtp?: string;
   scheduledAt?: string;
   statusHistory: Array<{ status: string; timestamp: string; note?: string }>;
   cancelledAt?: string;
@@ -103,4 +104,6 @@ export interface TowingTrackingResponseDto {
   };
   pickup: { address: string; latitude: number; longitude: number };
   dropoff?: { address: string; latitude: number; longitude: number };
+  assignedFleetVehicleLabel?: string;
+  tripStartOtp?: string;
 }

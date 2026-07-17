@@ -40,10 +40,20 @@ export type PartnerJobsStackParamList = {
     bookingId?: string;
     bookingType?: 'towing' | 'driver';
   };
+  VendorVehicles: undefined;
+  VendorAssignJob: {
+    bookingId: string;
+    bookingType: 'towing' | 'driver';
+    bookingNumber: string;
+    serviceLabel: string;
+    pickupAddress?: string;
+    estimatedFare?: number;
+  };
 };
 
 export type PartnerAccountStackParamList = {
   PartnerAccountMain: undefined;
   VendorVerificationStatus: undefined;
   VendorDrivers: undefined;
+  VendorVehicles: undefined;
 };

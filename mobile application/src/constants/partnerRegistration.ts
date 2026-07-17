@@ -39,19 +39,28 @@ export const INSURANCE_PROVIDER_OPTIONS = [
 ];
 
 export const BUSINESS_TYPE_OPTIONS = [
+  'Private Limited Company',
+  'Sole Proprietorship',
+  'Partnership',
+  'LLP',
   'Towing Company',
   'Roadside Assistance',
-  'Vehicle Recovery',
-  'Fleet Operator',
   'Other',
 ];
 
 export const INDIAN_STATE_OPTIONS = [
+  'Odisha',
   'Maharashtra',
   'Delhi',
   'Karnataka',
   'Gujarat',
   'Tamil Nadu',
   'Rajasthan',
+  'West Bengal',
+  'Uttar Pradesh',
+  'Telangana',
+  'Andhra Pradesh',
+  'Kerala',
+  'Madhya Pradesh',
   'Other',
 ];

@@ -1,18 +1,33 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
+  ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
   View,
+  useWindowDimensions,
 } from 'react-native';
-import { ChevronDown, Shield } from 'lucide-react-native';
+import {
+  ArrowLeft,
+  Check,
+  ChevronDown,
+  IndianRupee,
+  Lock,
+  Send,
+  ShieldCheck,
+  Smartphone,
+  Zap,
+} from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
+import { images } from '../../../assets';
 import AuthToast, { AuthLoadingOverlay } from '../../../components/auth/AuthToast';
-import GoogleIcon from '../../../components/auth/GoogleIcon';
-import PartnerScreenLayout from '../../../components/partner/PartnerScreenLayout';
 import { useAppSelector } from '../../../redux/hooks';
 import {
   getApiErrorMessage,
@@ -21,20 +36,40 @@ import {
 import { usePartnerOnboardingStore } from '../../../store/partnerOnboardingStore';
 import type { PartnerAuthStackParamList } from '../../../types/partnerNavigation';
 import { getRoleMismatchMessage, isRoleMismatchError } from '../../../utils/roleMismatch';
-import { colors, radius, spacing, typography } from '../../../theme';
+import { colors, layout, radius, shadows, spacing, typography } from '../../../theme';
 
 type Props = NativeStackScreenProps<PartnerAuthStackParamList, 'PartnerLogin'>;
 
 const MOBILE_REGEX = /^[6-9]\d{9}$/;
+const REF_W = 390;
+const LINK_BLUE = '#2563EB';
+const PAGE_BG = '#F7F7F5';
+const SUCCESS_GREEN = '#22C55E';
+
+const TRUST_ITEMS = [
+  { title: 'Verified Partners', subtitle: 'Trusted vendors & drivers', Icon: ShieldCheck },
+  { title: '24x7 Assistance', subtitle: 'Always ready on the road', Icon: Zap },
+  { title: 'Faster Payouts', subtitle: 'Quick settlements', Icon: IndianRupee },
+] as const;
+
+function formatMobileDisplay(value: string) {
+  if (value.length <= 5) return value;
+  return `${value.slice(0, 5)} ${value.slice(5)}`;
+}
 
 export default function PartnerLoginScreen({ navigation, route }: Props) {
   const loading = useAppSelector((state) => state.auth.loading);
   const signupAccountType = useAppSelector((state) => state.onboarding.signupAccountType);
   const setSelectedRole = usePartnerOnboardingStore((state) => state.setSelectedRole);
   const selectedRole = usePartnerOnboardingStore((state) => state.selectedRole);
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const scale = width / REF_W;
+  const px = (value: number) => Math.max(1, Math.round(value * scale));
 
   const [mobileNumber, setMobileNumber] = useState('');
   const [error, setError] = useState('');
+  const [focused, setFocused] = useState(false);
 
   const sendOtpMutation = useSendOtpMutation();
   const isValid = useMemo(() => MOBILE_REGEX.test(mobileNumber), [mobileNumber]);
@@ -91,78 +126,216 @@ export default function PartnerLoginScreen({ navigation, route }: Props) {
     }
   };
 
+  const handleChangeRole = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+    navigation.navigate('PartnerRoleSelection');
+  };
+
+  const inputBorderColor = focused || isValid ? colors.primary : colors.border;
+
   return (
     <>
-      <PartnerScreenLayout
-        title="Login"
-        subtitle="Enter your mobile number to continue"
-        onBack={() => navigation.goBack()}
-        headerExtra={
-          roleLabel ? <Text style={styles.roleHint}>Continuing as {roleLabel}</Text> : null
-        }
-        footer={
-          <Text style={styles.legalText}>
-            By continuing, you agree to our{' '}
-            <Text style={styles.legalLink}>Terms & Conditions</Text> and{' '}
-            <Text style={styles.legalLink}>Privacy Policy</Text>
-          </Text>
-        }>
-        <View style={styles.phoneField}>
-          <View style={styles.countryPicker}>
-            <Text style={styles.flag}>🇮🇳</Text>
-            <Text style={styles.countryCode}>+91</Text>
-            <ChevronDown size={16} color={colors.grey} strokeWidth={2.5} />
+      <View style={[styles.root, { paddingTop: insets.top }]}>
+        <StatusBar barStyle="dark-content" backgroundColor={PAGE_BG} />
+
+        <View style={[styles.topBar, { paddingHorizontal: px(layout.screenPadding) }]}>
+          <Pressable
+            onPress={() => navigation.goBack()}
+            hitSlop={12}
+            style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
+            accessibilityRole="button"
+            accessibilityLabel="Go back">
+            <ArrowLeft size={22} color={colors.dark} strokeWidth={2.5} />
+          </Pressable>
+
+          <View style={styles.brandBlock}>
+            <Text style={[styles.brandRace, { fontSize: px(18), lineHeight: px(22) }]}>RACE</Text>
+            <Text style={[styles.brandPartner, { fontSize: px(11), lineHeight: px(14) }]}>
+              PARTNER
+            </Text>
           </View>
-          <View style={styles.phoneDivider} />
-          <TextInput
-            value={mobileNumber}
-            onChangeText={(text) => {
-              setMobileNumber(text.replace(/\D/g, '').slice(0, 10));
-              if (error) setError('');
-            }}
-            keyboardType="number-pad"
-            placeholder="e.g. 9876543210"
-            placeholderTextColor={colors.grey}
-            maxLength={10}
-            style={styles.phoneInput}
-          />
+
+          <View style={styles.backButton} />
         </View>
 
-        <View style={styles.otpNotice}>
-          <Shield size={16} color={colors.primary} strokeWidth={2.2} />
-          <Text style={styles.otpNoticeText}>
-            We'll send you a One Time Password (OTP) to verify your number
-          </Text>
-        </View>
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <ScrollView
+            style={styles.scroll}
+            bounces={false}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={[
+              styles.scrollContent,
+              {
+                paddingHorizontal: px(layout.screenPadding),
+                paddingBottom: insets.bottom + px(spacing.xl),
+              },
+            ]}>
+            <View style={[styles.welcomeBlock, { marginTop: px(spacing.sm) }]}>
+              <Text style={[styles.welcomeTitle, { fontSize: px(28), lineHeight: px(34) }]}>
+                Welcome back!
+              </Text>
+              <Text
+                style={[
+                  styles.welcomeSubtitle,
+                  { fontSize: px(14), lineHeight: px(21), marginTop: px(6) },
+                ]}>
+                Sign in to your RACE Partner account with a secure OTP.
+              </Text>
+              {roleLabel ? (
+                <View style={[styles.rolePill, { marginTop: px(10) }]}>
+                  <Text style={styles.rolePillText}>Continuing as {roleLabel}</Text>
+                </View>
+              ) : null}
+            </View>
 
-        <AuthToast message={error} type="error" />
+            <Image
+              source={images.homeHeroTruck}
+              style={[styles.heroImage, { height: px(110), marginTop: px(spacing.md) }]}
+              resizeMode="contain"
+              accessibilityLabel="RACE Partner tow truck"
+            />
 
-        <Pressable
-          disabled={!isValid || loading}
-          onPress={() => void handleSendOtp()}
-          style={({ pressed }) => [
-            styles.primaryButton,
-            (!isValid || loading) && styles.primaryButtonDisabled,
-            pressed && isValid && !loading && styles.pressed,
-          ]}>
-          <Text style={styles.primaryButtonLabel}>
-            {loading ? 'Sending OTP...' : 'Send OTP'}
-          </Text>
-        </Pressable>
+            <View
+              style={[
+                styles.card,
+                {
+                  marginTop: px(spacing.md),
+                  paddingHorizontal: px(spacing.xl),
+                  paddingTop: px(spacing.xxl),
+                  paddingBottom: px(spacing.xl),
+                  borderRadius: px(18),
+                },
+              ]}>
+              <View style={styles.phoneIconWrap}>
+                <Smartphone size={px(26)} color={colors.primary} strokeWidth={2.2} />
+              </View>
 
-        <View style={styles.dividerRow}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>OR</Text>
-          <View style={styles.dividerLine} />
-        </View>
+              <Text style={[styles.cardTitle, { fontSize: px(20), marginTop: px(14) }]}>
+                Enter mobile number
+              </Text>
+              <Text
+                style={[
+                  styles.cardSubtitle,
+                  { fontSize: px(13), lineHeight: px(19), marginTop: px(6) },
+                ]}>
+                We'll send a 6-digit OTP to verify your partner account.
+              </Text>
 
-        <Pressable
-          style={({ pressed }) => [styles.googleButton, pressed && styles.pressed]}
-          onPress={() => Alert.alert('Google Sign-In', 'Google sign-in coming soon')}>
-          <GoogleIcon size={22} />
-          <Text style={styles.googleButtonLabel}>Continue with Google</Text>
-        </Pressable>
-      </PartnerScreenLayout>
+              <Text style={[styles.fieldLabel, { fontSize: px(13), marginTop: px(22) }]}>
+                Mobile number
+              </Text>
+
+              <View style={[styles.phoneRow, { marginTop: px(8), gap: px(10) }]}>
+                <View style={[styles.countryBox, { minHeight: px(52), borderRadius: px(12) }]}>
+                  <Text style={[styles.countryCode, { fontSize: px(15) }]}>+91</Text>
+                  <ChevronDown size={px(16)} color={colors.grey} strokeWidth={2.5} />
+                </View>
+
+                <View
+                  style={[
+                    styles.phoneInputWrap,
+                    {
+                      minHeight: px(52),
+                      borderRadius: px(12),
+                      borderColor: inputBorderColor,
+                    },
+                  ]}>
+                  <TextInput
+                    value={formatMobileDisplay(mobileNumber)}
+                    onChangeText={(text) => {
+                      setMobileNumber(text.replace(/\D/g, '').slice(0, 10));
+                      if (error) setError('');
+                    }}
+                    onFocus={() => setFocused(true)}
+                    onBlur={() => setFocused(false)}
+                    keyboardType="number-pad"
+                    placeholder="98765 43210"
+                    placeholderTextColor={colors.textMuted}
+                    maxLength={11}
+                    style={[styles.phoneInput, { fontSize: px(16) }]}
+                  />
+                  {isValid ? (
+                    <View style={styles.validCheck}>
+                      <Check size={14} color={SUCCESS_GREEN} strokeWidth={3} />
+                    </View>
+                  ) : null}
+                </View>
+              </View>
+
+              <AuthToast message={error} type="error" />
+
+              <Pressable
+                disabled={!isValid || loading || !partnerRole}
+                onPress={() => void handleSendOtp()}
+                style={({ pressed }) => [
+                  styles.sendButton,
+                  {
+                    marginTop: px(spacing.lg),
+                    minHeight: px(54),
+                    borderRadius: px(14),
+                  },
+                  (!isValid || loading || !partnerRole) && styles.sendButtonDisabled,
+                  pressed && isValid && !loading && styles.pressed,
+                ]}>
+                <Send size={px(18)} color={colors.dark} strokeWidth={2.4} />
+                <Text style={[styles.sendButtonLabel, { fontSize: px(16) }]}>
+                  {loading ? 'Sending OTP...' : 'Send OTP'}
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={handleChangeRole}
+                style={({ pressed }) => [
+                  styles.changeRoleRow,
+                  { marginTop: px(spacing.lg) },
+                  pressed && styles.pressed,
+                ]}>
+                <Text style={[styles.changeRoleText, { fontSize: px(13) }]}>
+                  Wrong role? <Text style={styles.changeRoleLink}>Change role</Text>
+                </Text>
+              </Pressable>
+
+              <View style={[styles.safeRow, { marginTop: px(spacing.xl) }]}>
+                <Lock size={13} color={colors.grey} strokeWidth={2.2} />
+                <Text style={[styles.safeText, { fontSize: px(12) }]}>
+                  Your data is safe and secure with RACE
+                </Text>
+              </View>
+            </View>
+
+            <View style={[styles.trustRow, { marginTop: px(spacing.xl), gap: px(8) }]}>
+              {TRUST_ITEMS.map(({ title, subtitle, Icon }) => (
+                <View key={title} style={styles.trustItem}>
+                  <View style={styles.trustIconWrap}>
+                    <Icon size={16} color={colors.primary} strokeWidth={2.2} />
+                  </View>
+                  <Text style={[styles.trustTitle, { fontSize: px(11) }]} numberOfLines={1}>
+                    {title}
+                  </Text>
+                  <Text
+                    style={[styles.trustSubtitle, { fontSize: px(10), lineHeight: px(13) }]}
+                    numberOfLines={2}>
+                    {subtitle}
+                  </Text>
+                </View>
+              ))}
+            </View>
+
+            <View style={[styles.encryptionRow, { marginTop: px(spacing.lg) }]}>
+              <ShieldCheck size={14} color={colors.grey} strokeWidth={2.2} />
+              <Text style={[styles.encryptionText, { fontSize: px(11) }]}>
+                Secured by enterprise-grade encryption
+              </Text>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </View>
 
       <AuthLoadingOverlay visible={loading} label="Sending OTP..." />
     </>
@@ -170,119 +343,181 @@ export default function PartnerLoginScreen({ navigation, route }: Props) {
 }
 
 const styles = StyleSheet.create({
-  roleHint: {
+  root: { flex: 1, backgroundColor: PAGE_BG },
+  flex: { flex: 1 },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.sm,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  brandBlock: { alignItems: 'center' },
+  brandRace: {
+    color: colors.dark,
+    fontWeight: typography.weights.extrabold,
+    letterSpacing: 0.5,
+  },
+  brandPartner: {
     color: colors.primary,
+    fontWeight: typography.weights.bold,
+    letterSpacing: 1.6,
+  },
+  scroll: { flex: 1 },
+  scrollContent: { flexGrow: 1 },
+  welcomeBlock: { alignItems: 'flex-start' },
+  welcomeTitle: {
+    color: colors.dark,
+    fontWeight: typography.weights.extrabold,
+  },
+  welcomeSubtitle: { color: colors.grey },
+  rolePill: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.goldLight,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderWidth: 1,
+    borderColor: '#F5D98A',
+  },
+  rolePillText: {
+    color: colors.primaryDark,
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.semibold,
+  },
+  heroImage: {
+    width: '100%',
+    maxWidth: 260,
+    alignSelf: 'center',
+  },
+  card: {
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.card,
+  },
+  phoneIconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: colors.goldLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+  },
+  cardTitle: {
+    color: colors.dark,
+    fontWeight: typography.weights.extrabold,
     textAlign: 'center',
   },
-  phoneField: {
+  cardSubtitle: {
+    color: colors.grey,
+    textAlign: 'center',
+  },
+  fieldLabel: {
+    color: colors.dark,
+    fontWeight: typography.weights.bold,
+  },
+  phoneRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 54,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderRadius: radius.lg,
-    backgroundColor: colors.background,
+  },
+  countryBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
     paddingHorizontal: spacing.md,
-  },
-  countryPicker: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingRight: spacing.sm,
-  },
-  flag: {
-    fontSize: 18,
+    backgroundColor: colors.lightGrey,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   countryCode: {
     color: colors.dark,
-    fontSize: typography.sizes.md,
     fontWeight: typography.weights.bold,
   },
-  phoneDivider: {
-    width: 1,
-    height: 28,
-    backgroundColor: colors.border,
-    marginRight: spacing.md,
+  phoneInputWrap: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    backgroundColor: colors.background,
+    paddingHorizontal: spacing.md,
   },
   phoneInput: {
     flex: 1,
-    fontSize: typography.sizes.md,
     color: colors.dark,
+    fontWeight: typography.weights.medium,
     paddingVertical: spacing.md,
   },
-  otpNotice: {
+  validCheck: { marginLeft: spacing.xs },
+  sendButton: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-    marginTop: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  otpNoticeText: {
-    flex: 1,
-    color: colors.grey,
-    fontSize: typography.sizes.sm,
-    lineHeight: typography.lineHeights.normal,
-  },
-  primaryButton: {
-    minHeight: 52,
-    borderRadius: radius.button,
-    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.primary,
   },
-  primaryButtonDisabled: {
-    opacity: 0.55,
-  },
-  primaryButtonLabel: {
+  sendButtonDisabled: { opacity: 0.5 },
+  sendButtonLabel: {
     color: colors.dark,
-    fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
   },
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: spacing.xl,
-    gap: spacing.md,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: colors.border,
-  },
-  dividerText: {
+  changeRoleRow: { alignItems: 'center' },
+  changeRoleText: {
     color: colors.grey,
-    fontSize: typography.sizes.sm,
+    textAlign: 'center',
+  },
+  changeRoleLink: {
+    color: LINK_BLUE,
     fontWeight: typography.weights.semibold,
   },
-  googleButton: {
-    minHeight: 52,
-    borderRadius: radius.button,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    backgroundColor: colors.background,
+  safeRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.md,
+    gap: 6,
   },
-  googleButtonLabel: {
+  safeText: { color: colors.grey },
+  trustRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  trustItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  trustIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.goldLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+  trustTitle: {
     color: colors.dark,
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semibold,
-  },
-  legalText: {
-    color: colors.grey,
-    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.bold,
     textAlign: 'center',
-    lineHeight: typography.lineHeights.relaxed,
   },
-  legalLink: {
-    color: colors.primary,
-    fontWeight: typography.weights.semibold,
+  trustSubtitle: {
+    color: colors.grey,
+    textAlign: 'center',
+    marginTop: 2,
   },
-  pressed: {
-    opacity: 0.9,
+  encryptionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
   },
+  encryptionText: { color: colors.grey },
+  pressed: { opacity: 0.9 },
 });

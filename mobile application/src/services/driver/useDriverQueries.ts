@@ -88,7 +88,14 @@ export function useUpdateDriverBookingStatusMutation() {
       bookingId: string;
       bookingType: 'towing' | 'driver';
       status: string;
-    }) => updateDriverBookingStatus(input.bookingId, input.bookingType, input.status),
+      tripOtp?: string;
+    }) =>
+      updateDriverBookingStatus(
+        input.bookingId,
+        input.bookingType,
+        input.status,
+        input.tripOtp,
+      ),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: driverQueryKeys.jobs });
       void queryClient.invalidateQueries({ queryKey: driverQueryKeys.active });

@@ -2,12 +2,13 @@ import React from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
-import { CloudUpload, type LucideIcon } from 'lucide-react-native';
+import { Check, CloudUpload, MoreHorizontal, type LucideIcon } from 'lucide-react-native';
 
 import { colors, radius, spacing, typography } from '../../theme';
 
 const MAX_BYTES = 5 * 1024 * 1024;
 const ALLOWED_MIME = new Set(['image/jpeg', 'image/jpg', 'image/png', 'application/pdf']);
+const SUCCESS_GREEN = '#22C55E';
 
 export interface PartnerDocumentFieldConfig {
   id: string;
@@ -21,17 +22,76 @@ interface PartnerDocumentUploadListProps {
   documents: PartnerDocumentFieldConfig[];
   uploadedIds: string[];
   onUpload: (id: string, uri: string, name: string, mimeType?: string) => void;
+  /** `card` matches the RACE Partner documents design */
+  variant?: 'default' | 'card';
+  hideTitle?: boolean;
 }
 
 export default function PartnerDocumentUploadList({
   documents,
   uploadedIds,
   onUpload,
+  variant = 'default',
+  hideTitle = false,
 }: PartnerDocumentUploadListProps) {
+  if (variant === 'card') {
+    return (
+      <View style={styles.cardList}>
+        {documents.map(doc => {
+          const uploaded = uploadedIds.includes(doc.id);
+          const Icon = doc.Icon;
+
+          return (
+            <View key={doc.id} style={styles.cardRow}>
+              <View style={[styles.cardIconWrap, uploaded && styles.cardIconWrapDone]}>
+                <Icon
+                  size={18}
+                  color={uploaded ? SUCCESS_GREEN : colors.primary}
+                  strokeWidth={2.2}
+                />
+              </View>
+
+              <View style={styles.cardCopy}>
+                <Text style={styles.cardTitle}>
+                  {doc.label}
+                  {doc.required ? <Text style={styles.required}> *</Text> : null}
+                </Text>
+                {doc.hint ? <Text style={styles.cardHint}>{doc.hint}</Text> : null}
+              </View>
+
+              {uploaded ? (
+                <Pressable
+                  onPress={() => void pickDocument(doc, uploaded, onUpload)}
+                  style={({ pressed }) => [styles.uploadedStatus, pressed && styles.pressed]}>
+                  <Check size={14} color={SUCCESS_GREEN} strokeWidth={3} />
+                  <Text style={styles.uploadedLabel}>Uploaded</Text>
+                </Pressable>
+              ) : (
+                <Pressable
+                  onPress={() => void pickDocument(doc, uploaded, onUpload)}
+                  style={({ pressed }) => [styles.uploadPill, pressed && styles.pressed]}>
+                  <CloudUpload size={14} color={colors.dark} strokeWidth={2.4} />
+                  <Text style={styles.uploadPillLabel}>Upload</Text>
+                </Pressable>
+              )}
+
+              <Pressable
+                onPress={() => void pickDocument(doc, uploaded, onUpload)}
+                hitSlop={8}
+                style={styles.moreBtn}>
+                <MoreHorizontal size={18} color={colors.grey} strokeWidth={2.2} />
+              </Pressable>
+            </View>
+          );
+        })}
+      </View>
+    );
+  }
+
   return (
     <View>
-      <Text style={styles.listTitle}>Required Documents</Text>
-      {documents.map((doc) => {
+      {hideTitle ? null : <Text style={styles.listTitle}>Required Documents</Text>}
+      {documents.map(doc => {
         const uploaded = uploadedIds.includes(doc.id);
         const Icon = doc.Icon;
 
@@ -285,6 +345,76 @@ const styles = StyleSheet.create({
     color: colors.dark,
     fontSize: typography.sizes.sm,
     lineHeight: typography.lineHeights.relaxed,
+  },
+  cardList: {
+    gap: spacing.sm,
+  },
+  cardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    backgroundColor: colors.background,
+  },
+  cardIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: colors.goldLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardIconWrapDone: {
+    backgroundColor: '#DCFCE7',
+  },
+  cardCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  cardTitle: {
+    color: colors.dark,
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.bold,
+  },
+  required: {
+    color: colors.error,
+  },
+  cardHint: {
+    marginTop: 2,
+    color: colors.grey,
+    fontSize: typography.sizes.xs,
+    lineHeight: 16,
+  },
+  uploadPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.primary,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  uploadPillLabel: {
+    color: colors.dark,
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.bold,
+  },
+  uploadedStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  uploadedLabel: {
+    color: SUCCESS_GREEN,
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.bold,
+  },
+  moreBtn: {
+    padding: 2,
   },
   pressed: {
     opacity: 0.9,

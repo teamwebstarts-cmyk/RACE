@@ -44,6 +44,8 @@ export interface IDriverBooking extends Document {
   driverId?: Types.ObjectId;
   assignedFleetVehicleId?: Types.ObjectId;
   assignedFleetVehicleLabel?: string;
+  tripStartOtp?: string;
+  tripStartOtpVerified?: boolean;
   scheduledAt?: Date;
   statusHistory: IDriverStatusHistoryEntry[];
   cancelledAt?: Date;
@@ -115,6 +117,8 @@ const DriverBookingSchema = new Schema<IDriverBooking>(
     vendorId: { type: Schema.Types.ObjectId, ref: 'Vendor', index: true },
     assignedFleetVehicleId: { type: Schema.Types.ObjectId, ref: 'VendorVehicle' },
     assignedFleetVehicleLabel: { type: String, trim: true },
+    tripStartOtp: { type: String, trim: true },
+    tripStartOtpVerified: { type: Boolean, default: false },
     scheduledAt: { type: Date },
     statusHistory: { type: [StatusHistorySchema], default: [] },
     cancelledAt: { type: Date },

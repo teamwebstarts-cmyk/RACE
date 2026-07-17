@@ -12,6 +12,8 @@ import PartnerActiveJobScreen from '../screens/partner/PartnerActiveJobScreen';
 import PartnerAccountScreen from '../screens/partner/PartnerAccountScreen';
 import PartnerVerificationStatusScreen from '../screens/partner/PartnerVerificationStatusScreen';
 import VendorDriversScreen from '../screens/partner/VendorDriversScreen';
+import VendorVehiclesScreen from '../screens/partner/VendorVehiclesScreen';
+import VendorAssignJobScreen from '../screens/partner/VendorAssignJobScreen';
 import type {
   PartnerAccountStackParamList,
   PartnerJobsStackParamList,
@@ -56,6 +58,16 @@ function PartnerJobsStackNavigator() {
         component={PartnerActiveJobScreen}
         options={{ headerTitle: 'Active job' }}
       />
+      <JobsStack.Screen
+        name="VendorVehicles"
+        component={VendorVehiclesScreen}
+        options={{ headerTitle: 'Fleet vehicles' }}
+      />
+      <JobsStack.Screen
+        name="VendorAssignJob"
+        component={VendorAssignJobScreen}
+        options={{ headerTitle: 'Assign job' }}
+      />
     </JobsStack.Navigator>
   );
 }
@@ -71,7 +83,12 @@ function PartnerAccountStackNavigator() {
       <AccountStack.Screen
         name="VendorDrivers"
         component={VendorDriversScreen}
-        options={{ headerTitle: 'My Drivers' }}
+        options={{ headerTitle: 'Fleet drivers' }}
+      />
+      <AccountStack.Screen
+        name="VendorVehicles"
+        component={VendorVehiclesScreen}
+        options={{ headerTitle: 'Fleet vehicles' }}
       />
       <AccountStack.Screen
         name="VendorVerificationStatus"

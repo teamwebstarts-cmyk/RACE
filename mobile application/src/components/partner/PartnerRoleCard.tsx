@@ -1,26 +1,21 @@
 import React from 'react';
-import {
-  Image,
-  type ImageSourcePropType,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { Check, ChevronRight } from 'lucide-react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import type { LucideIcon } from 'lucide-react-native';
 
-import { colors, radius, shadows, spacing, typography } from '../../theme';
+import { colors, radius, spacing, typography } from '../../theme';
 import type { PartnerRole } from '../../store/partnerOnboardingStore';
+
+export interface PartnerRoleFeature {
+  label: string;
+  Icon: LucideIcon;
+}
 
 interface PartnerRoleCardProps {
   role: PartnerRole;
   title: string;
   description: string;
-  badge: string;
-  illustration: ImageSourcePropType;
-  accentColor: string;
-  idleBackground: string;
-  idleBorder: string;
+  Icon: LucideIcon;
+  features: PartnerRoleFeature[];
   selected: boolean;
   onPress: () => void;
 }
@@ -28,46 +23,46 @@ interface PartnerRoleCardProps {
 export default function PartnerRoleCard({
   title,
   description,
-  badge,
-  illustration,
-  accentColor,
-  idleBackground,
-  idleBorder,
+  Icon,
+  features,
   selected,
   onPress,
 }: PartnerRoleCardProps) {
+  const accent = colors.primary;
+  const mutedIcon = selected ? '#8A7020' : colors.grey;
+
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="radio"
+      accessibilityState={{ selected }}
       style={({ pressed }) => [
         styles.card,
-        {
-          borderColor: selected ? colors.partnerRed : idleBorder,
-          backgroundColor: selected ? colors.partnerRedLight : idleBackground,
-        },
+        selected ? styles.cardSelected : styles.cardIdle,
         pressed && styles.pressed,
       ]}>
-      {selected ? (
-        <View style={styles.checkWrap}>
-          <Check size={14} color={colors.dark} strokeWidth={3} />
-        </View>
-      ) : null}
+      <View style={[styles.radio, selected ? styles.radioSelected : styles.radioIdle]} />
 
-      <View style={styles.row}>
-        <View style={styles.illustrationWrap}>
-          <Image source={illustration} style={styles.illustration} resizeMode="contain" />
+      <View style={styles.body}>
+        <View style={[styles.iconCircle, selected ? styles.iconCircleSelected : styles.iconCircleIdle]}>
+          <Icon size={28} color={selected ? accent : colors.grey} strokeWidth={2} />
         </View>
 
-        <View style={styles.copy}>
-          <Text style={[styles.title, { color: accentColor }]}>{title}</Text>
-          <Text style={styles.description}>{description}</Text>
-        </View>
-
-        <ChevronRight size={22} color={accentColor} strokeWidth={2.5} />
+        <Text style={styles.title}>{title}</Text>
+        <Text style={styles.description}>{description}</Text>
       </View>
 
-      <View style={[styles.badge, { backgroundColor: selected ? '#FFF0C2' : `${accentColor}18` }]}>
-        <Text style={[styles.badgeText, { color: accentColor }]}>{badge}</Text>
+      <View style={[styles.featureBar, selected ? styles.featureBarSelected : styles.featureBarIdle]}>
+        {features.map(({ label, Icon: FeatureIcon }) => (
+          <View key={label} style={styles.featureItem}>
+            <FeatureIcon size={13} color={mutedIcon} strokeWidth={2.2} />
+            <Text
+              style={[styles.featureLabel, selected ? styles.featureLabelSelected : null]}
+              numberOfLines={1}>
+              {label}
+            </Text>
+          </View>
+        ))}
       </View>
     </Pressable>
   );
@@ -77,64 +72,101 @@ const styles = StyleSheet.create({
   card: {
     borderWidth: 1.5,
     borderRadius: radius.lg,
-    padding: spacing.lg,
+    overflow: 'hidden',
     marginBottom: spacing.md,
-    ...shadows.card,
+  },
+  cardSelected: {
+    backgroundColor: colors.goldLight,
+    borderColor: colors.primary,
+  },
+  cardIdle: {
+    backgroundColor: colors.background,
+    borderColor: colors.border,
   },
   pressed: {
     opacity: 0.96,
     transform: [{ scale: 0.995 }],
   },
-  checkWrap: {
+  radio: {
     position: 'absolute',
     top: spacing.md,
-    right: spacing.md,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: colors.partnerRed,
-    alignItems: 'center',
-    justifyContent: 'center',
+    left: spacing.md,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
     zIndex: 1,
   },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
+  radioSelected: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primary,
   },
-  illustrationWrap: {
-    width: 72,
-    height: 72,
+  radioIdle: {
+    borderColor: '#C8C8C8',
+    backgroundColor: colors.background,
+  },
+  body: {
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xxl,
+    paddingBottom: spacing.lg,
+  },
+  iconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: spacing.md,
   },
-  illustration: {
-    width: 72,
-    height: 72,
+  iconCircleSelected: {
+    backgroundColor: '#FFE8B0',
   },
-  copy: {
-    flex: 1,
-    paddingRight: spacing.sm,
+  iconCircleIdle: {
+    backgroundColor: colors.lightGrey,
   },
   title: {
+    color: colors.dark,
     fontSize: typography.sizes.xl,
-    fontWeight: typography.weights.bold,
+    fontWeight: typography.weights.extrabold,
+    textAlign: 'center',
   },
   description: {
-    marginTop: spacing.xs,
-    color: colors.dark,
-    fontSize: typography.sizes.sm,
-    lineHeight: typography.lineHeights.normal,
+    marginTop: spacing.sm,
+    color: colors.grey,
+    fontSize: typography.sizes.md,
+    lineHeight: 21,
+    textAlign: 'center',
   },
-  badge: {
-    alignSelf: 'flex-start',
-    marginTop: spacing.md,
+  featureBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.pill,
+    paddingVertical: spacing.md,
+    gap: spacing.xs,
   },
-  badgeText: {
-    fontSize: typography.sizes.xs,
+  featureBarSelected: {
+    backgroundColor: '#F3E4BC',
+  },
+  featureBarIdle: {
+    backgroundColor: colors.lightGrey,
+  },
+  featureItem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    minWidth: 0,
+  },
+  featureLabel: {
+    color: colors.grey,
+    fontSize: 10,
     fontWeight: typography.weights.semibold,
+    flexShrink: 1,
+  },
+  featureLabelSelected: {
+    color: '#6B5A2A',
   },
 });

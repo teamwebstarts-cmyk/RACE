@@ -485,7 +485,7 @@ function ProfileStackNavigator() {
   );
 }
 
-function MainTabNavigator() {
+export function MainTabNavigator() {
   return (
     <TowingBookingProvider>
       <DriverBookingProvider>

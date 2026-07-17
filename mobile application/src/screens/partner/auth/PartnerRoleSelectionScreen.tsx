@@ -1,68 +1,83 @@
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Info } from 'lucide-react-native';
+import {
+  Image,
+  Pressable,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from 'react-native';
+import {
+  ArrowLeft,
+  ArrowRight,
+  BarChart3,
+  Building2,
+  CircleUser,
+  Send,
+  Shield,
+  Smartphone,
+  Users,
+  Wallet,
+} from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { images } from '../../../assets';
-import PartnerProgressBar from '../../../components/partner/PartnerProgressBar';
 import PartnerRoleCard from '../../../components/partner/PartnerRoleCard';
-import PartnerScreenLayout from '../../../components/partner/PartnerScreenLayout';
 import { useAppDispatch } from '../../../redux/hooks';
 import { setSignupPath } from '../../../redux/onboarding/onboardingSlice';
 import {
   usePartnerOnboardingStore,
   type PartnerRole,
 } from '../../../store/partnerOnboardingStore';
-import { PARTNER_WAITING_ADMIN_APPROVAL } from '../../../constants/partnerCopy';
 import type { PartnerAuthStackParamList } from '../../../types/partnerNavigation';
-import { colors, radius, spacing, typography } from '../../../theme';
+import { colors, layout, spacing, typography } from '../../../theme';
 
 type Props = NativeStackScreenProps<PartnerAuthStackParamList, 'PartnerRoleSelection'>;
 
-const ROLE_OPTIONS: Array<{
-  role: PartnerRole;
-  title: string;
-  description: string;
-  badge: string;
-  illustration: number;
-  accentColor: string;
-  idleBackground: string;
-  idleBorder: string;
-}> = [
+const REF_W = 390;
+const LINK_BLUE = '#2563EB';
+const PAGE_BG = '#F7F7F5';
+
+const ROLE_OPTIONS = [
   {
-    role: 'vendor',
-    title: 'Vendor',
+    role: 'vendor' as const,
+    title: 'Vendor / Fleet',
     description:
-      'Manage customer orders, assign drivers, track earnings, manage services and grow your business.',
-    badge: 'For business owners and service providers',
-    illustration: images.homeHeroTruck,
-    accentColor: colors.primary,
-    idleBackground: colors.goldLight,
-    idleBorder: '#F5D98A',
+      'Register your towing company, manage drivers, vehicles, and track verification status.',
+    Icon: Building2,
+    features: [
+      { label: 'Manage fleet', Icon: Shield },
+      { label: 'Assign drivers', Icon: Users },
+      { label: 'Track earnings', Icon: BarChart3 },
+    ],
   },
   {
-    role: 'driver',
+    role: 'driver' as const,
     title: 'Driver',
-    description:
-      'Accept delivery assignments, navigate routes, complete services, and earn through RACE Service.',
-    badge: 'For tow truck and roadside partners',
-    illustration: images.homePopularDriver,
-    accentColor: colors.primaryDark,
-    idleBackground: colors.goldLight,
-    idleBorder: '#F5D98A',
+    description: 'Go online, accept allotted jobs, and update trip status live.',
+    Icon: CircleUser,
+    features: [
+      { label: 'Get jobs', Icon: Smartphone },
+      { label: 'Update trips', Icon: Send },
+      { label: 'Receive payouts', Icon: Wallet },
+    ],
   },
 ];
 
 export default function PartnerRoleSelectionScreen({ navigation }: Props) {
   const dispatch = useAppDispatch();
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const scale = width / REF_W;
+  const px = (value: number) => Math.max(1, Math.round(value * scale));
+
+  const storedRole = usePartnerOnboardingStore((state) => state.selectedRole);
   const setSelectedRole = usePartnerOnboardingStore((state) => state.setSelectedRole);
-  const [selectedRole, setLocalRole] = useState<PartnerRole | null>(null);
+  const [selectedRole, setLocalRole] = useState<PartnerRole | null>(storedRole ?? 'vendor');
 
-  const goToLogin = (role?: PartnerRole) => {
-    navigation.navigate('PartnerLogin', role ? { role } : undefined);
-  };
-
-  /** Role selection is often the auth stack root (e.g. after logout). */
   const handleBack = () => {
     if (navigation.canGoBack()) {
       navigation.goBack();
@@ -74,143 +89,186 @@ export default function PartnerRoleSelectionScreen({ navigation }: Props) {
     });
   };
 
-  const handleContinue = () => {
-    if (!selectedRole) {
-      return;
-    }
-
-    setSelectedRole(selectedRole);
+  const persistRoleAndContinue = (role: PartnerRole) => {
+    setSelectedRole(role);
     dispatch(
       setSignupPath({
-        accountType: selectedRole,
+        accountType: role,
         vendorType: null,
       }),
     );
-    goToLogin(selectedRole);
+    navigation.navigate('PartnerLogin', { role });
+  };
+
+  const handleContinue = () => {
+    if (!selectedRole) return;
+    persistRoleAndContinue(selectedRole);
   };
 
   return (
-    <PartnerScreenLayout
-      title="Choose Your Role"
-      subtitle="Select how you want to partner with RACE Service."
-      onBack={handleBack}
-      keyboardAvoiding={false}
-      headerExtra={<PartnerProgressBar total={4} activeIndex={1} />}
-      footer={
-        <Pressable
-          disabled={!selectedRole}
-          onPress={() => {
-            if (!selectedRole) {
-              return;
-            }
-            setSelectedRole(selectedRole);
-            dispatch(
-              setSignupPath({
-                accountType: selectedRole,
-                vendorType: null,
-              }),
-            );
-            goToLogin(selectedRole);
-          }}
-          style={({ pressed }) => [
-            styles.footerLink,
-            !selectedRole && styles.footerLinkDisabled,
-            pressed && selectedRole && styles.pressed,
-          ]}>
-          <Text style={styles.footerText}>
-            Already have an account? <Text style={styles.footerLinkText}>Login</Text>
-          </Text>
-        </Pressable>
-      }>
-      {ROLE_OPTIONS.map((option) => (
-        <PartnerRoleCard
-          key={option.role}
-          role={option.role}
-          title={option.title}
-          description={option.description}
-          badge={option.badge}
-          illustration={option.illustration}
-          accentColor={option.accentColor}
-          idleBackground={option.idleBackground}
-          idleBorder={option.idleBorder}
-          selected={selectedRole === option.role}
-          onPress={() => setLocalRole(option.role)}
-        />
-      ))}
+    <View style={[styles.root, { paddingTop: insets.top }]}>
+      <StatusBar barStyle="dark-content" backgroundColor={PAGE_BG} />
 
-      <View style={styles.infoCard}>
-        <Info size={20} color={colors.primary} strokeWidth={2.2} />
-        <Text style={styles.infoText}>{PARTNER_WAITING_ADMIN_APPROVAL}</Text>
+      <View style={[styles.topBar, { paddingHorizontal: px(layout.screenPadding) }]}>
+        <Pressable
+          onPress={handleBack}
+          hitSlop={12}
+          style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
+          accessibilityRole="button"
+          accessibilityLabel="Go back">
+          <ArrowLeft size={22} color={colors.dark} strokeWidth={2.5} />
+        </Pressable>
+
+        <View style={styles.brandBlock}>
+          <Text style={[styles.brandRace, { fontSize: px(18), lineHeight: px(22) }]}>RACE</Text>
+          <Text style={[styles.brandPartner, { fontSize: px(11), lineHeight: px(14) }]}>
+            PARTNER
+          </Text>
+        </View>
+
+        <View style={styles.backButton} />
       </View>
 
-      <Pressable
-        disabled={!selectedRole}
-        onPress={handleContinue}
-        style={({ pressed }) => [
-          styles.continueButton,
-          !selectedRole && styles.continueButtonDisabled,
-          pressed && selectedRole && styles.pressed,
+      <ScrollView
+        style={styles.scroll}
+        bounces={false}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingHorizontal: px(layout.screenPadding),
+            paddingBottom: insets.bottom + px(spacing.xl),
+          },
         ]}>
-        <Text style={[styles.continueLabel, !selectedRole && styles.continueLabelDisabled]}>
-          Continue
+        <View style={[styles.hero, { marginTop: px(spacing.md) }]}>
+          <Image
+            source={images.homeHeroTruck}
+            style={[styles.heroImage, { height: px(140) }]}
+            resizeMode="contain"
+            accessibilityLabel="RACE Partner tow truck"
+          />
+          <Text style={[styles.headline, { fontSize: px(28), lineHeight: px(34), marginTop: px(8) }]}>
+            Select your role
+          </Text>
+          <Text style={[styles.subtitle, { fontSize: px(14), lineHeight: px(21), marginTop: px(8) }]}>
+            This decides which registration and dashboard you see. You can change this anytime
+            later.
+          </Text>
+        </View>
+
+        <View style={{ marginTop: px(spacing.xl), gap: px(4) }}>
+          {ROLE_OPTIONS.map((option) => (
+            <PartnerRoleCard
+              key={option.role}
+              role={option.role}
+              title={option.title}
+              description={option.description}
+              Icon={option.Icon}
+              features={option.features}
+              selected={selectedRole === option.role}
+              onPress={() => setLocalRole(option.role)}
+            />
+          ))}
+        </View>
+
+        <Pressable
+          disabled={!selectedRole}
+          onPress={handleContinue}
+          style={({ pressed }) => [
+            styles.continueButton,
+            {
+              marginTop: px(spacing.lg),
+              minHeight: px(54),
+              borderRadius: px(14),
+            },
+            !selectedRole && styles.continueButtonDisabled,
+            pressed && selectedRole && styles.pressed,
+          ]}>
+          <Text
+            style={[
+              styles.continueLabel,
+              { fontSize: px(17) },
+              !selectedRole && styles.continueLabelDisabled,
+            ]}>
+            Continue
+          </Text>
+          <ArrowRight
+            size={px(18)}
+            color={!selectedRole ? colors.grey : colors.dark}
+            strokeWidth={2.5}
+          />
+        </Pressable>
+
+        <Text style={[styles.helpText, { fontSize: px(13), lineHeight: px(20), marginTop: px(14) }]}>
+          Not sure? You can change your role anytime from{' '}
+          <Text style={styles.helpLink}>Account settings.</Text>
         </Text>
-      </Pressable>
-    </PartnerScreenLayout>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  infoCard: {
+  root: { flex: 1, backgroundColor: PAGE_BG },
+  topBar: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.md,
-    backgroundColor: colors.lightGrey,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    marginTop: spacing.md,
-    marginBottom: spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.sm,
   },
-  infoText: {
-    flex: 1,
-    color: colors.dark,
-    fontSize: typography.sizes.sm,
-    lineHeight: typography.lineHeights.relaxed,
-  },
-  continueButton: {
-    minHeight: 52,
-    borderRadius: radius.button,
-    backgroundColor: colors.primary,
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  continueButtonDisabled: {
-    backgroundColor: colors.border,
-  },
-  continueLabel: {
+  brandBlock: { alignItems: 'center' },
+  brandRace: {
     color: colors.dark,
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
+    fontWeight: typography.weights.extrabold,
+    letterSpacing: 0.5,
   },
-  continueLabelDisabled: {
-    color: colors.grey,
-  },
-  footerLink: {
-    alignItems: 'center',
-    paddingVertical: spacing.xs,
-  },
-  footerLinkDisabled: {
-    opacity: 0.45,
-  },
-  footerText: {
-    color: colors.dark,
-    fontSize: typography.sizes.md,
-    textAlign: 'center',
-  },
-  footerLinkText: {
+  brandPartner: {
     color: colors.primary,
     fontWeight: typography.weights.bold,
+    letterSpacing: 1.6,
   },
-  pressed: {
-    opacity: 0.9,
+  scroll: { flex: 1 },
+  scrollContent: { flexGrow: 1 },
+  hero: { alignItems: 'center' },
+  heroImage: { width: '100%', maxWidth: 280 },
+  headline: {
+    color: colors.dark,
+    fontWeight: typography.weights.extrabold,
+    textAlign: 'center',
   },
+  subtitle: {
+    color: colors.grey,
+    textAlign: 'center',
+    paddingHorizontal: spacing.sm,
+  },
+  continueButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.primary,
+  },
+  continueButtonDisabled: { backgroundColor: colors.border },
+  continueLabel: {
+    color: colors.dark,
+    fontWeight: typography.weights.bold,
+  },
+  continueLabelDisabled: { color: colors.grey },
+  helpText: {
+    color: colors.grey,
+    textAlign: 'center',
+    paddingHorizontal: spacing.md,
+  },
+  helpLink: {
+    color: LINK_BLUE,
+    fontWeight: typography.weights.semibold,
+  },
+  pressed: { opacity: 0.9 },
 });

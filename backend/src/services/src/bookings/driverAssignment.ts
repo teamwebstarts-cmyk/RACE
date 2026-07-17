@@ -9,6 +9,7 @@ import { canTransition } from '../bookingStatusConstants';
 import { appendStatusHistory } from './booking';
 import { emitBookingStatusUpdate } from '../socket';
 import { mapPublicBookingStatus } from '../bookingDisplayStatus';
+import { generateTripStartOtp } from './tripOtp';
 import type { ActiveBookingType } from '../../../models/src/user';
 
 const FALLBACK_DISTANCE_KM = 999;
@@ -235,9 +236,12 @@ export async function claimOpenBookingOffer(
   }
 
   const driverObjectId = new Types.ObjectId(driverId);
+  const tripStartOtp = generateTripStartOtp();
   const $set: Record<string, unknown> = {
     driverId: driverObjectId,
     status: 'DRIVER_EN_ROUTE',
+    tripStartOtp,
+    tripStartOtpVerified: false,
   };
   if (options?.vendorId) {
     $set.vendorId = new Types.ObjectId(options.vendorId);

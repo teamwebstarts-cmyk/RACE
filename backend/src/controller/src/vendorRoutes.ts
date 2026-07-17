@@ -14,7 +14,7 @@ import {
   createVendorVehicleSchema,
   updateVendorVehicleSchema,
 } from '../../services/src/vendorVehiclesValidator';
-import { vendorAssignBookingSchema } from '../../services/src/vendorBookingsValidator';
+import { vendorAssignBookingSchema, vendorVerifyTripOtpSchema } from '../../services/src/vendorBookingsValidator';
 import {
   registerVendorSchema,
   saveVendorDraftSchema,
@@ -85,6 +85,12 @@ router.post(
   requireRole('vendor'),
   validate(vendorAssignBookingSchema),
   vendorController.assignBooking,
+);
+router.post(
+  '/bookings/:id/verify-trip-otp',
+  requireRole('vendor'),
+  validate(vendorVerifyTripOtpSchema),
+  vendorController.verifyTripOtp,
 );
 
 export default router;

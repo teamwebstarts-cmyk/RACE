@@ -27,10 +27,14 @@ export default function PartnerRegistrationStepper({
                 <View
                   style={[
                     styles.circle,
-                    isCompleted || isActive ? styles.circleActive : styles.circleIdle,
+                    isCompleted
+                      ? styles.circleCompleted
+                      : isActive
+                        ? styles.circleActive
+                        : styles.circleIdle,
                   ]}>
                   {isCompleted ? (
-                    <Check size={14} color={colors.dark} strokeWidth={3} />
+                    <Check size={14} color="#FFFFFF" strokeWidth={3} />
                   ) : (
                     <Text
                       style={[
@@ -44,7 +48,11 @@ export default function PartnerRegistrationStepper({
                 <Text
                   style={[
                     styles.label,
-                    isActive ? styles.labelActive : styles.labelIdle,
+                    isCompleted
+                      ? styles.labelCompleted
+                      : isActive
+                        ? styles.labelActive
+                        : styles.labelIdle,
                   ]}
                   numberOfLines={2}>
                   {label}
@@ -54,7 +62,11 @@ export default function PartnerRegistrationStepper({
                 <View
                   style={[
                     styles.connector,
-                    stepNumber < activeStep ? styles.connectorActive : styles.connectorIdle,
+                    stepNumber < activeStep
+                      ? styles.connectorCompleted
+                      : stepNumber === activeStep
+                        ? styles.connectorActive
+                        : styles.connectorIdle,
                   ]}
                 />
               ) : null}
@@ -88,6 +100,9 @@ const styles = StyleSheet.create({
   circleActive: {
     backgroundColor: colors.partnerRed,
   },
+  circleCompleted: {
+    backgroundColor: colors.success,
+  },
   circleIdle: {
     backgroundColor: colors.background,
     borderWidth: 1.5,
@@ -113,6 +128,10 @@ const styles = StyleSheet.create({
     color: colors.partnerRed,
     fontWeight: typography.weights.semibold,
   },
+  labelCompleted: {
+    color: colors.success,
+    fontWeight: typography.weights.semibold,
+  },
   labelIdle: {
     color: colors.grey,
     fontWeight: typography.weights.medium,
@@ -125,6 +144,9 @@ const styles = StyleSheet.create({
   },
   connectorActive: {
     backgroundColor: colors.partnerRed,
+  },
+  connectorCompleted: {
+    backgroundColor: colors.success,
   },
   connectorIdle: {
     backgroundColor: colors.border,

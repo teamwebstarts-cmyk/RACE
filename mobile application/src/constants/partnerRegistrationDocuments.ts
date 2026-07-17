@@ -14,23 +14,55 @@ import {
 import type { PartnerDocumentFieldConfig } from '../components/partner/PartnerDocumentUploadList';
 
 export const VENDOR_DOCUMENTS: PartnerDocumentFieldConfig[] = [
-  { id: 'aadhaar', label: 'Aadhaar Card', hint: 'Upload front side', required: true, Icon: Fingerprint },
-  { id: 'pan', label: 'PAN Card', required: true, Icon: IdCard },
-  { id: 'gst', label: 'GST Certificate', required: false, Icon: FileText },
+  {
+    id: 'aadhaar',
+    label: 'Aadhaar Card',
+    hint: 'Government issued ID proof.',
+    required: true,
+    Icon: Fingerprint,
+  },
+  {
+    id: 'pan',
+    label: 'PAN Card',
+    hint: 'Permanent Account Number.',
+    required: true,
+    Icon: IdCard,
+  },
+  {
+    id: 'gst',
+    label: 'GST Certificate',
+    hint: 'Goods and Services Tax registration.',
+    required: false,
+    Icon: FileText,
+  },
   {
     id: 'business_registration',
     label: 'Business Registration Certificate',
+    hint: 'Company / firm registration proof.',
     required: true,
     Icon: Building2,
   },
-  { id: 'shop_photo', label: 'Shop / Office Photo', required: true, Icon: Store },
+  {
+    id: 'shop_photo',
+    label: 'Shop / Office Photo',
+    hint: 'Clear photo of your shop or office.',
+    required: true,
+    Icon: Store,
+  },
   {
     id: 'cancelled_cheque',
     label: 'Cancelled Cheque / Passbook',
+    hint: 'Bank account proof.',
     required: true,
     Icon: CreditCard,
   },
-  { id: 'profile_photo', label: 'Profile Photo', required: true, Icon: Camera },
+  {
+    id: 'profile_photo',
+    label: 'Profile Photo',
+    hint: 'Your passport size photo.',
+    required: true,
+    Icon: Camera,
+  },
 ];
 
 export const DRIVER_DOCUMENTS: PartnerDocumentFieldConfig[] = [

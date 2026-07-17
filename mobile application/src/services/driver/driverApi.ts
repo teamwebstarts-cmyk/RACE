@@ -79,10 +79,12 @@ export async function updateDriverBookingStatus(
   bookingId: string,
   bookingType: 'towing' | 'driver',
   status: string,
+  tripOtp?: string,
 ): Promise<unknown> {
   const { data } = await api.patch(API_ENDPOINTS.driverBookingStatus(bookingId), {
     bookingType,
     status,
+    ...(tripOtp ? { tripOtp } : {}),
   });
   return data.data;
 }

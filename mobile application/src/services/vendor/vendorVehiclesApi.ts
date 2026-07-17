@@ -37,11 +37,31 @@ export async function listVendorVehicles(): Promise<FleetVehicle[]> {
   return data.data ?? [];
 }
 
+export type UpdateFleetVehicleInput = {
+  type?: string;
+  model?: string;
+  year?: number;
+  status?: FleetVehicleStatus;
+  insuranceExpiry?: string;
+  maintenanceNote?: string;
+};
+
 export async function createVendorVehicle(
   payload: CreateFleetVehicleInput,
 ): Promise<FleetVehicle> {
   const { data } = await api.post<ApiSuccessResponse<FleetVehicle>>(
     API_ENDPOINTS.vendorVehicles,
+    payload,
+  );
+  return data.data;
+}
+
+export async function updateVendorVehicle(
+  vehicleId: string,
+  payload: UpdateFleetVehicleInput,
+): Promise<FleetVehicle> {
+  const { data } = await api.put<ApiSuccessResponse<FleetVehicle>>(
+    API_ENDPOINTS.vendorVehicle(vehicleId),
     payload,
   );
   return data.data;

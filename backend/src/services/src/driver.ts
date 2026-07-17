@@ -8,7 +8,10 @@ import {
   assertValidStatusTransition,
 } from './bookings/booking';
 import { releaseDriver, unassignDriverFromBooking, claimOpenBookingOffer, listOpenBookingOffers } from './bookings/driverAssignment';
+import { assertTripStartOtp } from './bookings/tripOtp';
 import { UserModel } from '../../models/src/user';
+import { TowingBookingModel } from '../../models/src/towingBooking';
+import { DriverBookingModel } from '../../models/src/driverBooking';
 import type { UnifiedBookingStatus } from './bookingStatusConstants';
 import type {
   DriverBookingsQueryDto,
@@ -221,6 +224,10 @@ export class DriverService {
 
     assertValidStatusTransition(booking.status, dto.status);
 
+    if (dto.status === 'IN_PROGRESS' && booking.status === 'DRIVER_ARRIVED') {
+      assertTripStartOtp(booking, dto.tripOtp);
+    }
+
     const updated = await Model.updateStatus(
       bookingId,
       dto.status,
@@ -229,6 +236,18 @@ export class DriverService {
 
     if (!updated) {
       throw new NotFoundError('Booking not found');
+    }
+
+    if (dto.status === 'IN_PROGRESS' && booking.status === 'DRIVER_ARRIVED') {
+      if (dto.bookingType === 'towing') {
+        await TowingBookingModel.findByIdAndUpdate(bookingId, {
+          tripStartOtpVerified: true,
+        }).exec();
+      } else {
+        await DriverBookingModel.findByIdAndUpdate(bookingId, {
+          tripStartOtpVerified: true,
+        }).exec();
+      }
     }
 
     if (dto.status === 'COMPLETED') {

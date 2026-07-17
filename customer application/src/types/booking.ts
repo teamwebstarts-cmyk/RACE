@@ -64,6 +64,7 @@ export interface Booking {
   driver?: BookingDriver;
   vendorId?: string;
   assignedFleetVehicleLabel?: string;
+  tripStartOtp?: string;
   etaMinutes?: number;
   distanceKm?: number;
   durationMinutes?: number;

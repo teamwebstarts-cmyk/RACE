@@ -88,6 +88,7 @@ export interface DriverBookingResponseDto {
     rating: number;
   };
   assignedFleetVehicleLabel?: string;
+  tripStartOtp?: string;
   scheduledAt?: string;
   statusHistory: Array<{ status: string; timestamp: string; note?: string }>;
   cancelledAt?: string;
@@ -124,4 +125,6 @@ export interface DriverTrackingResponseDto {
   };
   pickup: { address: string; latitude: number; longitude: number };
   dropoff?: { address: string; latitude: number; longitude: number };
+  assignedFleetVehicleLabel?: string;
+  tripStartOtp?: string;
 }

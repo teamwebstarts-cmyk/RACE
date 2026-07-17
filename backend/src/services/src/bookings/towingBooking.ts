@@ -28,6 +28,7 @@ import {
   isDriverVisibleToCustomer,
   mapPublicBookingStatus,
 } from '../bookingDisplayStatus';
+import { customerTripOtp } from './tripOtp';
 
 function mapTowingBooking(
   booking: ITowingBooking,
@@ -143,7 +144,11 @@ export class TowingBookingService {
       throw new ForbiddenError('You do not have access to this booking');
     }
 
-    return mapTowingBookingWithDriver(booking);
+    const mapped = await mapTowingBookingWithDriver(booking);
+    if (requestingUser.role === 'customer') {
+      mapped.tripStartOtp = customerTripOtp(booking);
+    }
+    return mapped;
   }
 
   async updateStatus(
@@ -245,6 +250,9 @@ export class TowingBookingService {
       driverLocation,
       pickup: booking.pickup,
       dropoff: booking.dropoff,
+      assignedFleetVehicleLabel: booking.assignedFleetVehicleLabel,
+      tripStartOtp:
+        requestingUser.role === 'customer' ? customerTripOtp(booking) : undefined,
     };
   }
 

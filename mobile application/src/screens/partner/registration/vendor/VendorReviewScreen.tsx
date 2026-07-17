@@ -1,11 +1,39 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
-import { CheckCircle2, Square, CheckSquare } from 'lucide-react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from 'react-native';
+import {
+  ArrowLeft,
+  ArrowRight,
+  Building2,
+  Check,
+  FileText,
+  MapPin,
+  Pencil,
+  ShieldCheck,
+} from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-import PartnerRegistrationLayout from '../../../../components/partner/PartnerRegistrationLayout';
-import { PartnerRegistrationFooter } from '../../../../components/partner/PartnerRegistrationSections';
+import { images } from '../../../../assets';
+import PartnerRegistrationStepper from '../../../../components/partner/PartnerRegistrationStepper';
 import { VENDOR_REGISTRATION_STEPS } from '../../../../constants/partnerRegistration';
+import { VENDOR_DOCUMENTS } from '../../../../constants/partnerRegistrationDocuments';
+import {
+  mapVendorTypeFromBusinessLabel,
+  VENDOR_UI_TO_BACKEND_DOC,
+} from '../../../../constants/backendRequiredDocuments';
 import { useAppDispatch, useAppSelector } from '../../../../redux/hooks';
 import { completeOnboarding, updateTokens, updateUser } from '../../../../redux/auth/authSlice';
 import { finishPartnerSignup } from '../../../../redux/onboarding/onboardingSlice';
@@ -19,37 +47,80 @@ import type {
 } from '../../../../types/partnerNavigation';
 import type { VendorType } from '../../../../types/vendor';
 import { partnerRegistrationGoBack } from '../../../../utils/partnerRegistration';
-import {
-  mapVendorTypeFromBusinessLabel,
-  VENDOR_UI_TO_BACKEND_DOC,
-} from '../../../../constants/backendRequiredDocuments';
-import { PARTNER_WAITING_ADMIN_APPROVAL } from '../../../../constants/partnerCopy';
-import { colors, radius, spacing, typography } from '../../../../theme';
+import { colors, layout, radius, shadows, spacing, typography } from '../../../../theme';
 
 type Props = NativeStackScreenProps<PartnerRegistrationStackParamList, 'VendorReview'>;
 
-function ReviewRow({ label, value }: { label: string; value: string }) {
+const REF_W = 390;
+const PAGE_BG = '#F7F7F5';
+const SUCCESS_GREEN = '#22C55E';
+
+function DetailRow({ label, value }: { label: string; value: string }) {
   return (
-    <View style={styles.row}>
-      <Text style={styles.rowLabel}>{label}</Text>
-      <Text style={styles.rowValue}>{value || '—'}</Text>
+    <View style={styles.detailRow}>
+      <Text style={styles.detailLabel}>{label}</Text>
+      <Text style={styles.detailValue}>{value || '—'}</Text>
+    </View>
+  );
+}
+
+function SectionCard({
+  title,
+  Icon,
+  onEdit,
+  children,
+}: {
+  title: string;
+  Icon: typeof Building2;
+  onEdit: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <View style={styles.sectionCard}>
+      <View style={styles.sectionHeader}>
+        <View style={styles.sectionIcon}>
+          <Icon size={18} color={colors.primary} strokeWidth={2.2} />
+        </View>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        <Pressable
+          onPress={onEdit}
+          style={({ pressed }) => [styles.editBtn, pressed && styles.pressed]}
+          hitSlop={8}>
+          <Pencil size={14} color={colors.primaryDark} strokeWidth={2.4} />
+          <Text style={styles.editLabel}>Edit</Text>
+        </Pressable>
+      </View>
+      <View style={styles.sectionBody}>{children}</View>
     </View>
   );
 }
 
 export default function VendorReviewScreen({ navigation, route }: Props) {
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const scale = width / REF_W;
+  const px = (value: number) => Math.max(1, Math.round(value * scale));
+
   const dispatch = useAppDispatch();
   const authUser = useAppSelector(state => state.auth.user);
   const { vendorBusiness, vendorAddress, vendorDocuments } = usePartnerRegistrationStore();
   const [submitting, setSubmitting] = useState(false);
-  const [acceptTerms, setAcceptTerms] = useState(false);
+
   const handleBack = () => partnerRegistrationGoBack(navigation, 'VendorReview', route.params);
 
-  const submit = async () => {
-    if (!acceptTerms) {
-      Alert.alert('Terms required', 'Please accept the Terms & Conditions to submit.');
-      return;
+  const uploadedDocs = VENDOR_DOCUMENTS.filter(doc =>
+    vendorDocuments.some(uploaded => uploaded.id === doc.id),
+  );
+
+  const formatMobile = (value: string) => {
+    const digits = value.replace(/\D/g, '');
+    if (digits.length === 10) {
+      return `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`;
     }
+    return value ? `+91 ${value}` : '—';
+  };
+
+  const submit = async () => {
     setSubmitting(true);
     try {
       const address = [
@@ -129,139 +200,400 @@ export default function VendorReviewScreen({ navigation, route }: Props) {
   };
 
   return (
-    <PartnerRegistrationLayout
-      title="Vendor Registration"
-      stepLabel="Step 4 of 4"
-      steps={VENDOR_REGISTRATION_STEPS}
-      activeStep={4}
-      onBack={handleBack}
-      footer={
-        <PartnerRegistrationFooter
-          showBack
-          onBack={handleBack}
-          continueLabel={submitting ? 'Submitting…' : 'Submit Application'}
-          onContinue={() => {
-            if (!submitting) void submit();
-          }}
-        />
-      }>
-      {submitting ? <ActivityIndicator color={colors.primary} style={{ marginBottom: spacing.md }} /> : null}
-      <View style={styles.successCard}>
-        <CheckCircle2 size={28} color={colors.partnerRed} strokeWidth={2} />
-        <Text style={styles.successTitle}>Review your application</Text>
-        <Text style={styles.successSubtitle}>{PARTNER_WAITING_ADMIN_APPROVAL}</Text>
+    <View style={[styles.root, { paddingTop: insets.top }]}>
+      <StatusBar barStyle="dark-content" backgroundColor={PAGE_BG} />
+
+      <View style={[styles.topBar, { paddingHorizontal: px(layout.screenPadding) }]}>
+        <Pressable
+          onPress={handleBack}
+          hitSlop={12}
+          style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
+          accessibilityRole="button"
+          accessibilityLabel="Go back">
+          <ArrowLeft size={22} color={colors.dark} strokeWidth={2.5} />
+        </Pressable>
+
+        <View style={styles.brandBlock}>
+          <Text style={[styles.brandRace, { fontSize: px(18), lineHeight: px(22) }]}>RACE</Text>
+          <Text style={[styles.brandPartner, { fontSize: px(11), lineHeight: px(14) }]}>
+            PARTNER
+          </Text>
+        </View>
+
+        <View style={styles.backButton} />
       </View>
 
-      <Text style={styles.sectionTitle}>Business Information</Text>
-      <View style={styles.card}>
-        <ReviewRow label="Business Name" value={vendorBusiness.businessName} />
-        <ReviewRow label="Owner Name" value={vendorBusiness.ownerName} />
-        <ReviewRow label="Mobile" value={vendorBusiness.mobileNumber} />
-        <ReviewRow label="Email" value={vendorBusiness.email} />
-        <ReviewRow label="Business Type" value={vendorBusiness.businessType} />
-      </View>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView
+          style={styles.scroll}
+          bounces={false}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[
+            styles.scrollContent,
+            {
+              paddingHorizontal: px(layout.screenPadding),
+              paddingBottom: insets.bottom + px(spacing.xl),
+            },
+          ]}>
+          <Text style={[styles.heroTitle, { fontSize: px(24), lineHeight: px(30) }]}>
+            Almost done!
+          </Text>
+          <Text
+            style={[
+              styles.heroSubtitle,
+              { fontSize: px(14), lineHeight: px(21), marginTop: px(6) },
+            ]}>
+            Please review your details before submitting. Our team will verify and get you onboard.
+          </Text>
 
-      <Text style={styles.sectionTitle}>Business Address</Text>
-      <View style={styles.card}>
-        <ReviewRow label="Address Line 1" value={vendorAddress.addressLine1} />
-        <ReviewRow label="Address Line 2" value={vendorAddress.addressLine2} />
-        <ReviewRow label="City" value={vendorAddress.city} />
-        <ReviewRow label="State" value={vendorAddress.state} />
-        <ReviewRow label="PIN Code" value={vendorAddress.pinCode} />
-        <ReviewRow label="Landmark" value={vendorAddress.landmark} />
-      </View>
-
-      <Text style={styles.sectionTitle}>Documents ({vendorDocuments.length})</Text>
-      <View style={styles.card}>
-        {vendorDocuments.map(doc => (
-          <ReviewRow
-            key={doc.id}
-            label={doc.label}
-            value={doc.mimeType === 'application/pdf' ? `PDF · ${doc.name}` : 'Uploaded'}
+          <Image
+            source={images.homeHeroTruck}
+            style={[styles.heroImage, { height: px(100), marginTop: px(spacing.sm) }]}
+            resizeMode="contain"
+            accessibilityLabel="RACE Partner tow truck"
           />
-        ))}
-      </View>
 
-      <Pressable
-        onPress={() => setAcceptTerms(prev => !prev)}
-        style={styles.termsRow}
-        accessibilityRole="checkbox"
-        accessibilityState={{ checked: acceptTerms }}>
-        {acceptTerms ? (
-          <CheckSquare size={22} color={colors.primary} strokeWidth={2.2} />
-        ) : (
-          <Square size={22} color={colors.grey} strokeWidth={2.2} />
-        )}
-        <Text style={styles.termsText}>
-          I accept the Terms & Conditions and confirm the details above are accurate.
-        </Text>
-      </Pressable>
-    </PartnerRegistrationLayout>
+          <View
+            style={[
+              styles.card,
+              {
+                marginTop: px(spacing.md),
+                paddingHorizontal: px(spacing.lg),
+                paddingTop: px(spacing.lg),
+                paddingBottom: px(spacing.xl),
+                borderRadius: px(18),
+              },
+            ]}>
+            <PartnerRegistrationStepper
+              steps={VENDOR_REGISTRATION_STEPS}
+              activeStep={4}
+            />
+
+            <Text style={[styles.formTitle, { fontSize: px(20), marginTop: px(spacing.lg) }]}>
+              Review your details
+            </Text>
+            <Text
+              style={[
+                styles.formSubtitle,
+                {
+                  fontSize: px(13),
+                  lineHeight: px(19),
+                  marginTop: px(4),
+                  marginBottom: px(spacing.lg),
+                },
+              ]}>
+              Confirm everything looks correct before you submit.
+            </Text>
+
+            {submitting ? (
+              <ActivityIndicator color={colors.primary} style={{ marginBottom: spacing.md }} />
+            ) : null}
+
+            <SectionCard
+              title="Business details"
+              Icon={Building2}
+              onEdit={() => navigation.navigate('VendorBusinessInfo', route.params)}>
+              <DetailRow label="Business name" value={vendorBusiness.businessName} />
+              <DetailRow label="Owner name" value={vendorBusiness.ownerName} />
+              <DetailRow label="Mobile number" value={formatMobile(vendorBusiness.mobileNumber)} />
+              <DetailRow label="Email" value={vendorBusiness.email || '—'} />
+              <DetailRow label="Business type" value={vendorBusiness.businessType} />
+            </SectionCard>
+
+            <SectionCard
+              title="Business address"
+              Icon={MapPin}
+              onEdit={() => navigation.navigate('VendorBusinessAddress', route.params)}>
+              <DetailRow label="Address line 1" value={vendorAddress.addressLine1} />
+              <DetailRow label="Address line 2" value={vendorAddress.addressLine2 || '—'} />
+              <DetailRow label="City" value={vendorAddress.city} />
+              <DetailRow label="State" value={vendorAddress.state} />
+              <DetailRow label="PIN code" value={vendorAddress.pinCode} />
+              <DetailRow label="Landmark" value={vendorAddress.landmark || '—'} />
+            </SectionCard>
+
+            <SectionCard
+              title="Documents"
+              Icon={FileText}
+              onEdit={() => navigation.navigate('VendorDocuments', route.params)}>
+              {uploadedDocs.length === 0 ? (
+                <Text style={styles.emptyDocs}>No documents uploaded yet.</Text>
+              ) : (
+                uploadedDocs.map(doc => {
+                  const DocIcon = doc.Icon;
+                  return (
+                    <View key={doc.id} style={styles.docRow}>
+                      <View style={styles.docIcon}>
+                        <DocIcon size={14} color={SUCCESS_GREEN} strokeWidth={2.2} />
+                      </View>
+                      <View style={styles.docCopy}>
+                        <Text style={styles.docTitle}>{doc.label}</Text>
+                        <Text style={styles.docStatus}>Uploaded</Text>
+                      </View>
+                      <Check size={14} color={SUCCESS_GREEN} strokeWidth={3} />
+                    </View>
+                  );
+                })
+              )}
+            </SectionCard>
+
+            <Pressable
+              disabled={submitting}
+              onPress={() => void submit()}
+              style={({ pressed }) => [
+                styles.submitButton,
+                {
+                  marginTop: px(spacing.xl),
+                  minHeight: px(54),
+                  borderRadius: px(14),
+                },
+                submitting && styles.submitDisabled,
+                pressed && !submitting && styles.pressed,
+              ]}>
+              <Text style={[styles.submitLabel, { fontSize: px(16) }]}>
+                {submitting ? 'Submitting…' : 'Submit for review'}
+              </Text>
+              {!submitting ? (
+                <ArrowRight size={px(18)} color={colors.dark} strokeWidth={2.5} />
+              ) : null}
+            </Pressable>
+
+            <View style={[styles.agreeRow, { marginTop: px(spacing.lg) }]}>
+              <ShieldCheck size={14} color={colors.grey} strokeWidth={2.2} />
+              <Text style={styles.agreeText}>
+                By submitting, you agree that all information is accurate to the best of your
+                knowledge.
+              </Text>
+            </View>
+          </View>
+
+          <View style={[styles.trustCard, { marginTop: px(spacing.lg), borderRadius: px(14) }]}>
+            <View style={styles.trustIcon}>
+              <ShieldCheck size={16} color={colors.primary} strokeWidth={2.2} />
+            </View>
+            <View style={styles.trustCopy}>
+              <Text style={styles.trustTitle}>Secure & Verified</Text>
+              <Text style={styles.trustText}>
+                We verify every document to keep RACE customers safe.
+              </Text>
+            </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  successCard: {
+  root: {
+    flex: 1,
+    backgroundColor: PAGE_BG,
+  },
+  flex: { flex: 1 },
+  topBar: {
+    flexDirection: 'row',
     alignItems: 'center',
-    padding: spacing.lg,
-    borderRadius: radius.md,
-    backgroundColor: colors.partnerRedLight,
-    marginBottom: spacing.lg,
+    justifyContent: 'space-between',
+    paddingVertical: spacing.sm,
   },
-  successTitle: {
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  brandBlock: { alignItems: 'center' },
+  brandRace: {
+    color: colors.dark,
+    fontWeight: typography.weights.extrabold,
+    letterSpacing: 0.5,
+  },
+  brandPartner: {
+    color: colors.primary,
+    fontWeight: typography.weights.bold,
+    letterSpacing: 1.6,
+  },
+  scroll: { flex: 1 },
+  scrollContent: { flexGrow: 1 },
+  heroTitle: {
+    color: colors.dark,
+    fontWeight: typography.weights.extrabold,
     marginTop: spacing.sm,
-    color: colors.dark,
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
-    textAlign: 'center',
   },
-  successSubtitle: {
-    marginTop: spacing.xs,
+  heroSubtitle: {
     color: colors.grey,
-    fontSize: typography.sizes.sm,
-    textAlign: 'center',
-    lineHeight: typography.lineHeights.relaxed,
   },
-  sectionTitle: {
-    color: colors.dark,
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
-    marginBottom: spacing.sm,
-    marginTop: spacing.md,
+  heroImage: {
+    width: '100%',
+    maxWidth: 240,
+    alignSelf: 'center',
   },
   card: {
+    backgroundColor: colors.background,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.md,
-    padding: spacing.md,
+    ...shadows.card,
+  },
+  formTitle: {
+    color: colors.dark,
+    fontWeight: typography.weights.extrabold,
+  },
+  formSubtitle: {
+    color: colors.grey,
+  },
+  sectionCard: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
     backgroundColor: colors.background,
+    marginBottom: spacing.md,
+    overflow: 'hidden',
   },
-  row: {
-    paddingVertical: spacing.sm,
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    backgroundColor: colors.goldLight,
     borderBottomWidth: 1,
-    borderBottomColor: colors.lightGrey,
+    borderBottomColor: colors.border,
   },
-  rowLabel: {
+  sectionIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sectionTitle: {
+    flex: 1,
+    color: colors.dark,
+    fontWeight: typography.weights.bold,
+    fontSize: typography.sizes.md,
+  },
+  editBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  editLabel: {
+    color: colors.primaryDark,
+    fontWeight: typography.weights.bold,
+    fontSize: typography.sizes.sm,
+  },
+  sectionBody: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  detailRow: {
+    paddingVertical: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  detailLabel: {
     color: colors.grey,
     fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.medium,
     marginBottom: 2,
   },
-  rowValue: {
+  detailValue: {
     color: colors.dark,
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.semibold,
   },
-  termsRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-    marginTop: spacing.lg,
+  emptyDocs: {
+    color: colors.grey,
+    fontSize: typography.sizes.sm,
     paddingVertical: spacing.sm,
   },
-  termsText: {
-    flex: 1,
+  docRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  docIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#DCFCE7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  docCopy: { flex: 1 },
+  docTitle: {
     color: colors.dark,
     fontSize: typography.sizes.sm,
-    lineHeight: typography.lineHeights.relaxed,
+    fontWeight: typography.weights.semibold,
   },
+  docStatus: {
+    marginTop: 1,
+    color: SUCCESS_GREEN,
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.semibold,
+  },
+  submitButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.primary,
+  },
+  submitDisabled: {
+    opacity: 0.6,
+  },
+  submitLabel: {
+    color: colors.dark,
+    fontWeight: typography.weights.bold,
+  },
+  agreeRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+  },
+  agreeText: {
+    flex: 1,
+    color: colors.grey,
+    fontSize: typography.sizes.sm,
+    lineHeight: 18,
+  },
+  trustCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.lg,
+    ...shadows.card,
+  },
+  trustIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.goldLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  trustCopy: { flex: 1 },
+  trustTitle: {
+    color: colors.dark,
+    fontWeight: typography.weights.bold,
+    fontSize: typography.sizes.sm,
+  },
+  trustText: {
+    marginTop: 2,
+    color: colors.grey,
+    fontSize: typography.sizes.sm,
+    lineHeight: 18,
+  },
+  pressed: { opacity: 0.9 },
 });

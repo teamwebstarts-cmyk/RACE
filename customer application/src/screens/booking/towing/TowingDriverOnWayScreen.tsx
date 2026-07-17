@@ -4,6 +4,7 @@ import { MessageCircle, Phone, Star } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import MapPlaceholder from '../../../components/booking/MapPlaceholder';
+import TripOtpCard from '../../../components/booking/TripOtpCard';
 import DriverAvatar from '../../../components/bookings/DriverAvatar';
 import TowingBookingLayout, { useBookingTheme } from '../../../components/booking/TowingBookingLayout';
 import { useBookingTracking } from '../../../hooks/useBookingTracking';
@@ -104,6 +105,12 @@ export default function TowingDriverOnWayScreen({ navigation, route }: Props) {
             }}>
             {hasDriver ? `Arriving in ${etaMinutes} min` : `ETA: ${etaLabel}`}
           </Text>
+
+          {booking?.tripStartOtp ? (
+            <View style={{ marginTop: t.px(16) }}>
+              <TripOtpCard otp={booking.tripStartOtp} />
+            </View>
+          ) : null}
 
           <View style={{ flexDirection: 'row', gap: t.px(10), marginTop: t.px(16) }}>
             <Pressable

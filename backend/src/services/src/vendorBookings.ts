@@ -14,7 +14,10 @@ import {
   type OpenBookingOffer,
 } from './bookings/driverAssignment';
 import { resolveAssignedDriver } from './bookings/assignedDriver';
-import type { VendorAssignBookingDto } from './vendorBookingsValidator';
+import type { VendorAssignBookingDto, VendorVerifyTripOtpDto } from './vendorBookingsValidator';
+import { assertTripStartOtp } from './bookings/tripOtp';
+import { appendStatusHistory } from './bookings/booking';
+import { emitBookingStatusUpdate } from './socket';
 
 export class VendorBookingsService {
   private async assertVendorApproved(vendorUserId: string) {
@@ -90,6 +93,69 @@ export class VendorBookingsService {
       driver: assignedDriver,
       assignedFleetVehicleLabel: fleetVehicleLabel,
       message: 'Driver and vehicle assigned — customer can see partner details now',
+    };
+  }
+
+  /**
+   * Vendor verifies customer's trip OTP and starts the service (DRIVER_ARRIVED → IN_PROGRESS).
+   */
+  async verifyTripOtp(
+    vendorUserId: string,
+    bookingId: string,
+    dto: VendorVerifyTripOtpDto,
+  ) {
+    await this.assertVendorApproved(vendorUserId);
+
+    const booking =
+      dto.bookingType === 'towing'
+        ? await TowingBookingModel.findById(bookingId).exec()
+        : await DriverBookingModel.findById(bookingId).exec();
+    if (!booking) throw new NotFoundError('Booking not found');
+    if (booking.vendorId?.toString() !== vendorUserId) {
+      throw new ForbiddenError('This booking is not assigned to your fleet');
+    }
+    if (booking.status !== 'DRIVER_ARRIVED') {
+      throw new BadRequestError('Mark driver as arrived before verifying trip OTP');
+    }
+
+    assertTripStartOtp(booking, dto.tripOtp);
+
+    const updated =
+      dto.bookingType === 'towing'
+        ? await TowingBookingModel.findByIdAndUpdate(
+            bookingId,
+            {
+              status: 'IN_PROGRESS',
+              tripStartOtpVerified: true,
+              statusHistory: appendStatusHistory(booking.statusHistory, 'IN_PROGRESS'),
+            },
+            { new: true },
+          ).exec()
+        : await DriverBookingModel.findByIdAndUpdate(
+            bookingId,
+            {
+              status: 'IN_PROGRESS',
+              tripStartOtpVerified: true,
+              statusHistory: appendStatusHistory(booking.statusHistory, 'IN_PROGRESS'),
+            },
+            { new: true },
+          ).exec();
+
+    if (!updated) throw new NotFoundError('Booking not found');
+
+    emitBookingStatusUpdate(bookingId, 'IN_PROGRESS', {
+      message: 'Trip started — OTP verified',
+    });
+
+    const driver = await resolveAssignedDriver(updated.driverId?.toString());
+    return {
+      id: updated.id,
+      status: updated.status,
+      bookingNumber: updated.bookingNumber,
+      driver,
+      assignedFleetVehicleLabel:
+        'assignedFleetVehicleLabel' in updated ? updated.assignedFleetVehicleLabel : undefined,
+      message: 'Trip OTP verified — service started',
     };
   }
 

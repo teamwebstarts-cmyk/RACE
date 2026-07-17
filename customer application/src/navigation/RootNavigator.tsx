@@ -5,7 +5,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import SplashScreen from '../screens/auth/SplashScreen';
 import AuthNavigator from './AuthNavigator';
-import MainNavigator from './MainNavigator';
+import { MainTabNavigator } from './AppNavigator';
 import { useAuthSessionSync } from '../hooks/useAuthSessionSync';
 import { useAppSelector } from '../redux/hooks';
 import { useAuthStore } from '../store/authStore';
@@ -16,33 +16,33 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const navigationTheme = {
   ...DefaultTheme,
-  dark: true,
+  dark: false,
   colors: {
     ...DefaultTheme.colors,
     primary: colors.primary,
-    background: colors.backgroundSoft,
-    card: colors.surfaceDark,
-    text: colors.textLight,
-    border: colors.borderLight,
-    notification: colors.accentRed,
+    background: colors.background,
+    card: colors.cardBg,
+    text: colors.dark,
+    border: colors.border,
+    notification: colors.error,
   },
 };
 
 export default function RootNavigator() {
   useAuthSessionSync();
 
-  const accessToken = useAppSelector((state) => state.auth.accessToken);
+  const accessToken = useAppSelector(state => state.auth.accessToken);
   const isAuthenticated = useAuthStore(
-    (state) => state.isAuthenticated && Boolean(accessToken),
+    state => state.isAuthenticated && Boolean(accessToken),
   );
-  const onboardingRequired = useAuthStore((state) => state.onboardingRequired);
+  const onboardingRequired = useAuthStore(state => state.onboardingRequired);
   const canEnterApp = isAuthenticated && !onboardingRequired;
 
   return (
     <NavigationContainer theme={navigationTheme}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {canEnterApp ? (
-          <Stack.Screen name="Main" component={MainNavigator} />
+          <Stack.Screen name="Main" component={MainTabNavigator} />
         ) : (
           <>
             <Stack.Screen name="Splash" component={SplashScreen} />
@@ -67,6 +67,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surfaceDarker,
+    backgroundColor: colors.background,
   },
 });

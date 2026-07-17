@@ -80,6 +80,7 @@ function mapServiceBookingToBooking(
       : undefined,
     vendorId: item.vendorId,
     assignedFleetVehicleLabel: item.assignedFleetVehicleLabel,
+    tripStartOtp: item.tripStartOtp,
     invoice: {
       baseFare: item.estimatedFare,
       total: item.estimatedFare,

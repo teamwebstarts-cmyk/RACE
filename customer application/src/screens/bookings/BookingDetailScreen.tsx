@@ -22,6 +22,7 @@ import {
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import DriverAvatar from '../../components/bookings/DriverAvatar';
+import TripOtpCard from '../../components/booking/TripOtpCard';
 import ProfileSubScreenLayout from '../../components/profile/ProfileSubScreenLayout';
 import GoldButton from '../../components/auth/GoldButton';
 import { useBookingQuery } from '../../services/bookings/useBookingQueries';
@@ -295,6 +296,11 @@ export default function BookingDetailScreen({ navigation, route }: Props) {
             </Text>
           </Pressable>
         </View>
+        {booking.tripStartOtp ? (
+          <View style={{ marginTop: px(14) }}>
+            <TripOtpCard otp={booking.tripStartOtp} />
+          </View>
+        ) : null}
       </View>
 
       <View style={[styles.card, { borderRadius: px(14), padding: px(14), marginBottom: px(20) }, shadows.card]}>
