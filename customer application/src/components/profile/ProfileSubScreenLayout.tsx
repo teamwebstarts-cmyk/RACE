@@ -4,6 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import AppScreenLayout from '../ui/AppScreenLayout';
 import AppStackHeader from '../ui/AppStackHeader';
 import { useScreenPx } from '../../hooks/useScreenPx';
+import { colors } from '../../theme';
 
 type Props = {
   title: string;
@@ -33,6 +34,7 @@ export default function ProfileSubScreenLayout({
 
   return (
     <AppScreenLayout
+      backgroundColor={colors.pageBg}
       keyboardAvoiding={keyboardAvoiding}
       footer={footer}
       header={

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { assignVendorBooking, listVendorBookingOffers } from './vendorBookingsApi';
+import { approveVendorBooking, assignVendorBooking, listVendorBookingOffers } from './vendorBookingsApi';
 import {
   createVendorVehicle,
   listVendorVehicles,
@@ -9,7 +9,7 @@ import {
   type CreateFleetVehicleInput,
   type UpdateFleetVehicleInput,
 } from './vendorVehiclesApi';
-import { createVendorDriver, listVendorDrivers, type CreateFleetDriverInput } from './vendorDriversApi';
+import { createVendorDriver, listVendorDrivers, type CreateVendorDriverInput } from './vendorDriversApi';
 import { driverQueryKeys } from '../driver/useDriverQueries';
 import { vendorDriverKeys } from './useVendorDriversQueries';
 
@@ -88,7 +88,7 @@ export function useRemoveVendorVehicleMutation() {
 export function useAssignDriverToVehicleMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (payload: CreateFleetDriverInput) => createVendorDriver(payload),
+    mutationFn: (payload: CreateVendorDriverInput) => createVendorDriver(payload),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: vendorBookingQueryKeys.drivers });
       void queryClient.invalidateQueries({ queryKey: vendorDriverKeys.list });
@@ -96,6 +96,18 @@ export function useAssignDriverToVehicleMutation() {
   });
 }
 
+export function useApproveVendorBookingMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: approveVendorBooking,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: vendorBookingQueryKeys.offers });
+      void queryClient.invalidateQueries({ queryKey: driverQueryKeys.offers });
+    },
+  });
+}
+
+/** @deprecated Use useApproveVendorBookingMutation */
 export function useAssignVendorBookingMutation() {
   const queryClient = useQueryClient();
   return useMutation({

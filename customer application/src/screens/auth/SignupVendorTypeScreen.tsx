@@ -22,7 +22,7 @@ export default function SignupVendorTypeScreen({ navigation, route }: Props) {
   const accountType = route.params?.accountType ?? 'vendor';
   const dispatch = useAppDispatch();
 
-  const options = VENDOR_TYPE_CONFIGS.filter((item) =>
+  const options = VENDOR_TYPE_CONFIGS.filter(item =>
     accountType === 'vendor'
       ? VENDOR_ONLY.includes(item.type)
       : DRIVER_ONLY.includes(item.type),
@@ -49,7 +49,7 @@ export default function SignupVendorTypeScreen({ navigation, route }: Props) {
           Document verification is required next — Aadhaar, PAN, licenses, and more.
         </Text>
 
-        {options.map((item) => (
+        {options.map(item => (
           <TouchableOpacity key={item.type} onPress={() => handleSelect(item.type)} activeOpacity={0.88}>
             <GlassCard style={styles.card}>
               <Text style={styles.emoji}>{item.emoji}</Text>
@@ -67,20 +67,20 @@ export default function SignupVendorTypeScreen({ navigation, route }: Props) {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.surfaceDarker },
+  safeArea: { flex: 1, backgroundColor: colors.pageBg },
   content: { padding: spacing.lg, paddingBottom: spacing.xxl },
   title: {
-    color: colors.textLight,
+    color: colors.dark,
     fontSize: typography.sizes.xxl,
-    fontWeight: typography.weights.bold,
+    fontWeight: typography.weights.extrabold,
   },
-  subtitle: { color: colors.subtext, marginBottom: spacing.lg, marginTop: spacing.xs, lineHeight: 20 },
+  subtitle: { color: colors.grey, marginBottom: spacing.lg, marginTop: spacing.xs, lineHeight: 20 },
   card: { marginBottom: spacing.md, alignItems: 'center' },
   emoji: { fontSize: 36, marginBottom: spacing.sm },
-  cardTitle: { color: colors.textLight, fontSize: typography.sizes.lg, fontWeight: typography.weights.bold },
-  cardSubtitle: { color: colors.subtext, textAlign: 'center', marginTop: spacing.xs },
+  cardTitle: { color: colors.dark, fontSize: typography.sizes.lg, fontWeight: typography.weights.bold },
+  cardSubtitle: { color: colors.grey, textAlign: 'center', marginTop: spacing.xs, lineHeight: 20 },
   steps: {
-    color: colors.primary,
+    color: colors.primaryDark,
     marginTop: spacing.md,
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.semibold,

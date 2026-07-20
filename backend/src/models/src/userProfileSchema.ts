@@ -89,6 +89,10 @@ export interface IDriverProfile {
   vendorUserId?: Types.ObjectId;
   /** vendor = onboarded by vendor via Partner app; admin = assigned by admin portal */
   fleetSource?: DriverFleetSource;
+  /** Unique login for vendor-managed drivers (password auth). */
+  loginId?: string;
+  /** bcrypt hash — never returned in API responses. */
+  passwordHash?: string;
   driverType: string;
   city: string;
   state?: string;
@@ -205,6 +209,8 @@ export const DriverProfileSchema = new Schema<IDriverProfile>(
     licenseNo: { type: String, required: true },
     vendorUserId: { type: Schema.Types.ObjectId, ref: 'User' },
     fleetSource: { type: String, enum: ['vendor', 'admin'] },
+    loginId: { type: String, trim: true, lowercase: true },
+    passwordHash: { type: String, select: false },
     driverType: { type: String, required: true },
     city: { type: String, required: true },
     state: { type: String, default: 'Odisha' },

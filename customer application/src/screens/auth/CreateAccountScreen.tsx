@@ -245,7 +245,7 @@ export default function CreateAccountScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.pageBg,
   },
   flex: {
     flex: 1,

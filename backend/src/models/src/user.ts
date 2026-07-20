@@ -126,6 +126,7 @@ UserSchema.index({ 'vendorProfile.status': 1, 'vendorProfile.submittedAt': -1 })
 UserSchema.index({ 'vendorProfile.verificationStage': 1 });
 UserSchema.index({ 'driverProfile.driverCode': 1 }, { unique: true, sparse: true });
 UserSchema.index({ 'driverProfile.licenseNo': 1 }, { unique: true, sparse: true });
+UserSchema.index({ 'driverProfile.loginId': 1 }, { unique: true, sparse: true });
 UserSchema.index({ 'driverProfile.status': 1 });
 UserSchema.index({ 'driverProfile.vendorUserId': 1 });
 UserSchema.index({ fullName: 'text', mobileNumber: 'text', 'driverProfile.driverCode': 'text' });

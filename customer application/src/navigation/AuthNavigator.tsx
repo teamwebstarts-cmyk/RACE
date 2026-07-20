@@ -49,7 +49,7 @@ export default function AuthNavigator() {
       initialRouteName={initialRouteName}
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: colors.surfaceDarker },
+        contentStyle: { backgroundColor: colors.pageBg },
       }}>
       <Stack.Screen name="Onboarding" component={OnboardingScreen} />
       <Stack.Screen name="AccountType" component={AccountTypeScreen} />
@@ -65,9 +65,9 @@ export default function AuthNavigator() {
         options={{
           headerShown: true,
           headerTitle: 'Document Verification',
-          headerStyle: { backgroundColor: colors.surfaceDark },
-          headerTintColor: colors.primary,
-          headerTitleStyle: { fontWeight: typography.weights.bold, color: colors.textLight },
+          headerStyle: { backgroundColor: colors.pageBg },
+          headerTintColor: colors.dark,
+          headerTitleStyle: { fontWeight: typography.weights.bold, color: colors.dark },
         }}
       />
       <Stack.Screen
@@ -76,9 +76,9 @@ export default function AuthNavigator() {
         options={{
           headerShown: true,
           headerTitle: 'Review Submission',
-          headerStyle: { backgroundColor: colors.surfaceDark },
-          headerTintColor: colors.primary,
-          headerTitleStyle: { fontWeight: typography.weights.bold, color: colors.textLight },
+          headerStyle: { backgroundColor: colors.pageBg },
+          headerTintColor: colors.dark,
+          headerTitleStyle: { fontWeight: typography.weights.bold, color: colors.dark },
         }}
       />
       <Stack.Screen
@@ -87,9 +87,9 @@ export default function AuthNavigator() {
         options={{
           headerShown: true,
           headerTitle: 'Verification Status',
-          headerStyle: { backgroundColor: colors.surfaceDark },
-          headerTintColor: colors.primary,
-          headerTitleStyle: { fontWeight: typography.weights.bold, color: colors.textLight },
+          headerStyle: { backgroundColor: colors.pageBg },
+          headerTintColor: colors.dark,
+          headerTitleStyle: { fontWeight: typography.weights.bold, color: colors.dark },
         }}
       />
     </Stack.Navigator>

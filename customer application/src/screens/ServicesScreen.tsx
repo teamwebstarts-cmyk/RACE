@@ -43,11 +43,16 @@ export default function ServicesScreen({ navigation }: Props) {
 
   return (
     <AppScreenLayout
+      backgroundColor={colors.pageBg}
       contentStyle={{ paddingTop: px(10) }}
       header={
         <TabRootHeader
           title="Services"
           subtitle="Choose a service category to get started"
+          onAvatarPress={() => {
+            const parent = navigation.getParent();
+            parent?.navigate('Profile' as never);
+          }}
         />
       }>
           <View
@@ -114,17 +119,14 @@ export default function ServicesScreen({ navigation }: Props) {
                   flex: 1,
                   height: px(140),
                   overflow: 'hidden',
-                  alignItems: 'flex-start',
+                  alignItems: 'center',
                   justifyContent: 'center',
-                  marginLeft: px(-10),
                 }}>
                 <Image
                   source={HOME_HERO_IMAGE}
                   style={{
-                    width: px(210),
-                    height: px(158),
-                    marginLeft: px(-6),
-                    marginRight: px(-28),
+                    width: px(180),
+                    height: px(140),
                   }}
                   resizeMode="contain"
                 />

@@ -192,6 +192,16 @@ export class VendorController {
     return sendSuccess(res, offers);
   });
 
+  approveBooking = asyncHandler(async (req: Request, res: Response) => {
+    const user = getAuthUser(req);
+    const result = await vendorBookingsService.approveBooking(
+      user.id,
+      getParamId(req.params.id),
+      req.body,
+    );
+    return sendSuccess(res, result);
+  });
+
   assignBooking = asyncHandler(async (req: Request, res: Response) => {
     const user = getAuthUser(req);
     const result = await vendorBookingsService.assignBooking(

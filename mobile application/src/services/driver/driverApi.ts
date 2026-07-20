@@ -23,6 +23,9 @@ export type DriverJobBooking = {
   createdAt: string;
   distanceKm?: number;
   serviceLabel?: string;
+  vendorId?: string;
+  assignedFleetVehicleLabel?: string;
+  vendorApproved?: boolean;
 };
 
 export async function setDriverAvailability(isAvailable: boolean): Promise<{

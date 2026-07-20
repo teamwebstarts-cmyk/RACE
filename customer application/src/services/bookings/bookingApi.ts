@@ -155,6 +155,8 @@ export interface BookingTracking {
   driverLocation?: { latitude: number; longitude: number };
   pickup: Booking['pickup'];
   dropoff?: Booking['dropoff'];
+  tripStartOtp?: string;
+  assignedFleetVehicleLabel?: string;
 }
 
 export async function getBookingTracking(bookingId: string): Promise<BookingTracking | null> {
@@ -167,6 +169,8 @@ export async function getBookingTracking(bookingId: string): Promise<BookingTrac
       driverLocation: towing.driverLocation,
       pickup: toBookingLocation(towing.pickup),
       dropoff: towing.dropoff ? toBookingLocation(towing.dropoff) : undefined,
+      tripStartOtp: towing.tripStartOtp,
+      assignedFleetVehicleLabel: towing.assignedFleetVehicleLabel,
     };
   } catch {
     try {
@@ -178,6 +182,8 @@ export async function getBookingTracking(bookingId: string): Promise<BookingTrac
         driverLocation: driver.driverLocation,
         pickup: toBookingLocation(driver.pickup),
         dropoff: driver.dropoff ? toBookingLocation(driver.dropoff) : undefined,
+        tripStartOtp: driver.tripStartOtp,
+        assignedFleetVehicleLabel: driver.assignedFleetVehicleLabel,
       };
     } catch {
       throw new Error('Unable to fetch booking tracking');

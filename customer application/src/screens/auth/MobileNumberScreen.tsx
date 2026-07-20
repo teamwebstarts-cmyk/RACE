@@ -1,60 +1,89 @@
 import React, { useMemo, useState } from 'react';
 import {
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
-  Image,
   View,
+  useWindowDimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  ArrowLeft,
+  Check,
+  ChevronDown,
+  Lock,
+  Send,
+  ShieldCheck,
+  Smartphone,
+  Zap,
+} from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
 
 import { images } from '../../assets';
-import { API_CONFIG } from '../../config/api';
 import AuthToast, { AuthLoadingOverlay } from '../../components/auth/AuthToast';
+import { API_CONFIG } from '../../config/api';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import { clearSignupPath } from '../../redux/onboarding/onboardingSlice';
 import { getApiErrorMessage, useSendOtpMutation } from '../../services/auth/useAuthMutations';
 import { getRoleMismatchMessage, isRoleMismatchError } from '../../utils/roleMismatch';
 import type { AuthStackParamList } from '../../types/navigation';
-import { colors, radius, spacing, typography } from '../../theme';
+import { colors, layout, radius, shadows, spacing, typography } from '../../theme';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'MobileNumber'>;
 
 const MOBILE_REGEX = /^[6-9]\d{9}$/;
+const REF_W = 390;
+const SUCCESS_GREEN = '#22C55E';
+
+const TRUST_ITEMS = [
+  { title: '24/7 Help', subtitle: 'Always on the road', Icon: Zap },
+  { title: 'Verified Pros', subtitle: 'Trained technicians', Icon: ShieldCheck },
+  { title: 'Fast Arrival', subtitle: 'Nearby network', Icon: Smartphone },
+] as const;
+
+function formatMobileDisplay(value: string) {
+  if (value.length <= 5) return value;
+  return `${value.slice(0, 5)} ${value.slice(5)}`;
+}
 
 export default function MobileNumberScreen({ navigation }: Props) {
   const dispatch = useAppDispatch();
-  const loading = useAppSelector((state) => state.auth.loading);
-  const signupAccountType = useAppSelector((state) => state.onboarding.signupAccountType);
-  const signupVendorType = useAppSelector((state) => state.onboarding.signupVendorType);
-  const [mobileNumber, setMobileNumber] = useState('');
-  const [passwordHint, setPasswordHint] = useState('');
-  const [error, setError] = useState('');
+  const loading = useAppSelector(state => state.auth.loading);
+  const signupAccountType = useAppSelector(state => state.onboarding.signupAccountType);
+  const signupVendorType = useAppSelector(state => state.onboarding.signupVendorType);
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const scale = width / REF_W;
+  const px = (value: number) => Math.max(1, Math.round(value * scale));
 
-  const signupLabel =
-    signupAccountType === 'customer'
-      ? 'Customer sign up'
-      : signupAccountType === 'vendor'
-        ? 'Vendor sign up'
-        : signupAccountType === 'driver'
-          ? 'Driver sign up'
-          : null;
+  const [mobileNumber, setMobileNumber] = useState('');
+  const [error, setError] = useState('');
+  const [focused, setFocused] = useState(false);
 
   const sendOtpMutation = useSendOtpMutation();
-
   const isValid = useMemo(() => MOBILE_REGEX.test(mobileNumber), [mobileNumber]);
+
+  const isSignup = Boolean(signupAccountType);
+  const roleLabel =
+    signupAccountType === 'customer'
+      ? 'Customer'
+      : signupAccountType === 'vendor'
+        ? 'Vendor'
+        : signupAccountType === 'driver'
+          ? 'Driver'
+          : null;
 
   const handleSendOtp = async () => {
     setError('');
 
     if (!isValid) {
-      setError('Enter a valid 10-digit Indian mobile number');
+      setError('Enter a valid 10-digit mobile number');
       return;
     }
 
@@ -81,279 +110,410 @@ export default function MobileNumberScreen({ navigation }: Props) {
     }
   };
 
+  const inputBorderColor = error
+    ? colors.error
+    : focused || isValid
+      ? colors.primary
+      : colors.border;
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}>
-          <View style={styles.header}>
-            <Image source={images.logo} style={styles.logo} resizeMode="contain" />
-            <Text style={styles.title}>
-              {signupLabel ? signupLabel : 'Welcome Back 👋'}
+    <>
+      <View style={[styles.root, { paddingTop: insets.top }]}>
+        <StatusBar barStyle="dark-content" backgroundColor={colors.pageBg} />
+
+        <View style={[styles.topBar, { paddingHorizontal: px(layout.screenPadding) }]}>
+          <Pressable
+            onPress={() => navigation.goBack()}
+            hitSlop={12}
+            style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
+            accessibilityRole="button"
+            accessibilityLabel="Go back">
+            <ArrowLeft size={22} color={colors.dark} strokeWidth={2.5} />
+          </Pressable>
+
+          <View style={styles.brandBlock}>
+            <Text style={[styles.brandRace, { fontSize: px(18), lineHeight: px(22) }]}>RACE</Text>
+            <Text style={[styles.brandCustomer, { fontSize: px(11), lineHeight: px(14) }]}>
+              SERVICE
             </Text>
-            <Text style={styles.subtitle}>
-              {signupLabel
-                ? 'Verify your mobile number to continue.'
-                : 'Please login to continue.'}
-            </Text>
-            {signupVendorType ? (
-              <Text style={styles.pathHint}>Selected: {signupVendorType.replace(/_/g, ' ')}</Text>
-            ) : null}
           </View>
 
-          <View style={styles.card}>
-            <Text style={styles.label}>Mobile Number</Text>
-            <View style={styles.inputRow}>
-              <View style={styles.countryCode}>
-                <Text style={styles.countryCodeText}>+91</Text>
-              </View>
-              <TextInput
-                style={styles.input}
-                value={mobileNumber}
-                onChangeText={(text) => setMobileNumber(text.replace(/\D/g, '').slice(0, 10))}
-                keyboardType="number-pad"
-                placeholder="9876543210"
-                placeholderTextColor={colors.textMuted}
-                maxLength={10}
-              />
+          <View style={styles.backButton} />
+        </View>
+
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <ScrollView
+            style={styles.scroll}
+            bounces={false}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={[
+              styles.scrollContent,
+              {
+                paddingHorizontal: px(layout.screenPadding),
+                paddingBottom: insets.bottom + px(spacing.xl),
+              },
+            ]}>
+            <View style={[styles.welcomeBlock, { marginTop: px(spacing.sm) }]}>
+              <Text style={[styles.welcomeTitle, { fontSize: px(28), lineHeight: px(34) }]}>
+                {isSignup ? 'Create your account' : 'Welcome back!'}
+              </Text>
+              <Text
+                style={[
+                  styles.welcomeSubtitle,
+                  { fontSize: px(14), lineHeight: px(21), marginTop: px(6) },
+                ]}>
+                {isSignup
+                  ? 'Verify your mobile number with a secure OTP to continue.'
+                  : 'Sign in to your RACE account with a secure OTP.'}
+              </Text>
+              {roleLabel ? (
+                <View style={[styles.rolePill, { marginTop: px(10) }]}>
+                  <Text style={styles.rolePillText}>Continuing as {roleLabel}</Text>
+                </View>
+              ) : null}
+              {signupVendorType ? (
+                <Text style={[styles.pathHint, { marginTop: px(8), fontSize: px(12) }]}>
+                  Selected: {signupVendorType.replace(/_/g, ' ')}
+                </Text>
+              ) : null}
             </View>
 
-            {!signupLabel ? (
-              <View style={styles.inputRow}>
-                <View style={styles.countryCode}>
-                  <Ionicons name="lock-closed-outline" size={18} color={colors.textMuted} />
-                </View>
-                <TextInput
-                  style={styles.input}
-                  value={passwordHint}
-                  onChangeText={setPasswordHint}
-                  secureTextEntry
-                  placeholder="••••••"
-                  placeholderTextColor={colors.textMuted}
-                />
+            <Image
+              source={images.homeHeroTruck}
+              style={[styles.heroImage, { height: px(110), marginTop: px(spacing.md) }]}
+              resizeMode="contain"
+              accessibilityLabel="RACE roadside assistance"
+            />
+
+            <View
+              style={[
+                styles.card,
+                {
+                  marginTop: px(spacing.md),
+                  paddingHorizontal: px(spacing.xl),
+                  paddingTop: px(spacing.xxl),
+                  paddingBottom: px(spacing.xl),
+                  borderRadius: px(18),
+                },
+              ]}>
+              <View style={styles.phoneIconWrap}>
+                <Smartphone size={px(26)} color={colors.primary} strokeWidth={2.2} />
               </View>
-            ) : null}
 
-            <AuthToast message={error} />
-
-            {__DEV__ ? (
-              <Text style={styles.devHint}>API: {API_CONFIG.baseUrl}</Text>
-            ) : null}
-
-            <Pressable
-              style={[styles.loginButton, (!isValid || loading) && styles.loginButtonDisabled]}
-              onPress={handleSendOtp}
-              disabled={!isValid || loading}>
-              <Text style={styles.loginButtonText}>
-                {loading ? 'Sending...' : signupLabel ? 'Continue' : 'Login'}
+              <Text style={[styles.cardTitle, { fontSize: px(20), marginTop: px(14) }]}>
+                Enter mobile number
               </Text>
-            </Pressable>
+              <Text
+                style={[
+                  styles.cardSubtitle,
+                  { fontSize: px(13), lineHeight: px(19), marginTop: px(6) },
+                ]}>
+                We'll send a 6-digit OTP to verify your account.
+              </Text>
 
-            {!signupLabel ? (
-              <>
-                <View style={styles.dividerWrap}>
-                  <View style={styles.divider} />
-                  <Text style={styles.dividerText}>or continue with</Text>
-                  <View style={styles.divider} />
+              <Text style={[styles.fieldLabel, { fontSize: px(13), marginTop: px(22) }]}>
+                Mobile number
+              </Text>
+
+              <View style={[styles.phoneRow, { marginTop: px(8), gap: px(10) }]}>
+                <View style={[styles.countryBox, { minHeight: px(52), borderRadius: px(12) }]}>
+                  <Text style={[styles.countryCode, { fontSize: px(15) }]}>+91</Text>
+                  <ChevronDown size={px(16)} color={colors.grey} strokeWidth={2.5} />
                 </View>
-                <View style={styles.socialRow}>
-                  <Pressable style={styles.socialButton}>
-                    <Ionicons name="logo-google" size={22} color={colors.textDark} />
-                  </Pressable>
-                  <Pressable style={styles.socialButton}>
-                    <Ionicons name="logo-apple" size={22} color={colors.textDark} />
-                  </Pressable>
-                  <Pressable style={styles.socialButton}>
-                    <Ionicons name="logo-whatsapp" size={22} color="#25D366" />
-                  </Pressable>
+
+                <View
+                  style={[
+                    styles.phoneInputWrap,
+                    {
+                      minHeight: px(52),
+                      borderRadius: px(12),
+                      borderColor: inputBorderColor,
+                    },
+                  ]}>
+                  <TextInput
+                    value={formatMobileDisplay(mobileNumber)}
+                    onChangeText={text => {
+                      setMobileNumber(text.replace(/\D/g, '').slice(0, 10));
+                      if (error) setError('');
+                    }}
+                    onFocus={() => setFocused(true)}
+                    onBlur={() => setFocused(false)}
+                    keyboardType="number-pad"
+                    placeholder="98765 43210"
+                    placeholderTextColor={colors.textMuted}
+                    maxLength={11}
+                    style={[styles.phoneInput, { fontSize: px(16) }]}
+                  />
+                  {isValid ? (
+                    <View style={styles.validCheck}>
+                      <Check size={14} color={SUCCESS_GREEN} strokeWidth={3} />
+                    </View>
+                  ) : null}
                 </View>
-                <Pressable
-                  style={styles.signupPressable}
-                  onPress={() => navigation.navigate('AccountType')}>
-                  <Text style={styles.signupText}>
-                    Don't have an account? <Text style={styles.signupLink}>Sign Up</Text>
-                  </Text>
-                </Pressable>
-              </>
-            ) : (
-              <Pressable style={styles.switchTypeButton} onPress={() => navigation.navigate('AccountType')}>
-                <Text style={styles.switchTypeText}>Change account type</Text>
+              </View>
+
+              <AuthToast message={error} type="error" />
+
+              {__DEV__ ? (
+                <Text style={[styles.devHint, { fontSize: px(11), marginTop: px(8) }]}>
+                  API: {API_CONFIG.baseUrl}
+                </Text>
+              ) : null}
+
+              <Pressable
+                disabled={!isValid || loading}
+                onPress={() => void handleSendOtp()}
+                style={({ pressed }) => [
+                  styles.sendButton,
+                  {
+                    marginTop: px(spacing.lg),
+                    minHeight: px(54),
+                    borderRadius: px(14),
+                  },
+                  (!isValid || loading) && styles.sendButtonDisabled,
+                  pressed && isValid && !loading && styles.pressed,
+                ]}>
+                <Send size={px(18)} color={colors.dark} strokeWidth={2.4} />
+                <Text style={[styles.sendButtonLabel, { fontSize: px(16) }]}>
+                  {loading ? 'Sending OTP...' : 'Send OTP'}
+                </Text>
               </Pressable>
-            )}
-          </View>
-        </ScrollView>
-        <AuthLoadingOverlay visible={loading} label="Sending OTP..." />
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+
+              <Pressable
+                onPress={() => navigation.navigate('AccountType')}
+                style={({ pressed }) => [
+                  styles.changeRoleRow,
+                  { marginTop: px(spacing.lg) },
+                  pressed && styles.pressed,
+                ]}>
+                <Text style={[styles.changeRoleText, { fontSize: px(13) }]}>
+                  {isSignup ? (
+                    <>
+                      Wrong path? <Text style={styles.changeRoleLink}>Change account type</Text>
+                    </>
+                  ) : (
+                    <>
+                      New to RACE? <Text style={styles.changeRoleLink}>Get started</Text>
+                    </>
+                  )}
+                </Text>
+              </Pressable>
+
+              <View style={[styles.safeRow, { marginTop: px(spacing.xl) }]}>
+                <Lock size={13} color={colors.grey} strokeWidth={2.2} />
+                <Text style={[styles.safeText, { fontSize: px(12) }]}>
+                  Your data is safe and secure with RACE
+                </Text>
+              </View>
+            </View>
+
+            <View style={[styles.trustRow, { marginTop: px(spacing.xl), gap: px(8) }]}>
+              {TRUST_ITEMS.map(({ title, subtitle, Icon }) => (
+                <View key={title} style={styles.trustItem}>
+                  <View style={styles.trustIconWrap}>
+                    <Icon size={16} color={colors.primary} strokeWidth={2.2} />
+                  </View>
+                  <Text style={[styles.trustTitle, { fontSize: px(11) }]} numberOfLines={1}>
+                    {title}
+                  </Text>
+                  <Text
+                    style={[styles.trustSubtitle, { fontSize: px(10), lineHeight: px(13) }]}
+                    numberOfLines={2}>
+                    {subtitle}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </View>
+
+      <AuthLoadingOverlay visible={loading} label="Sending OTP..." />
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.background,
+  root: { flex: 1, backgroundColor: colors.pageBg },
+  flex: { flex: 1 },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.sm,
   },
-  flex: {
-    flex: 1,
-  },
-  content: {
-    flexGrow: 1,
-    padding: spacing.lg,
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
     justifyContent: 'center',
   },
-  header: {
-    alignItems: 'center',
-    marginBottom: spacing.xl,
+  brandBlock: { alignItems: 'center' },
+  brandRace: {
+    color: colors.dark,
+    fontWeight: typography.weights.extrabold,
+    letterSpacing: 0.5,
   },
-  logo: {
-    width: 72,
-    height: 72,
-  },
-  title: {
-    marginTop: spacing.sm,
-    color: colors.textDark,
-    fontSize: typography.sizes.xxl,
+  brandCustomer: {
+    color: colors.primary,
     fontWeight: typography.weights.bold,
+    letterSpacing: 1.6,
   },
-  subtitle: {
-    marginTop: spacing.sm,
-    color: colors.textMuted,
-    fontSize: typography.sizes.md,
-    textAlign: 'center',
-    lineHeight: 22,
-    maxWidth: 320,
+  scroll: { flex: 1 },
+  scrollContent: { flexGrow: 1 },
+  welcomeBlock: { alignItems: 'flex-start' },
+  welcomeTitle: {
+    color: colors.dark,
+    fontWeight: typography.weights.extrabold,
+  },
+  welcomeSubtitle: { color: colors.grey },
+  rolePill: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.goldLight,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderWidth: 1,
+    borderColor: '#F5D98A',
+  },
+  rolePillText: {
+    color: colors.primaryDark,
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
   },
   pathHint: {
-    marginTop: spacing.sm,
-    color: colors.primary,
-    fontSize: typography.sizes.sm,
+    color: colors.primaryDark,
     fontWeight: typography.weights.semibold,
     textTransform: 'capitalize',
   },
+  heroImage: {
+    width: '100%',
+    maxWidth: 260,
+    alignSelf: 'center',
+  },
   card: {
     backgroundColor: colors.background,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
     borderWidth: 1,
     borderColor: colors.border,
+    ...shadows.card,
   },
-  label: {
-    color: colors.textDark,
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
-    marginBottom: spacing.sm,
-  },
-  inputRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  countryCode: {
-    minWidth: 72,
+  phoneIconWrap: {
+    width: 52,
     height: 52,
-    borderRadius: radius.md,
-    backgroundColor: colors.backgroundSoft,
+    borderRadius: 26,
+    backgroundColor: colors.goldLight,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
+    alignSelf: 'center',
   },
-  countryCodeText: {
-    color: colors.primary,
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
-  },
-  input: {
-    flex: 1,
-    height: 52,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: spacing.md,
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.semibold,
-    color: colors.textDark,
-    backgroundColor: colors.backgroundSoft,
-  },
-  devHint: {
-    marginBottom: spacing.md,
-    color: colors.textMuted,
-    fontSize: typography.sizes.xs,
+  cardTitle: {
+    color: colors.dark,
+    fontWeight: typography.weights.extrabold,
     textAlign: 'center',
   },
-  dividerWrap: {
+  cardSubtitle: {
+    color: colors.grey,
+    textAlign: 'center',
+  },
+  fieldLabel: {
+    color: colors.dark,
+    fontWeight: typography.weights.bold,
+  },
+  phoneRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
   },
-  divider: {
-    flex: 1,
-    height: 1,
-    backgroundColor: colors.border,
-  },
-  dividerText: {
-    color: colors.textMuted,
-    fontSize: typography.sizes.sm,
-  },
-  socialRow: {
+  countryBox: {
     flexDirection: 'row',
-    marginBottom: spacing.md,
-  },
-  socialButton: {
-    flex: 1,
-    height: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.lightGrey,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.md,
-    marginHorizontal: 4,
+  },
+  countryCode: {
+    color: colors.dark,
+    fontWeight: typography.weights.bold,
+  },
+  phoneInputWrap: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    backgroundColor: colors.background,
+    paddingHorizontal: spacing.md,
+  },
+  phoneInput: {
+    flex: 1,
+    color: colors.dark,
+    fontWeight: typography.weights.medium,
+    paddingVertical: spacing.md,
+  },
+  validCheck: { marginLeft: spacing.xs },
+  sendButton: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.backgroundSoft,
-  },
-  loginButton: {
-    height: 56,
-    borderRadius: 12,
+    gap: spacing.sm,
     backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.md,
   },
-  loginButtonDisabled: {
-    opacity: 0.5,
-  },
-  loginButtonText: {
-    color: colors.textDark,
-    fontSize: typography.sizes.xl,
+  sendButtonDisabled: { opacity: 0.5 },
+  sendButtonLabel: {
+    color: colors.dark,
     fontWeight: typography.weights.bold,
   },
-  signupPressable: {
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
+  changeRoleRow: { alignItems: 'center' },
+  changeRoleText: {
+    color: colors.grey,
+    textAlign: 'center',
   },
-  signupText: {
-    color: colors.text,
-    fontSize: typography.sizes.md,
-  },
-  signupLink: {
-    color: colors.primary,
-    fontWeight: typography.weights.bold,
-  },
-  switchTypeButton: {
-    height: 52,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  switchTypeText: {
-    color: colors.primary,
+  changeRoleLink: {
+    color: '#2563EB',
     fontWeight: typography.weights.semibold,
-    fontSize: typography.sizes.md,
   },
+  safeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  safeText: { color: colors.grey },
+  trustRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  trustItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  trustIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.goldLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+  trustTitle: {
+    color: colors.dark,
+    fontWeight: typography.weights.bold,
+    textAlign: 'center',
+  },
+  trustSubtitle: {
+    color: colors.grey,
+    textAlign: 'center',
+    marginTop: 2,
+  },
+  devHint: {
+    color: colors.textMuted,
+    textAlign: 'center',
+  },
+  pressed: { opacity: 0.9 },
 });

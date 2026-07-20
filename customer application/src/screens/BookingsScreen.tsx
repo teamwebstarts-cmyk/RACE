@@ -8,7 +8,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { Headphones, Phone, SlidersHorizontal } from 'lucide-react-native';
+import { Headphones, Phone } from 'lucide-react-native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -27,9 +27,8 @@ import {
   isBookingOngoing,
   mapBookingToActiveCard,
   mapBookingToHistoryRow,
-  resolveBookingType,
 } from '../utils/bookingDisplay';
-import { colors, typography } from '../theme';
+import { colors, shadows, typography } from '../theme';
 
 const REF_W = 390;
 
@@ -49,7 +48,7 @@ export default function BookingsScreen() {
 
   useFocusEffect(
     React.useCallback(() => {
-      void refetch().then((result) => {
+      void refetch().then(result => {
         setLoadError(result.error ? 'Failed to load bookings. Pull to refresh.' : null);
       });
     }, [refetch]),
@@ -75,6 +74,15 @@ export default function BookingsScreen() {
     [typeFiltered],
   );
 
+  /** Catch bookings that are neither ongoing nor completed so they still appear. */
+  const otherList = useMemo(
+    () =>
+      typeFiltered
+        .filter(b => !isBookingOngoing(b) && !isBookingCompleted(b))
+        .map(mapBookingToHistoryRow),
+    [typeFiltered],
+  );
+
   const showOngoing =
     activeTab === 'all' ||
     activeTab === 'ongoing' ||
@@ -85,11 +93,6 @@ export default function BookingsScreen() {
     activeTab === 'completed' ||
     activeTab === 'towing' ||
     activeTab === 'driver';
-
-  const visibleOngoing =
-    activeTab === 'ongoing' || activeTab === 'towing' || activeTab === 'driver'
-      ? ongoingList
-      : ongoingList.slice(0, 1);
 
   const openTrack = (bookingId: string, bookingType: 'towing' | 'driver') => {
     if (bookingType === 'driver') {
@@ -103,38 +106,49 @@ export default function BookingsScreen() {
     navigation.navigate('BookingDetail', { bookingId });
   };
 
+  const isEmpty =
+    !isLoading &&
+    !isRefetching &&
+    ongoingList.length === 0 &&
+    historyList.length === 0 &&
+    otherList.length === 0;
+
   return (
     <AppScreenLayout
+      backgroundColor={colors.pageBg}
+      refreshing={isRefetching}
+      onRefresh={() => {
+        void refetch().then(result => {
+          setLoadError(result.error ? 'Failed to load bookings. Pull to refresh.' : null);
+        });
+      }}
       header={
         <TabRootHeader
           title="Bookings"
           subtitle="Track and manage your service requests"
+          onAvatarPress={() => {
+            const tabNav = navigation.getParent();
+            tabNav?.navigate('Profile' as never);
+          }}
         />
       }>
-      <View
-        style={{
-          flexDirection: 'row',
-          flexWrap: 'wrap',
-          gap: px(8),
-          marginTop: px(16),
-          marginBottom: px(18),
-        }}>
+      <View style={[styles.tabsWrap, { marginTop: px(16), marginBottom: px(16), gap: px(8) }]}>
         {BOOKING_TABS.map(tab => {
           const isActive = activeTab === tab.id;
           return (
             <Pressable
               key={tab.id}
               onPress={() => setActiveTab(tab.id)}
-              style={{
-                alignItems: 'center',
-                justifyContent: 'center',
-                paddingVertical: px(8),
-                paddingHorizontal: px(12),
-                borderRadius: px(20),
-                borderWidth: 1,
-                borderColor: isActive ? colors.primary : colors.border,
-                backgroundColor: isActive ? colors.primary : colors.background,
-              }}>
+              style={[
+                styles.tab,
+                {
+                  paddingVertical: px(8),
+                  paddingHorizontal: px(14),
+                  borderRadius: px(20),
+                  borderColor: isActive ? colors.primary : colors.border,
+                  backgroundColor: isActive ? colors.primary : colors.background,
+                },
+              ]}>
               <Text
                 style={{
                   fontSize: px(12),
@@ -148,44 +162,107 @@ export default function BookingsScreen() {
         })}
       </View>
 
-      {isLoading || isRefetching ? (
-        <View style={{ alignItems: 'center', paddingVertical: px(24) }}>
+      {isLoading && bookings.length === 0 ? (
+        <View style={{ alignItems: 'center', paddingVertical: px(32) }}>
           <ActivityIndicator color={colors.primary} />
+          <Text style={{ marginTop: px(10), fontSize: px(13), color: colors.grey }}>
+            Loading bookings…
+          </Text>
         </View>
       ) : null}
+
       {loadError ? (
         <View
           style={{
             borderRadius: px(12),
             borderWidth: 1,
             borderColor: colors.error,
-            backgroundColor: '#FFEDED',
-            padding: px(10),
+            backgroundColor: '#FEE2E2',
+            padding: px(12),
             marginBottom: px(12),
           }}>
-          <Text style={{ color: colors.error, fontSize: px(12), fontWeight: typography.weights.semibold }}>
+          <Text
+            style={{
+              color: colors.error,
+              fontSize: px(12),
+              fontWeight: typography.weights.semibold,
+              marginBottom: px(8),
+            }}>
             {loadError}
           </Text>
+          <Pressable onPress={() => void refetch()}>
+            <Text style={{ color: colors.primaryDark, fontWeight: typography.weights.bold }}>
+              Retry
+            </Text>
+          </Pressable>
         </View>
       ) : null}
 
-      {showOngoing ? (
-        <View style={{ marginBottom: px(4) }}>
+      {isEmpty ? (
+        <View
+          style={[
+            styles.emptyCard,
+            shadows.card,
+            { borderRadius: px(16), padding: px(24), marginBottom: px(16) },
+          ]}>
           <Text
             style={{
               fontSize: px(16),
               fontWeight: typography.weights.bold,
               color: colors.dark,
-              marginBottom: px(8),
+              textAlign: 'center',
             }}>
-            {activeTab === 'ongoing' ? 'Ongoing Bookings' : 'Active Booking'}
+            No bookings yet
           </Text>
-          {visibleOngoing.length === 0 ? (
+          <Text
+            style={{
+              marginTop: px(8),
+              fontSize: px(13),
+              color: colors.grey,
+              textAlign: 'center',
+              lineHeight: px(18),
+            }}>
+            Book a towing or driver service from Home. Once a vendor assigns a partner, it will
+            show here as active.
+          </Text>
+          <Pressable
+            onPress={() => {
+              const tabNav = navigation.getParent();
+              tabNav?.navigate('Home' as never);
+            }}
+            style={{
+              marginTop: px(16),
+              alignSelf: 'center',
+              backgroundColor: colors.primary,
+              borderRadius: px(12),
+              paddingHorizontal: px(18),
+              paddingVertical: px(12),
+            }}>
+            <Text style={{ fontWeight: typography.weights.bold, color: colors.dark }}>
+              Browse services
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
+
+      {showOngoing && !isEmpty ? (
+        <View style={{ marginBottom: px(8) }}>
+          <Text
+            style={{
+              fontSize: px(16),
+              fontWeight: typography.weights.bold,
+              color: colors.dark,
+              marginBottom: px(10),
+            }}>
+            {activeTab === 'ongoing' ? 'Ongoing bookings' : 'Active bookings'}
+            {ongoingList.length > 0 ? ` (${ongoingList.length})` : ''}
+          </Text>
+          {ongoingList.length === 0 ? (
             <Text style={{ fontSize: px(13), color: colors.grey, marginBottom: px(12) }}>
               No ongoing bookings right now.
             </Text>
           ) : (
-            visibleOngoing.map((booking: ReturnType<typeof mapBookingToActiveCard>) => (
+            ongoingList.map(booking => (
               <ActiveBookingCard
                 key={booking.id}
                 booking={booking}
@@ -198,52 +275,24 @@ export default function BookingsScreen() {
         </View>
       ) : null}
 
-      {showHistory ? (
+      {showHistory && !isEmpty ? (
         <View>
-          <View
+          <Text
             style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
+              fontSize: px(16),
+              fontWeight: typography.weights.bold,
+              color: colors.dark,
               marginBottom: px(10),
             }}>
-            <Text
-              style={{
-                fontSize: px(16),
-                fontWeight: typography.weights.bold,
-                color: colors.dark,
-              }}>
-              Booking History
-            </Text>
-            <Pressable
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: px(4),
-                paddingHorizontal: px(10),
-                paddingVertical: px(6),
-                borderRadius: px(10),
-                borderWidth: 1,
-                borderColor: colors.border,
-              }}>
-              <SlidersHorizontal size={px(14)} color={colors.dark} strokeWidth={2} />
-              <Text
-                style={{
-                  fontSize: px(12),
-                  fontWeight: typography.weights.semibold,
-                  color: colors.dark,
-                }}>
-                Filter
-              </Text>
-            </Pressable>
-          </View>
+            Booking history
+          </Text>
 
-          {historyList.length === 0 ? (
+          {historyList.length === 0 && otherList.length === 0 ? (
             <Text style={{ fontSize: px(13), color: colors.grey, marginBottom: px(12) }}>
               Completed bookings will appear here.
             </Text>
           ) : (
-            historyList.map((item: ReturnType<typeof mapBookingToHistoryRow>) => (
+            [...otherList, ...historyList].map(item => (
               <BookingHistoryRow
                 key={item.id}
                 item={item}
@@ -256,17 +305,15 @@ export default function BookingsScreen() {
       ) : null}
 
       <View
-        style={{
-          marginTop: px(8),
-          borderRadius: px(14),
-          borderWidth: 1.5,
-          borderColor: colors.primary,
-          backgroundColor: colors.background,
-          padding: px(14),
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: px(12),
-        }}>
+        style={[
+          styles.supportCard,
+          {
+            marginTop: px(12),
+            borderRadius: px(14),
+            padding: px(14),
+            gap: px(12),
+          },
+        ]}>
         <View
           style={{
             width: px(44),
@@ -296,22 +343,23 @@ export default function BookingsScreen() {
           style={{
             flexDirection: 'row',
             alignItems: 'center',
-            gap: px(4),
-            paddingHorizontal: px(10),
-            paddingVertical: px(8),
+            gap: px(6),
+            paddingHorizontal: px(12),
+            paddingVertical: px(10),
             borderRadius: px(10),
             borderWidth: 1.5,
             borderColor: colors.primary,
+            backgroundColor: colors.background,
             flexShrink: 0,
           }}>
           <Phone size={px(14)} color={colors.primary} strokeWidth={2.5} />
           <Text
             style={{
-              fontSize: px(11),
+              fontSize: px(12),
               fontWeight: typography.weights.bold,
-              color: colors.primary,
+              color: colors.primaryDark,
             }}>
-            Call{'\n'}Support
+            Call
           </Text>
         </Pressable>
       </View>
@@ -319,4 +367,27 @@ export default function BookingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({});
+const styles = StyleSheet.create({
+  tabsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  tab: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  emptyCard: {
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+  },
+  supportCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    backgroundColor: colors.background,
+  },
+});

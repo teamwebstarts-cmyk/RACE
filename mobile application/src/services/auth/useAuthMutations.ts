@@ -8,6 +8,7 @@ import {
   setPendingMobileNumber,
 } from '../../redux/auth/authSlice';
 import { completeProfile, sendOtp, verifyOtp } from './authApi';
+import * as authService from '../authService';
 import type { CompleteProfileRequest, SendOtpRequest, VerifyOtpRequest } from '../../types/auth';
 import { getApiErrorMessage } from '../api/apiClient';
 
@@ -80,6 +81,28 @@ export function useVerifyOtpMutation() {
       onError: () => dispatch(setLoading(false)),
     },
   );
+}
+
+export function useDriverCredentialLoginMutation() {
+  const dispatch = useAppDispatch();
+
+  return useAsyncMutation<
+    { loginId: string; password: string },
+    Awaited<ReturnType<typeof authService.loginDriverWithCredentials>>
+  >(authService.loginDriverWithCredentials, {
+    onMutate: () => dispatch(setLoading(true)),
+    onSuccess: data => {
+      dispatch(
+        setCredentials({
+          user: data.user,
+          accessToken: data.accessToken,
+          refreshToken: data.refreshToken,
+          onboardingRequired: data.onboardingRequired,
+        }),
+      );
+    },
+    onError: () => dispatch(setLoading(false)),
+  });
 }
 
 export function useCompleteProfileMutation() {

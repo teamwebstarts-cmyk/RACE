@@ -384,7 +384,7 @@ export default function ProfileSetupScreen({ navigation }: Props) {
             paddingHorizontal: px(24),
             paddingTop: px(12),
             paddingBottom: Math.max(insets.bottom, px(16)),
-            backgroundColor: colors.background,
+            backgroundColor: colors.pageBg,
             borderTopWidth: StyleSheet.hairlineWidth,
             borderTopColor: colors.border,
           }}>
@@ -406,7 +406,7 @@ export default function ProfileSetupScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.pageBg,
   },
   flex: {
     flex: 1,

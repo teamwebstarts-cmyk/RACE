@@ -8,13 +8,18 @@ import { VendorVehicleModel } from '../../models/src/vendorVehicle';
 import { TowingBookingModel } from '../../models/src/towingBooking';
 import { DriverBookingModel } from '../../models/src/driverBooking';
 import {
+  approveVendorBookingOffer,
   claimOpenBookingOffer,
   isDriverEligibleForBooking,
   listOpenBookingOffers,
   type OpenBookingOffer,
 } from './bookings/driverAssignment';
 import { resolveAssignedDriver } from './bookings/assignedDriver';
-import type { VendorAssignBookingDto, VendorVerifyTripOtpDto } from './vendorBookingsValidator';
+import type {
+  VendorApproveBookingDto,
+  VendorAssignBookingDto,
+  VendorVerifyTripOtpDto,
+} from './vendorBookingsValidator';
 import { assertTripStartOtp } from './bookings/tripOtp';
 import { appendStatusHistory } from './bookings/booking';
 import { emitBookingStatusUpdate } from './socket';
@@ -35,12 +40,46 @@ export class VendorBookingsService {
 
   async listOffers(vendorUserId: string): Promise<OpenBookingOffer[]> {
     await this.assertVendorApproved(vendorUserId);
-    return listOpenBookingOffers();
+    return listOpenBookingOffers({ forVendorId: vendorUserId });
   }
 
   /**
-   * Vendor picks a fleet driver (+ optional fleet vehicle) for an open customer request.
-   * Dispatches immediately so the customer sees partner details.
+   * Vendor approves a customer request and assigns a fleet vehicle.
+   * Job stays CONFIRMED until a vendor driver self-claims it.
+   */
+  async approveBooking(
+    vendorUserId: string,
+    bookingId: string,
+    dto: VendorApproveBookingDto,
+  ) {
+    await this.assertVendorApproved(vendorUserId);
+
+    const vehicle = await VendorVehicleModel.findById(dto.vehicleId).exec();
+    if (!vehicle) throw new NotFoundError('Fleet vehicle not found');
+    if (vehicle.vendorId.toString() !== vendorUserId) {
+      throw new ForbiddenError('Vehicle is not in your fleet');
+    }
+    if (vehicle.status !== 'ACTIVE') {
+      throw new BadRequestError('Only ACTIVE fleet vehicles can be assigned');
+    }
+
+    const fleetVehicleLabel = `${vehicle.registrationNo} · ${vehicle.type} · ${vehicle.vehicleModel}`;
+
+    const result = await approveVendorBookingOffer(bookingId, dto.bookingType, vendorUserId, {
+      fleetVehicleId: vehicle.id,
+      fleetVehicleLabel,
+    });
+
+    return {
+      ...result,
+      assignedFleetVehicleLabel: fleetVehicleLabel,
+      message: 'Job approved — your drivers can now accept it',
+    };
+  }
+
+  /**
+   * @deprecated Use approveBooking — vendor assigns vehicle only; drivers self-claim.
+   * Kept for backward compatibility with older clients.
    */
   async assignBooking(
     vendorUserId: string,

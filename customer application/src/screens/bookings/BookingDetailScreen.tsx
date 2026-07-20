@@ -192,6 +192,15 @@ export default function BookingDetailScreen({ navigation, route }: Props) {
           </Text>
         </View>
       }>
+      {booking.tripStartOtp ? (
+        <View style={{ marginBottom: px(14) }}>
+          <TripOtpCard
+            otp={booking.tripStartOtp}
+            subtitle="Share this code with your driver when they arrive to start the trip."
+          />
+        </View>
+      ) : null}
+
       <View style={[styles.card, { borderRadius: px(14), padding: px(14), marginBottom: px(14) }, shadows.card]}>
         <Text style={{ fontSize: px(16), fontWeight: typography.weights.bold, color: colors.dark, marginBottom: px(4) }}>
           {booking.serviceLabel}
@@ -274,7 +283,10 @@ export default function BookingDetailScreen({ navigation, route }: Props) {
             ) : null}
             {booking.vendorId && !booking.driver?.name ? (
               <Text style={{ fontSize: px(12), color: colors.grey, marginTop: px(4) }}>
-                Vendor assigned — driver details updating
+                Partner approved — assigning driver
+                {booking.assignedFleetVehicleLabel
+                  ? ` · ${booking.assignedFleetVehicleLabel}`
+                  : ''}
               </Text>
             ) : null}
           </View>
@@ -296,11 +308,6 @@ export default function BookingDetailScreen({ navigation, route }: Props) {
             </Text>
           </Pressable>
         </View>
-        {booking.tripStartOtp ? (
-          <View style={{ marginTop: px(14) }}>
-            <TripOtpCard otp={booking.tripStartOtp} />
-          </View>
-        ) : null}
       </View>
 
       <View style={[styles.card, { borderRadius: px(14), padding: px(14), marginBottom: px(20) }, shadows.card]}>

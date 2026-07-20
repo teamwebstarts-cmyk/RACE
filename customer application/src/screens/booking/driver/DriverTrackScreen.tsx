@@ -5,6 +5,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import MapPlaceholder from '../../../components/booking/MapPlaceholder';
 import DriverAvatar from '../../../components/bookings/DriverAvatar';
+import TripOtpCard from '../../../components/booking/TripOtpCard';
 import TowingBookingLayout, { useBookingTheme } from '../../../components/booking/TowingBookingLayout';
 import { useBookingTracking } from '../../../hooks/useBookingTracking';
 import { useBookingQuery } from '../../../services/bookings/useBookingQueries';
@@ -45,10 +46,9 @@ export default function DriverTrackScreen({ navigation, route }: Props) {
   const bookingId = route.params?.bookingId;
   const fromBookings = route.params?.fromBookings;
   const booking = useBookingQuery(bookingId ?? '');
-  const { etaLabel, status, driverLocation, driverName, driverRating } = useBookingTracking(
-    bookingId,
-    'driver',
-  );
+  const { etaLabel, status, driverLocation, driverName, driverRating, tripStartOtp: trackedOtp } =
+    useBookingTracking(bookingId, 'driver');
+  const tripOtp = booking?.tripStartOtp ?? trackedOtp;
   const displayDriverName =
     driverName ?? booking?.driver?.name ?? 'Assigning driver';
   const hasAssignedDriver = Boolean(driverName ?? booking?.driver?.name);
@@ -239,6 +239,15 @@ export default function DriverTrackScreen({ navigation, route }: Props) {
             )}
           </View>
         </View>
+
+        {tripOtp ? (
+          <View style={{ marginTop: t.px(12) }}>
+            <TripOtpCard
+              otp={tripOtp}
+              subtitle="Share this code with your driver when they arrive to start the trip."
+            />
+          </View>
+        ) : null}
       </View>
     </TowingBookingLayout>
   );

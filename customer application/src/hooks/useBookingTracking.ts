@@ -16,6 +16,7 @@ export function useBookingTracking(bookingId?: string, bookingType?: 'towing' | 
   const [driverLocation, setDriverLocation] = useState<
     { latitude: number; longitude: number; driverName?: string; driverPhone?: string } | undefined
   >();
+  const [tripStartOtp, setTripStartOtp] = useState<string | undefined>();
 
   useEffect(() => {
     if (!bookingId) return undefined;
@@ -23,6 +24,9 @@ export function useBookingTracking(bookingId?: string, bookingType?: 'towing' | 
     const unsubscribe = trackingService.subscribe(bookingId, (update) => {
       setStatus(update.status);
       setEtaMinutes(update.etaMinutes);
+      if (update.tripStartOtp) {
+        setTripStartOtp(update.tripStartOtp);
+      }
       if (update.driver) {
         setDriver(update.driver);
       } else if (update.driverLocation?.driverName) {
@@ -51,5 +55,6 @@ export function useBookingTracking(bookingId?: string, bookingType?: 'towing' | 
     driverPhone: driver?.phone ?? driverLocation?.driverPhone,
     driverRating: driver?.rating ?? 4.8,
     driverLocation,
+    tripStartOtp,
   };
 }

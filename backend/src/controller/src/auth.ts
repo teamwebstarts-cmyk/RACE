@@ -15,6 +15,11 @@ export class AuthController {
     return sendSuccess(res, result);
   });
 
+  driverLogin = asyncHandler(async (req: Request, res: Response) => {
+    const result = await authService.loginDriverWithCredentials(req.body);
+    return sendSuccess(res, result);
+  });
+
   refreshToken = asyncHandler(async (req: Request, res: Response) => {
     const result = await authService.refreshToken(req.body);
     return sendSuccess(res, result);

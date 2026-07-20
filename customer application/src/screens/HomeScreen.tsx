@@ -148,9 +148,10 @@ export default function HomeScreen({ navigation }: Props) {
   return (
     <>
     <AppScreenLayout
+      backgroundColor={colors.pageBg}
       contentStyle={{ paddingTop: px(10) }}
       header={
-        <View>
+        <View style={{ backgroundColor: colors.pageBg }}>
           <Pressable
             onPress={openLocationSheet}
             style={{
@@ -160,6 +161,7 @@ export default function HomeScreen({ navigation }: Props) {
               paddingHorizontal: px(20),
               paddingTop: px(4),
               paddingBottom: px(8),
+              backgroundColor: colors.pageBg,
             }}>
             <MapPin size={px(16)} color={colors.primary} strokeWidth={2.4} />
             <Text
@@ -177,6 +179,10 @@ export default function HomeScreen({ navigation }: Props) {
           <TabRootHeader
             title={getGreeting(displayName)}
             subtitle="What do you need help with today?"
+            onAvatarPress={() => {
+              const tabNav = navigation.getParent<BottomTabNavigationProp<RootTabParamList>>();
+              tabNav?.navigate('Profile');
+            }}
           />
         </View>
       }>
@@ -308,9 +314,8 @@ export default function HomeScreen({ navigation }: Props) {
                 <Image
                   source={HOME_HERO_IMAGE}
                   style={{
-                    width: px(210),
-                    height: px(158),
-                    marginRight: px(-28),
+                    width: px(180),
+                    height: px(148),
                   }}
                   resizeMode="contain"
                 />
@@ -371,11 +376,11 @@ export default function HomeScreen({ navigation }: Props) {
                     numberOfLines={2}
                     style={{
                       marginTop: px(4),
-                      fontSize: px(10),
+                      fontSize: px(11),
                       fontWeight: typography.weights.bold,
                       color: colors.dark,
                       textAlign: 'center',
-                      lineHeight: px(12),
+                      lineHeight: px(13),
                     }}>
                     {item.label}
                   </Text>

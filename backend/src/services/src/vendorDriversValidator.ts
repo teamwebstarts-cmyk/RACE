@@ -8,6 +8,15 @@ export const createVendorDriverSchema = z.object({
   city: z.string().min(2).max(100).optional(),
   vehicleRegistration: z.string().min(4).max(20).optional(),
   email: z.string().email().optional(),
+  loginId: z
+    .string()
+    .min(4, 'Login ID must be at least 4 characters')
+    .max(40)
+    .regex(
+      /^[a-zA-Z0-9._-]+$/,
+      'Login ID may only contain letters, numbers, dots, underscores, and hyphens',
+    ),
+  password: z.string().min(6, 'Password must be at least 6 characters').max(72),
 });
 
 export const claimVendorDriverSchema = z.object({

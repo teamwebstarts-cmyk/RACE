@@ -17,6 +17,8 @@ export interface TrackingUpdate {
   longitude: number;
   etaMinutes: number;
   status: string;
+  tripStartOtp?: string;
+  assignedFleetVehicleLabel?: string;
   driver?: {
     id: string;
     name: string;
@@ -96,6 +98,8 @@ class TrackingService {
             etaMinutes: legacy.etaMinutes,
             status: legacy.status,
             driverLocation: legacy.driverLocation,
+            tripStartOtp: legacy.tripStartOtp,
+            assignedFleetVehicleLabel: legacy.assignedFleetVehicleLabel,
           };
           this.pushUpdate(bookingId, update);
           return;
@@ -115,6 +119,8 @@ class TrackingService {
             status: towing.status,
             driver: towing.driver,
             driverLocation: towing.driverLocation,
+            tripStartOtp: towing.tripStartOtp,
+            assignedFleetVehicleLabel: towing.assignedFleetVehicleLabel,
           };
           this.pushUpdate(bookingId, update);
           return;
@@ -132,6 +138,8 @@ class TrackingService {
             status: driver.status,
             driver: driver.driver,
             driverLocation: driver.driverLocation,
+            tripStartOtp: driver.tripStartOtp,
+            assignedFleetVehicleLabel: driver.assignedFleetVehicleLabel,
           };
           this.pushUpdate(bookingId, update);
           return;

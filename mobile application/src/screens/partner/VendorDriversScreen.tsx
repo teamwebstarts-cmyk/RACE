@@ -17,6 +17,8 @@ import {
   ChevronDown,
   FileStack,
   IdCard,
+  KeyRound,
+  Lock,
   MoreVertical,
   Phone,
   Plus,
@@ -62,7 +64,7 @@ const PAGE_SIZE = 5;
 
 const DRIVER_TYPES = ['Tow Driver', 'Full-Time', 'Part-Time'] as const;
 
-const FLEET_DRIVER_DOCUMENTS: PartnerDocumentFieldConfig[] = [
+const VENDOR_DRIVER_DOCUMENTS: PartnerDocumentFieldConfig[] = [
   { id: 'driving_license', label: 'Driving License', required: true, Icon: IdCard },
   { id: 'aadhaar', label: 'Aadhaar Card', required: true, Icon: IdCard },
   { id: 'police_verification', label: 'Police Verification', required: true, Icon: BadgeCheck },
@@ -160,6 +162,8 @@ export default function VendorDriversScreen({}: Props) {
   const [phone, setPhone] = useState('');
   const [licenseNo, setLicenseNo] = useState('');
   const [city, setCity] = useState('Bhubaneswar');
+  const [loginId, setLoginId] = useState('');
+  const [password, setPassword] = useState('');
   const [driverType, setDriverType] = useState<(typeof DRIVER_TYPES)[number]>('Tow Driver');
   const [showForm, setShowForm] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -222,6 +226,7 @@ export default function VendorDriversScreen({}: Props) {
       return (
         driver.name.toLowerCase().includes(q) ||
         driver.phone.includes(q) ||
+        (driver.loginId ?? '').toLowerCase().includes(q) ||
         driver.licenseNo.toLowerCase().includes(q)
       );
     });
@@ -253,6 +258,10 @@ export default function VendorDriversScreen({}: Props) {
             : 'Mobile must start with 6, 7, 8, or 9';
     }
     if (licenseNo.trim().length < 4) next.licenseNo = 'Enter a valid license number';
+    if (!/^[a-zA-Z0-9._-]{4,40}$/.test(loginId.trim())) {
+      next.loginId = 'Login ID: 4–40 chars (letters, numbers, . _ -)';
+    }
+    if (password.length < 6) next.password = 'Password must be at least 6 characters';
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -279,6 +288,8 @@ export default function VendorDriversScreen({}: Props) {
         licenseNo: licenseNo.trim(),
         driverType,
         city: city.trim() || 'Bhubaneswar',
+        loginId: loginId.trim(),
+        password,
       });
 
       for (const doc of driverDocuments) {
@@ -293,11 +304,16 @@ export default function VendorDriversScreen({}: Props) {
         }
       }
 
-      Alert.alert('Driver added', `${name.trim()} has been added to your fleet.`);
+      Alert.alert(
+        'Vendor driver added',
+        `${name.trim()} can sign in with Login ID “${loginId.trim()}”. Share the password securely.`,
+      );
       setName('');
       setPhone('');
       setLicenseNo('');
       setCity('Bhubaneswar');
+      setLoginId('');
+      setPassword('');
       setDriverDocuments([]);
       setErrors({});
       setShowForm(false);
@@ -309,7 +325,7 @@ export default function VendorDriversScreen({}: Props) {
 
   const onRemove = (driver: FleetDriver) => {
     setMenuDriver(null);
-    Alert.alert('Remove driver?', `Unlink ${driver.name} from your fleet?`, [
+    Alert.alert('Remove driver?', `Unlink ${driver.name} from your vendor team?`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Remove',
@@ -366,12 +382,12 @@ export default function VendorDriversScreen({}: Props) {
         scrollable={false}
         header={
           <View style={styles.headerPad}>
-            <Text style={styles.title}>Fleet drivers</Text>
+            <Text style={styles.title}>Vendor drivers</Text>
           </View>
         }>
         <View style={styles.pendingBanner}>
           <Text style={styles.pendingText}>
-            Fleet driver management is available after signing in as a vendor.
+            Vendor driver management is available after signing in as a vendor.
           </Text>
         </View>
       </AppScreenLayout>
@@ -389,9 +405,9 @@ export default function VendorDriversScreen({}: Props) {
         <View style={styles.headerPad}>
           <View style={styles.titleRow}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.title}>Fleet drivers</Text>
+              <Text style={styles.title}>Vendor drivers</Text>
               <Text style={styles.subtitle}>
-                Manage your fleet drivers and keep your team ready for every call.
+                Manage your vendor drivers and keep your team ready for every call.
               </Text>
             </View>
             <Pressable
@@ -463,6 +479,39 @@ export default function VendorDriversScreen({}: Props) {
               onChangeText={setCity}
               placeholder="e.g. Bhubaneswar"
             />
+            <FormField
+              variant="outlined"
+              label="Login ID"
+              required
+              Icon={KeyRound}
+              value={loginId}
+              onChangeText={text => {
+                setLoginId(text.replace(/\s/g, ''));
+                if (errors.loginId) setErrors(prev => ({ ...prev, loginId: '' }));
+              }}
+              autoCapitalize="none"
+              autoCorrect={false}
+              placeholder="e.g. driver.odisha01"
+              error={errors.loginId}
+            />
+            <FormField
+              variant="outlined"
+              label="Password"
+              required
+              Icon={Lock}
+              value={password}
+              onChangeText={text => {
+                setPassword(text);
+                if (errors.password) setErrors(prev => ({ ...prev, password: '' }));
+              }}
+              secureTextEntry
+              placeholder="Min. 6 characters"
+              error={errors.password}
+            />
+            <Text style={styles.helperText}>
+              Share this Login ID and password with the driver so they can sign in as a Vendor
+              driver.
+            </Text>
 
             <Text style={styles.typeLabel}>Driver type</Text>
             <View style={styles.typeRow}>
@@ -484,10 +533,10 @@ export default function VendorDriversScreen({}: Props) {
               Upload documents. Status stays pending until admin approves.
             </Text>
             <PartnerDocumentUploadList
-              documents={FLEET_DRIVER_DOCUMENTS}
+              documents={VENDOR_DRIVER_DOCUMENTS}
               uploadedIds={driverDocuments.map(d => d.id)}
               onUpload={(id, uri, fileName, mimeType) => {
-                const label = FLEET_DRIVER_DOCUMENTS.find(doc => doc.id === id)?.label ?? id;
+                const label = VENDOR_DRIVER_DOCUMENTS.find(doc => doc.id === id)?.label ?? id;
                 setDriverDocuments(prev => [
                   ...prev.filter(d => d.id !== id),
                   { id, label, uri, name: fileName, mimeType },
@@ -504,7 +553,7 @@ export default function VendorDriversScreen({}: Props) {
                 createMutation.isPending && styles.disabled,
               ]}>
               <Text style={styles.saveLabel}>
-                {createMutation.isPending ? 'Saving…' : 'Save to fleet'}
+                {createMutation.isPending ? 'Saving…' : 'Save vendor driver'}
               </Text>
             </Pressable>
           </View>
@@ -592,9 +641,9 @@ export default function VendorDriversScreen({}: Props) {
             <View style={styles.iconWrap}>
               <Users size={36} color={colors.primary} strokeWidth={2} />
             </View>
-            <Text style={styles.emptyTitle}>No fleet drivers yet</Text>
+            <Text style={styles.emptyTitle}>No vendor drivers yet</Text>
             <Text style={styles.emptySubtitle}>
-              Add drivers to your fleet so you can assign them to vehicles and jobs.
+              Add drivers to your vendor team so you can assign them to vehicles and jobs.
             </Text>
           </View>
         ) : (
@@ -648,6 +697,12 @@ export default function VendorDriversScreen({}: Props) {
                   <View style={styles.metric}>
                     <Text style={styles.metricText}>{driver.driverType}</Text>
                   </View>
+                  {driver.loginId ? (
+                    <View style={styles.metric}>
+                      <KeyRound size={12} color={colors.grey} strokeWidth={2.2} />
+                      <Text style={styles.metricText}>{driver.loginId}</Text>
+                    </View>
+                  ) : null}
                   {driver.city ? (
                     <View style={styles.metric}>
                       <Calendar size={12} color={colors.grey} strokeWidth={2.2} />
@@ -750,7 +805,7 @@ export default function VendorDriversScreen({}: Props) {
               style={styles.sheetItem}
               onPress={() => menuDriver && onRemove(menuDriver)}>
               <Text style={[styles.sheetItemText, { color: colors.error }]}>
-                Remove from fleet
+                Unlink driver
               </Text>
             </Pressable>
           </View>

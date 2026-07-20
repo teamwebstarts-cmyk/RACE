@@ -30,6 +30,7 @@ import {
   useDriverActiveJobQuery,
   useDriverAvailabilityMutation,
   useDriverJobsQuery,
+  useDriverJobOffersQuery,
 } from '../../services/driver/useDriverQueries';
 import { getProfile } from '../../services/profileService';
 import {
@@ -226,7 +227,7 @@ function buildActivity(args: {
     items.push({
       id: `driver-${driver.id}`,
       title: 'Driver added',
-      description: `${driver.name} has been added to your fleet`,
+      description: `${driver.name} has been added to your vendor team`,
       status: 'Completed',
       tone: 'purple',
       Icon: Users,
@@ -369,6 +370,7 @@ export default function PartnerHomeScreen() {
   const { data: offers = [], refetch: refetchOffers } = useVendorBookingOffersQuery(isVendor);
   const { data: drivers = [], refetch: refetchDrivers } = useVendorFleetDriversQuery(isVendor);
   const { data: jobs = [], refetch: refetchDriverJobs } = useDriverJobsQuery(isDriver);
+  const { data: driverOffers = [], refetch: refetchDriverOffers } = useDriverJobOffersQuery(isDriver);
   const { data: activeJob } = useDriverActiveJobQuery(isDriver);
   const availabilityMutation = useDriverAvailabilityMutation();
 
@@ -564,13 +566,13 @@ export default function PartnerHomeScreen() {
           <>
             <QuickAction
               title="Manage drivers"
-              subtitle="Add, edit & manage your fleet drivers"
+              subtitle="Add, edit & manage your vendor drivers"
               Icon={Users}
               onPress={() => goAccountScreen('VendorDrivers')}
             />
             <QuickAction
               title="Manage vehicles"
-              subtitle="Add, edit & manage your fleet vehicles"
+              subtitle="Add, edit & manage your vendor vehicles"
               Icon={Truck}
               onPress={() => goAccountScreen('VendorVehicles')}
             />
@@ -583,25 +585,27 @@ export default function PartnerHomeScreen() {
           </>
         ) : (
           <QuickAction
-            title="Active job"
+            title={activeJob ? 'Active trip' : driverOffers.length > 0 ? 'Trips ready' : 'Jobs'}
             subtitle={
               activeJob
                 ? `#${activeJob.bookingNumber} · ${formatReadableAddress(activeJob.pickup?.address || activeJob.pickup?.label)}`
-                : 'No active job right now'
+                : driverOffers.length > 0
+                  ? `${driverOffers.length} trip(s) waiting — tap to accept`
+                  : 'No active trip — check Jobs for vendor-approved requests'
             }
             Icon={Briefcase}
             onPress={() => {
-              if (!activeJob) {
-                navigation.navigate('PartnerJobs');
+              if (activeJob) {
+                navigation.navigate('PartnerJobs', {
+                  screen: 'PartnerActiveJob',
+                  params: {
+                    bookingId: activeJob.id,
+                    bookingType: activeJob.bookingType,
+                  },
+                } as never);
                 return;
               }
-              navigation.navigate('PartnerJobs', {
-                screen: 'PartnerActiveJob',
-                params: {
-                  bookingId: activeJob.id,
-                  bookingType: activeJob.bookingType,
-                },
-              } as never);
+              navigation.navigate('PartnerJobs');
             }}
           />
         )}

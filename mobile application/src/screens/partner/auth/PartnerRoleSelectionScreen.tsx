@@ -44,12 +44,12 @@ const PAGE_BG = '#F7F7F5';
 const ROLE_OPTIONS = [
   {
     role: 'vendor' as const,
-    title: 'Vendor / Fleet',
+    title: 'Vendor',
     description:
       'Register your towing company, manage drivers, vehicles, and track verification status.',
     Icon: Building2,
     features: [
-      { label: 'Manage fleet', Icon: Shield },
+      { label: 'Manage drivers', Icon: Shield },
       { label: 'Assign drivers', Icon: Users },
       { label: 'Track earnings', Icon: BarChart3 },
     ],
@@ -97,6 +97,10 @@ export default function PartnerRoleSelectionScreen({ navigation }: Props) {
         vendorType: null,
       }),
     );
+    if (role === 'driver') {
+      navigation.navigate('PartnerDriverAuthMode');
+      return;
+    }
     navigation.navigate('PartnerLogin', { role });
   };
 

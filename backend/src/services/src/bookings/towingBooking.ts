@@ -128,7 +128,13 @@ export class TowingBookingService {
     status?: UnifiedBookingStatus,
   ): Promise<TowingBookingResponseDto[]> {
     const bookings = await towingBookingRepository.findByCustomer(customerId, { status });
-    return Promise.all(bookings.map(mapTowingBookingWithDriver));
+    return Promise.all(
+      bookings.map(async (booking) => {
+        const mapped = await mapTowingBookingWithDriver(booking);
+        mapped.tripStartOtp = customerTripOtp(booking);
+        return mapped;
+      }),
+    );
   }
 
   async getBookingById(

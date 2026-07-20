@@ -44,6 +44,9 @@ export interface CombinedBookingListItemDto {
     phone: string;
     rating: number;
   };
+  vendorId?: string;
+  assignedFleetVehicleLabel?: string;
+  tripStartOtp?: string;
   scheduledAt?: string;
   statusHistory: Array<{ status: string; timestamp: string }>;
   createdAt: string;

@@ -5,6 +5,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import MapPlaceholder from '../../../components/booking/MapPlaceholder';
 import DriverAvatar from '../../../components/bookings/DriverAvatar';
+import TripOtpCard from '../../../components/booking/TripOtpCard';
 import TowingBookingLayout, { useBookingTheme } from '../../../components/booking/TowingBookingLayout';
 import { getDriverTypeBadgeLabel } from '../../../constants/driverBooking';
 import { useDriverBooking } from '../../../context/DriverBookingContext';
@@ -21,10 +22,9 @@ export default function DriverOnWayScreen({ navigation, route }: Props) {
   const { booking: draftBooking } = useDriverBooking();
   const bookingId = route.params?.bookingId;
   const booking = useBookingQuery(bookingId ?? '');
-  const { etaLabel, etaMinutes, driverName, driverPhone, driverRating } = useBookingTracking(
-    bookingId,
-    'driver',
-  );
+  const { etaLabel, etaMinutes, driverName, driverPhone, driverRating, tripStartOtp: trackedOtp } =
+    useBookingTracking(bookingId, 'driver');
+  const tripOtp = booking?.tripStartOtp ?? trackedOtp;
 
   const name = driverName ?? booking?.driver?.name ?? 'Assigning driver';
   const rating = booking?.driver?.rating ?? driverRating;
@@ -101,11 +101,19 @@ export default function DriverOnWayScreen({ navigation, route }: Props) {
                 </>
               ) : (
                 <Text style={{ fontSize: t.caption, color: colors.grey }}>
-                  Finding nearest driver…
+                  {booking?.assignedFleetVehicleLabel
+                    ? `Vehicle: ${booking.assignedFleetVehicleLabel} — assigning driver…`
+                    : 'Finding nearest driver…'}
                 </Text>
               )}
             </View>
           </View>
+
+          {tripOtp ? (
+            <View style={{ marginTop: t.px(16) }}>
+              <TripOtpCard otp={tripOtp} />
+            </View>
+          ) : null}
 
           <Text
             style={{

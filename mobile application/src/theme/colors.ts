@@ -27,6 +27,7 @@ const categoryThemes: Record<CategoryId, CategoryTheme> = {
 export const colors = {
   primary: sharedColors.primary,
   background: sharedColors.background,
+  pageBg: (sharedColors as { pageBg?: string }).pageBg ?? '#F7F7F5',
   dark: sharedColors.dark,
   grey: sharedColors.grey,
   lightGrey: sharedColors.lightGrey,
@@ -42,7 +43,7 @@ export const colors = {
   subtext: sharedColors.grey,
   textLight: '#FFFFFF',
   textMuted: '#999999',
-  backgroundSoft: sharedColors.lightGrey,
+  backgroundSoft: (sharedColors as { pageBg?: string }).pageBg ?? '#F7F7F5',
   backgroundMuted: sharedColors.lightGrey,
   surface: sharedColors.cardBg,
   surfaceDark: sharedColors.dark,

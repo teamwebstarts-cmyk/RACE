@@ -12,6 +12,7 @@ import {
   listBookings,
   submitBookingRating,
 } from './bookingApi';
+import { isBookingOngoing } from '../../utils/bookingDisplay';
 
 export const bookingKeys = {
   all: ['bookings'] as const,
@@ -33,6 +34,15 @@ export function useBookingsQuery() {
         dispatch(setBookingsLoading(false));
       }
     },
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      if (data?.some(isBookingOngoing)) {
+        return 5_000;
+      }
+      return false;
+    },
   });
 }
 
@@ -45,22 +55,26 @@ export function useBookingQuery(bookingId: string) {
   const query = useQuery({
     queryKey: bookingKeys.detail(bookingId),
     queryFn: async () => {
-      try {
-        const remote = await getBooking(bookingId);
-        if (remote) {
-          dispatch(updateBooking(remote));
-          return remote;
-        }
-      } catch {
-        if (localBooking) {
-          return localBooking;
-        }
-        throw new Error('Failed to load booking');
+      const remote = await getBooking(bookingId);
+      if (remote) {
+        dispatch(updateBooking(remote));
+        return remote;
       }
-      return localBooking ?? null;
+      if (localBooking) {
+        return localBooking;
+      }
+      throw new Error('Failed to load booking');
     },
     enabled: Boolean(bookingId),
     initialData: localBooking,
+    refetchOnMount: 'always',
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      if (data && isBookingOngoing(data)) {
+        return 5_000;
+      }
+      return false;
+    },
   });
 
   return query.data ?? null;

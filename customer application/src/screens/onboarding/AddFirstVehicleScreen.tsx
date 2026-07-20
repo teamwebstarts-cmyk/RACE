@@ -93,11 +93,11 @@ export default function AddFirstVehicleScreen({ navigation }: Props) {
               <ChipRow label="Fuel Type" options={FUEL_TYPES} value={fuelType} onChange={setFuelType} />
             ) : null}
 
-            <FormField dark label="Vehicle Number" value={vehicleNumber} onChangeText={setVehicleNumber} placeholder="OD02AB1234" autoCapitalize="characters" />
-            <FormField dark label="Brand" value={brand} onChangeText={setBrand} placeholder="Hyundai" />
-            <FormField dark label="Model" value={model} onChangeText={setModel} placeholder="i20" />
-            <FormField dark label="Color" value={color} onChangeText={setColor} placeholder="White" />
-            <FormField dark label="Vehicle Photo URL (optional)" value={photoUrl} onChangeText={setPhotoUrl} placeholder="https://..." autoCapitalize="none" />
+            <FormField label="Vehicle Number" value={vehicleNumber} onChangeText={setVehicleNumber} placeholder="OD02AB1234" autoCapitalize="characters" />
+            <FormField label="Brand" value={brand} onChangeText={setBrand} placeholder="Hyundai" />
+            <FormField label="Model" value={model} onChangeText={setModel} placeholder="i20" />
+            <FormField label="Color" value={color} onChangeText={setColor} placeholder="White" />
+            <FormField label="Vehicle Photo URL (optional)" value={photoUrl} onChangeText={setPhotoUrl} placeholder="https://..." autoCapitalize="none" />
 
             <AuthToast message={error} />
 
@@ -140,16 +140,32 @@ function ChipRow<T extends string>({
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.surfaceDarker },
+  safeArea: { flex: 1, backgroundColor: colors.pageBg },
   flex: { flex: 1 },
   content: { padding: spacing.lg, paddingBottom: spacing.xxl },
-  title: { color: colors.textLight, fontSize: typography.sizes.xxl, fontWeight: typography.weights.bold },
-  subtitle: { color: colors.subtext, marginTop: spacing.sm, marginBottom: spacing.lg },
+  title: {
+    color: colors.dark,
+    fontSize: typography.sizes.xxl,
+    fontWeight: typography.weights.extrabold,
+  },
+  subtitle: { color: colors.grey, marginTop: spacing.sm, marginBottom: spacing.lg, lineHeight: 20 },
   field: { marginBottom: spacing.md },
-  label: { color: colors.subtext, fontSize: typography.sizes.sm, fontWeight: typography.weights.semibold, marginBottom: spacing.xs },
+  label: {
+    color: colors.grey,
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
+    marginBottom: spacing.xs,
+  },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  chip: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.pill, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.glass.border },
+  chip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.pill,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
   chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  chipText: { color: colors.subtext, textTransform: 'capitalize' },
-  chipTextActive: { color: colors.textLight, fontWeight: typography.weights.bold },
+  chipText: { color: colors.grey, textTransform: 'capitalize' },
+  chipTextActive: { color: colors.dark, fontWeight: typography.weights.bold },
 });

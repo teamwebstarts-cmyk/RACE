@@ -82,6 +82,7 @@ export function mapBookingToActiveCard(booking: Booking): ActiveBooking {
           experience: 'RACE verified',
         },
     bookingType: booking.bookingType ?? 'towing',
+    tripStartOtp: booking.tripStartOtp,
   };
 }
 

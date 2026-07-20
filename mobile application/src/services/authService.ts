@@ -45,6 +45,24 @@ export async function verifyOtp(payload: VerifyOtpPayload): Promise<VerifyOtpRes
   return result;
 }
 
+export interface DriverCredentialLoginPayload {
+  loginId: string;
+  password: string;
+}
+
+export async function loginDriverWithCredentials(
+  payload: DriverCredentialLoginPayload,
+): Promise<VerifyOtpResponse> {
+  const result = await unwrapApi<VerifyOtpResponse>(
+    api.post('/api/v1/auth/driver-login', {
+      loginId: payload.loginId,
+      password: payload.password,
+    }),
+  );
+  await saveTokens(result.accessToken, result.refreshToken);
+  return result;
+}
+
 export async function logout(): Promise<void> {
   await clearTokens();
 }

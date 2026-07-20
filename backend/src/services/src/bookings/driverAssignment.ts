@@ -1,7 +1,7 @@
 import { Types } from 'mongoose';
 
 import { logger } from '../../../utils/src/logger';
-import { BadRequestError, ConflictError, NotFoundError } from '../../../utils/src/errors';
+import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../../../utils/src/errors';
 import { UserModel, type IUser } from '../../../models/src/user';
 import { TowingBookingModel } from '../../../models/src/towingBooking';
 import { DriverBookingModel } from '../../../models/src/driverBooking';
@@ -90,6 +90,10 @@ export type OpenBookingOffer = {
   createdAt: string;
   distanceKm?: number;
   serviceLabel: string;
+  vendorId?: string;
+  assignedFleetVehicleLabel?: string;
+  /** True when vendor approved the job and a driver still needs to claim it. */
+  vendorApproved?: boolean;
 };
 
 function mapOffer(
@@ -103,9 +107,12 @@ function mapOffer(
     dropoff?: { address?: string; latitude?: number; longitude?: number } | null;
     estimatedFare?: number;
     createdAt: Date;
+    vendorId?: { toString(): string } | null;
+    assignedFleetVehicleLabel?: string | null;
   },
   distanceKm?: number,
 ): OpenBookingOffer {
+  const vendorId = booking.vendorId?.toString();
   return {
     bookingType,
     id: booking.id ?? booking._id?.toString() ?? '',
@@ -117,25 +124,54 @@ function mapOffer(
     createdAt: booking.createdAt.toISOString(),
     distanceKm,
     serviceLabel: bookingType === 'towing' ? 'Towing' : 'Driver hire',
+    vendorId,
+    assignedFleetVehicleLabel: booking.assignedFleetVehicleLabel ?? undefined,
+    vendorApproved: Boolean(vendorId),
   };
 }
 
-/** Confirmed bookings with no driver — Uber-style nearby feed. */
+/** Confirmed bookings with no driver — marketplace feed. */
 export async function listOpenBookingOffers(options?: {
   bookingType?: ActiveBookingType;
   latitude?: number;
   longitude?: number;
   radiusKm?: number;
   forDriver?: IUser;
+  /** Vendor portal: open jobs + jobs this vendor already approved (awaiting driver). */
+  forVendorId?: string;
 }): Promise<OpenBookingOffer[]> {
   const includeTowing = !options?.bookingType || options.bookingType === 'towing';
   const includeDriver = !options?.bookingType || options.bookingType === 'driver';
   const radiusKm = options?.radiusKm ?? DEFAULT_OFFER_RADIUS_KM;
 
-  const openFilter = {
+  const noDriverClause = { $or: [{ driverId: null }, { driverId: { $exists: false } }] };
+  const noVendorClause = { $or: [{ vendorId: null }, { vendorId: { $exists: false } }] };
+
+  const openFilter: Record<string, unknown> = {
     status: 'CONFIRMED',
-    $or: [{ driverId: null }, { driverId: { $exists: false } }],
   };
+
+  const driverVendorId = options?.forDriver?.driverProfile?.vendorUserId?.toString();
+
+  if (options?.forVendorId) {
+    openFilter.$and = [
+      noDriverClause,
+      {
+        $or: [
+          { vendorId: null },
+          { vendorId: { $exists: false } },
+          { vendorId: new Types.ObjectId(options.forVendorId) },
+        ],
+      },
+    ];
+  } else if (driverVendorId) {
+    openFilter.$and = [noDriverClause];
+    openFilter.vendorId = new Types.ObjectId(driverVendorId);
+  } else if (options?.forDriver) {
+    openFilter.$and = [noDriverClause, noVendorClause];
+  } else {
+    openFilter.$and = [noDriverClause];
+  }
 
   const [towing, driver] = await Promise.all([
     includeTowing
@@ -159,14 +195,39 @@ export async function listOpenBookingOffers(options?: {
       dropoff?: { address?: string; latitude?: number; longitude?: number } | null;
       estimatedFare?: number;
       createdAt: Date;
+      vendorId?: { toString(): string } | null;
+      assignedFleetVehicleLabel?: string | null;
     },
   ) => {
     if (options?.forDriver && !isDriverEligibleForBooking(options.forDriver, bookingType)) {
+      const bookingVendorIdEarly = booking.vendorId?.toString();
+      if (
+        !driverVendorId ||
+        !bookingVendorIdEarly ||
+        bookingVendorIdEarly !== driverVendorId
+      ) {
+        return;
+      }
+    }
+
+    const bookingVendorId = booking.vendorId?.toString();
+    if (driverVendorId) {
+      if (!bookingVendorId || bookingVendorId !== driverVendorId) {
+        return;
+      }
+    } else if (options?.forDriver && bookingVendorId) {
       return;
     }
+
+    if (options?.forVendorId && bookingVendorId && bookingVendorId !== options.forVendorId) {
+      return;
+    }
+
     const lat = booking.pickup?.latitude;
     const lng = booking.pickup?.longitude;
     let distanceKm: number | undefined;
+    /** Vendor fleet drivers see every job their vendor approved — no geo radius. */
+    const skipRadiusFilter = Boolean(driverVendorId) || Boolean(bookingVendorId);
 
     if (
       options?.latitude !== undefined &&
@@ -175,10 +236,12 @@ export async function listOpenBookingOffers(options?: {
       lng !== undefined
     ) {
       distanceKm = haversineDistanceKm(options.latitude, options.longitude, lat, lng);
-      if (distanceKm > radiusKm) return;
+      if (!skipRadiusFilter && distanceKm > radiusKm) return;
     } else if (options?.forDriver && lat !== undefined && lng !== undefined) {
       distanceKm = driverDistanceFromPickup(options.forDriver, lat, lng);
-      if (distanceKm !== FALLBACK_DISTANCE_KM && distanceKm > radiusKm) return;
+      if (!skipRadiusFilter && distanceKm !== FALLBACK_DISTANCE_KM && distanceKm > radiusKm) {
+        return;
+      }
     }
 
     offers.push(mapOffer(bookingType, booking, distanceKm));
@@ -195,6 +258,74 @@ export async function listOpenBookingOffers(options?: {
   });
 
   return offers;
+}
+
+/**
+ * Vendor approves an open customer request and assigns a fleet vehicle.
+ * Status stays CONFIRMED until a vendor driver self-claims the job.
+ */
+export async function approveVendorBookingOffer(
+  bookingId: string,
+  bookingType: ActiveBookingType,
+  vendorId: string,
+  options: {
+    fleetVehicleId: string;
+    fleetVehicleLabel: string;
+  },
+): Promise<{
+  id: string;
+  status: string;
+  bookingNumber: string;
+  vendorId: string;
+  assignedFleetVehicleLabel: string;
+}> {
+  const filter = {
+    _id: bookingId,
+    status: 'CONFIRMED',
+    $and: [
+      { $or: [{ driverId: null }, { driverId: { $exists: false } }] },
+      { $or: [{ vendorId: null }, { vendorId: { $exists: false } }] },
+    ],
+  };
+
+  const update = {
+    $set: {
+      vendorId: new Types.ObjectId(vendorId),
+      assignedFleetVehicleId: new Types.ObjectId(options.fleetVehicleId),
+      assignedFleetVehicleLabel: options.fleetVehicleLabel,
+    },
+    $push: {
+      statusHistory: {
+        status: 'CONFIRMED',
+        timestamp: new Date(),
+        note: 'Vendor approved — awaiting driver',
+      },
+    },
+  };
+
+  const approved =
+    bookingType === 'towing'
+      ? await TowingBookingModel.findOneAndUpdate(filter, update, { new: true }).exec()
+      : await DriverBookingModel.findOneAndUpdate(filter, update, { new: true }).exec();
+
+  if (!approved) {
+    throw new ConflictError('This job is no longer available or was already approved');
+  }
+
+  emitBookingStatusUpdate(bookingId, 'CONFIRMED', {
+    internalStatus: 'CONFIRMED',
+    message: 'Vendor approved your request — assigning driver',
+    assignedFleetVehicleLabel: options.fleetVehicleLabel,
+    vendorApproved: true,
+  });
+
+  return {
+    id: approved.id,
+    status: approved.status,
+    bookingNumber: approved.bookingNumber,
+    vendorId,
+    assignedFleetVehicleLabel: options.fleetVehicleLabel,
+  };
 }
 
 /**
@@ -228,12 +359,56 @@ export async function claimOpenBookingOffer(
     throw new BadRequestError('You already have an active booking or are offline');
   }
   if (!isDriverEligibleForBooking(driver, bookingType)) {
-    throw new BadRequestError(
+    const existingForEligibility =
       bookingType === 'towing'
-        ? 'Only tow drivers can accept towing jobs'
-        : 'Only Full-Time / Part-Time drivers can accept driver-hire jobs',
-    );
+        ? await TowingBookingModel.findById(bookingId).select('vendorId').exec()
+        : await DriverBookingModel.findById(bookingId).select('vendorId').exec();
+    const bookingVendorForEligibility = existingForEligibility?.vendorId?.toString();
+    const driverVendorForEligibility = driver.driverProfile?.vendorUserId?.toString();
+    if (
+      !bookingVendorForEligibility ||
+      !driverVendorForEligibility ||
+      bookingVendorForEligibility !== driverVendorForEligibility
+    ) {
+      throw new BadRequestError(
+        bookingType === 'towing'
+          ? 'Only tow drivers can accept towing jobs'
+          : 'Only Full-Time / Part-Time drivers can accept driver-hire jobs',
+      );
+    }
   }
+
+  const existing =
+    bookingType === 'towing'
+      ? await TowingBookingModel.findById(bookingId).exec()
+      : await DriverBookingModel.findById(bookingId).exec();
+  if (!existing) {
+    throw new NotFoundError('Booking not found');
+  }
+  if (existing.status !== 'CONFIRMED' || existing.driverId) {
+    throw new ConflictError('This job was just taken by another partner');
+  }
+
+  const driverVendorId = driver.driverProfile?.vendorUserId?.toString();
+  const bookingVendorId =
+    'vendorId' in existing && existing.vendorId ? existing.vendorId.toString() : undefined;
+
+  if (bookingVendorId) {
+    if (!driverVendorId || driverVendorId !== bookingVendorId) {
+      throw new ForbiddenError('This job is reserved for your vendor fleet drivers');
+    }
+  } else if (driverVendorId) {
+    throw new ForbiddenError('Your vendor must approve this job before you can accept it');
+  }
+
+  const vendorId = bookingVendorId ?? options?.vendorId;
+  const fleetVehicleId =
+    ('assignedFleetVehicleId' in existing && existing.assignedFleetVehicleId?.toString()) ??
+    options?.fleetVehicleId;
+  const fleetVehicleLabel =
+    ('assignedFleetVehicleLabel' in existing
+      ? existing.assignedFleetVehicleLabel
+      : undefined) ?? options?.fleetVehicleLabel;
 
   const driverObjectId = new Types.ObjectId(driverId);
   const tripStartOtp = generateTripStartOtp();
@@ -243,14 +418,14 @@ export async function claimOpenBookingOffer(
     tripStartOtp,
     tripStartOtpVerified: false,
   };
-  if (options?.vendorId) {
-    $set.vendorId = new Types.ObjectId(options.vendorId);
+  if (vendorId) {
+    $set.vendorId = new Types.ObjectId(vendorId);
   }
-  if (options?.fleetVehicleId) {
-    $set.assignedFleetVehicleId = new Types.ObjectId(options.fleetVehicleId);
+  if (fleetVehicleId) {
+    $set.assignedFleetVehicleId = new Types.ObjectId(fleetVehicleId);
   }
-  if (options?.fleetVehicleLabel) {
-    $set.assignedFleetVehicleLabel = options.fleetVehicleLabel;
+  if (fleetVehicleLabel) {
+    $set.assignedFleetVehicleLabel = fleetVehicleLabel;
   }
 
   const update = {
@@ -289,7 +464,8 @@ export async function claimOpenBookingOffer(
     internalStatus: 'DRIVER_EN_ROUTE',
     driverAccepted: true,
     message: 'Partner accepted your booking',
-    assignedFleetVehicleLabel: options?.fleetVehicleLabel,
+    assignedFleetVehicleLabel: fleetVehicleLabel,
+    tripStartOtp,
   });
 
   return {
@@ -297,8 +473,8 @@ export async function claimOpenBookingOffer(
     status: claimed.status,
     bookingNumber: claimed.bookingNumber,
     driverId,
-    vendorId: options?.vendorId,
-    assignedFleetVehicleLabel: options?.fleetVehicleLabel,
+    vendorId,
+    assignedFleetVehicleLabel: fleetVehicleLabel,
   };
 }
 

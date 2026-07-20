@@ -31,11 +31,12 @@ export default function OnboardingFormLayout({
     <AppScreenLayout
       edges={['top']}
       keyboardAvoiding
+      backgroundColor={colors.pageBg}
       horizontalPadding={px(24)}
       header={
         <View
           style={{
-            backgroundColor: colors.background,
+            backgroundColor: colors.pageBg,
             borderBottomWidth: 1,
             borderBottomColor: colors.border,
             paddingHorizontal: px(24),

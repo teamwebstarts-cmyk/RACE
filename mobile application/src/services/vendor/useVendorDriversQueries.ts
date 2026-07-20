@@ -5,7 +5,7 @@ import {
   createVendorDriver,
   listVendorDrivers,
   removeVendorDriver,
-  type CreateFleetDriverInput,
+  type CreateVendorDriverInput,
 } from './vendorDriversApi';
 
 export const vendorDriverKeys = {
@@ -23,7 +23,7 @@ export function useVendorDriversQuery(enabled = true) {
 export function useCreateVendorDriverMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (payload: CreateFleetDriverInput) => createVendorDriver(payload),
+    mutationFn: (payload: CreateVendorDriverInput) => createVendorDriver(payload),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: vendorDriverKeys.list });
     },

@@ -96,7 +96,7 @@ export class DriverService {
     assertDriverRole(role);
     await assertDriverApproved(driverId);
 
-    const driver = await UserModel.findById(driverId).exec();
+    const driver = await UserModel.findById(driverId).select('driverProfile currentLocation role').exec();
     if (!driver) throw new NotFoundError('Driver not found');
 
     return listOpenBookingOffers({ forDriver: driver });

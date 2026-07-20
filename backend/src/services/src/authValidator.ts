@@ -23,8 +23,18 @@ export const verifyOtpSchema = z.object({
   role: roleField.default('customer'),
 });
 
+export const driverCredentialLoginSchema = z.object({
+  loginId: z
+    .string()
+    .min(4)
+    .max(40)
+    .regex(/^[a-zA-Z0-9._-]+$/, 'Invalid login ID'),
+  password: z.string().min(6).max(72),
+});
+
 export type SendOtpDto = z.infer<typeof sendOtpSchema>;
 export type VerifyOtpDto = z.infer<typeof verifyOtpSchema>;
+export type DriverCredentialLoginDto = z.infer<typeof driverCredentialLoginSchema>;
 
 export function normalizeSendOtpDto(dto: SendOtpDto): {
   mobileNumber: string;

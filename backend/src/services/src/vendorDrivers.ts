@@ -2,12 +2,16 @@ import { Types } from 'mongoose';
 
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../../utils/src/errors';
 import { normalizeMobileNumber } from '../../utils/src/otp';
+import {
+  hashDriverPassword,
+  normalizeDriverLoginId,
+} from '../../utils/src/driverPassword';
 import { storageService } from '../../storage/src/index';
 import { UserModel, type IUser } from '../../models/src/user';
 import { driverRepository } from './driverRepository';
 import type { CreateVendorDriverDto } from './vendorDriversValidator';
 
-function mapFleetDriver(user: IUser) {
+function mapVendorDriver(user: IUser) {
   const profile = user.driverProfile;
   return {
     id: user.id,
@@ -23,7 +27,19 @@ function mapFleetDriver(user: IUser) {
     isBusy: Boolean(user.activeBookingId),
     rating: profile?.rating ?? 0,
     vendorId: profile?.vendorUserId?.toString() ?? '',
+    loginId: profile?.loginId,
+    hasPasswordLogin: Boolean(profile?.loginId),
   };
+}
+
+async function assertLoginIdAvailable(loginId: string, excludeUserId?: string) {
+  const existing = await UserModel.findOne({
+    role: 'driver',
+    'driverProfile.loginId': loginId,
+  }).exec();
+  if (existing && existing.id !== excludeUserId) {
+    throw new ConflictError('This login ID is already taken. Choose another.');
+  }
 }
 
 export class VendorDriversService {
@@ -40,7 +56,7 @@ export class VendorDriversService {
     const status = user.vendorProfile?.status;
     if (status !== 'approved') {
       throw new ForbiddenError(
-        'Your vendor account must be approved by admin before you can add fleet drivers.',
+        'Your vendor account must be approved by admin before you can add vendor drivers.',
       );
     }
     return user;
@@ -52,12 +68,16 @@ export class VendorDriversService {
       role: 'driver',
       'driverProfile.vendorUserId': new Types.ObjectId(vendorUserId),
     }).exec();
-    return drivers.map(mapFleetDriver);
+    return drivers.map(mapVendorDriver);
   }
 
   async create(vendorUserId: string, dto: CreateVendorDriverDto) {
     await this.assertVendorApproved(vendorUserId);
     const phone = normalizeMobileNumber(dto.phone);
+    const loginId = normalizeDriverLoginId(dto.loginId);
+    const passwordHash = await hashDriverPassword(dto.password);
+
+    await assertLoginIdAvailable(loginId);
 
     const existing = await UserModel.findOne({ mobileNumber: phone }).exec();
     if (existing) {
@@ -69,8 +89,12 @@ export class VendorDriversService {
         throw new ConflictError('Driver already belongs to another vendor');
       }
 
+      await assertLoginIdAvailable(loginId, existing.id);
+
       existing.driverProfile.vendorUserId = new Types.ObjectId(vendorUserId);
       existing.driverProfile.fleetSource = 'vendor';
+      existing.driverProfile.loginId = loginId;
+      existing.driverProfile.passwordHash = passwordHash;
       if (dto.licenseNo) existing.driverProfile.licenseNo = dto.licenseNo;
       if (dto.driverType) existing.driverProfile.driverType = dto.driverType;
       if (dto.city) existing.driverProfile.city = dto.city;
@@ -84,7 +108,7 @@ export class VendorDriversService {
         existing.isProfileCompleted = true;
       }
       await existing.save();
-      return mapFleetDriver(existing);
+      return mapVendorDriver(existing);
     }
 
     const count = await driverRepository.count();
@@ -98,6 +122,8 @@ export class VendorDriversService {
       driverType: dto.driverType,
       vendorUserId,
       fleetSource: 'vendor',
+      loginId,
+      passwordHash,
       city: dto.city ?? 'Bhubaneswar',
       state: 'Odisha',
       vehicleRegistration: dto.vehicleRegistration,
@@ -118,7 +144,7 @@ export class VendorDriversService {
 
     const user = await UserModel.findById(created.id).exec();
     if (!user) throw new NotFoundError('Driver not found after create');
-    return mapFleetDriver(user);
+    return mapVendorDriver(user);
   }
 
   async claimByPhone(vendorUserId: string, phoneRaw: string) {
@@ -135,7 +161,7 @@ export class VendorDriversService {
     driver.driverProfile.vendorUserId = new Types.ObjectId(vendorUserId);
     driver.driverProfile.fleetSource = 'vendor';
     await driver.save();
-    return mapFleetDriver(driver);
+    return mapVendorDriver(driver);
   }
 
   async remove(vendorUserId: string, driverId: string) {
@@ -143,13 +169,15 @@ export class VendorDriversService {
     const driver = await UserModel.findOne({ _id: driverId, role: 'driver' }).exec();
     if (!driver?.driverProfile) throw new NotFoundError('Driver not found');
     if (driver.driverProfile.vendorUserId?.toString() !== vendorUserId) {
-      throw new ForbiddenError('Driver is not in your fleet');
+      throw new ForbiddenError('Driver is not on your vendor team');
     }
     if (driver.activeBookingId) {
       throw new BadRequestError('Cannot remove a driver with an active booking');
     }
     driver.driverProfile.vendorUserId = undefined;
     driver.driverProfile.fleetSource = undefined;
+    driver.driverProfile.loginId = undefined;
+    driver.driverProfile.passwordHash = undefined;
     await driver.save();
     return { removed: true, driverId };
   }
@@ -165,7 +193,7 @@ export class VendorDriversService {
     const driver = await UserModel.findOne({ _id: driverId, role: 'driver' }).exec();
     if (!driver?.driverProfile) throw new NotFoundError('Driver not found');
     if (driver.driverProfile.vendorUserId?.toString() !== vendorUserId) {
-      throw new ForbiddenError('Driver is not in your fleet');
+      throw new ForbiddenError('Driver is not on your vendor team');
     }
 
     const upload = await storageService.uploadDriverDocument({
@@ -207,7 +235,7 @@ export class VendorDriversService {
     driver.driverProfile.status = 'PENDING';
     await driver.save();
 
-    return mapFleetDriver(driver);
+    return mapVendorDriver(driver);
   }
 }
 

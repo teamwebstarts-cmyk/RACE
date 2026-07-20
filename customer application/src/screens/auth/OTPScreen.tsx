@@ -1,17 +1,18 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Pressable,
+  StyleSheet,
   Text,
   TextInput,
   useWindowDimensions,
   View,
 } from 'react-native';
-import { MessageCircle } from 'lucide-react-native';
+import { Info, MessageCircle, Pencil, ShieldCheck } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import AuthFormLayout from '../../components/auth/AuthFormLayout';
-import GoldButton from '../../components/auth/GoldButton';
 import { useAuthActions } from '../../hooks/useAuth';
 import { sendOtp } from '../../services/authService';
 import { getApiErrorMessage } from '../../services/api';
@@ -21,7 +22,7 @@ import { getCustomerOnboardingRouteFromStep } from '../../store/customerOnboardi
 import type { AuthStackParamList } from '../../types/navigation';
 import { getPhoneDigits } from '../../utils/phone';
 import { maskMobile } from '../../utils/mask';
-import { colors, shadows, typography } from '../../theme';
+import { colors, radius, shadows, spacing, typography } from '../../theme';
 
 const REF_W = 390;
 
@@ -31,11 +32,11 @@ export default function OTPScreen({ navigation, route }: Props) {
   const { phone, isExistingUser } = route.params;
   const { verifyOtp: verifyOtpAction, error: authError, isLoading, clearError } = useAuthActions();
   const { width } = useWindowDimensions();
-  const px = (n: number) => Math.round(n * (width / REF_W));
+  const px = (n: number) => Math.max(1, Math.round(n * (width / REF_W)));
 
   const [digits, setDigits] = useState(['', '', '', '', '', '']);
   const [activeIndex, setActiveIndex] = useState(0);
-  const [timer, setTimer] = useState(30);
+  const [timer, setTimer] = useState(60);
   const [error, setError] = useState('');
   const [isResending, setIsResending] = useState(false);
   const inputRefs = useRef<Array<TextInput | null>>([]);
@@ -52,9 +53,7 @@ export default function OTPScreen({ navigation, route }: Props) {
         setError('Please enter the 6-digit OTP');
         return;
       }
-      if (isVerifyingRef.current) {
-        return;
-      }
+      if (isVerifyingRef.current) return;
 
       isVerifyingRef.current = true;
       clearError();
@@ -108,9 +107,7 @@ export default function OTPScreen({ navigation, route }: Props) {
 
   useEffect(() => {
     if (timer <= 0) return;
-    const interval = setInterval(() => {
-      setTimer(prev => prev - 1);
-    }, 1000);
+    const interval = setInterval(() => setTimer(prev => prev - 1), 1000);
     return () => clearInterval(interval);
   }, [timer]);
 
@@ -168,7 +165,7 @@ export default function OTPScreen({ navigation, route }: Props) {
     clearError();
     try {
       await sendOtp({ mobileNumber });
-      setTimer(30);
+      setTimer(60);
       setDigits(['', '', '', '', '', '']);
       setActiveIndex(0);
       inputRefs.current[0]?.focus();
@@ -181,180 +178,222 @@ export default function OTPScreen({ navigation, route }: Props) {
   };
 
   const timerLabel = `00:${String(timer).padStart(2, '0')}`;
+  const isVerifying = isLoading && otpValue.length === 6;
 
   return (
     <AuthFormLayout onBack={() => navigation.goBack()}>
-      <View
-        style={{
-          alignSelf: 'center',
-          width: px(72),
-          height: px(72),
-          borderRadius: px(36),
-          backgroundColor: colors.goldLight,
-          alignItems: 'center',
-          justifyContent: 'center',
-          marginTop: px(12),
-          marginBottom: px(20),
-        }}>
-        <MessageCircle size={px(32)} color={colors.primary} strokeWidth={2.2} />
-      </View>
+      <View style={[styles.card, shadows.card, { borderRadius: px(18), padding: px(spacing.xl) }]}>
+        <View style={[styles.iconWrap, { width: px(64), height: px(64), borderRadius: px(32) }]}>
+          <MessageCircle size={px(28)} color={colors.primary} strokeWidth={2.2} />
+        </View>
 
-      <Text
-        style={{
-          fontSize: px(26),
-          fontWeight: typography.weights.extrabold,
-          color: colors.dark,
-          textAlign: 'center',
-        }}>
-        Enter OTP
-      </Text>
-
-      <Text
-        style={{
-          marginTop: px(8),
-          fontSize: px(14),
-          color: colors.grey,
-          textAlign: 'center',
-          lineHeight: px(20),
-        }}>
-        We have sent a 6-digit code to your mobile number
-      </Text>
-
-      <View
-        style={{
-          flexDirection: 'row',
-          justifyContent: 'center',
-          alignItems: 'center',
-          marginTop: px(10),
-          marginBottom: px(28),
-          gap: px(6),
-        }}>
-        <Text
-          style={{
-            fontSize: px(14),
-            fontWeight: typography.weights.bold,
-            color: colors.primary,
-          }}>
-          {destinationLabel}
+        <Text style={[styles.title, { fontSize: px(24) }]}>Enter OTP</Text>
+        <Text style={[styles.subtitle, { fontSize: px(14), lineHeight: px(20) }]}>
+          We have sent a 6-digit code to your mobile number
         </Text>
-        <Pressable onPress={() => navigation.goBack()}>
+
+        <View style={[styles.phoneRow, { marginTop: px(10), marginBottom: px(24), gap: px(6) }]}>
+          <Text style={[styles.phoneText, { fontSize: px(14) }]}>{destinationLabel}</Text>
+          <Pressable onPress={() => navigation.goBack()} hitSlop={8} style={styles.editBtn}>
+            <Pencil size={15} color={colors.primary} strokeWidth={2.2} />
+          </Pressable>
+        </View>
+
+        <View style={[styles.otpRow, { gap: px(8), marginBottom: px(16) }]}>
+          <TextInput
+            value=""
+            onChangeText={applyOtpValue}
+            textContentType="oneTimeCode"
+            autoComplete="sms-otp"
+            keyboardType="number-pad"
+            style={styles.hiddenInput}
+          />
+          {digits.map((digit, index) => {
+            const isActive = activeIndex === index;
+            return (
+              <Pressable
+                key={index}
+                onPress={() => {
+                  setActiveIndex(index);
+                  inputRefs.current[index]?.focus();
+                }}
+                style={{
+                  width: px(46),
+                  height: px(54),
+                  borderRadius: px(12),
+                  borderWidth: isActive ? 2 : 1.5,
+                  borderColor: isActive ? colors.primary : colors.border,
+                  backgroundColor: colors.background,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  overflow: 'hidden',
+                }}>
+                <TextInput
+                  ref={ref => {
+                    inputRefs.current[index] = ref;
+                  }}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    fontSize: px(22),
+                    fontWeight: typography.weights.bold,
+                    color: digit || isActive ? colors.dark : 'transparent',
+                    textAlign: 'center',
+                    padding: 0,
+                  }}
+                  value={digit}
+                  onChangeText={value => handleDigitInput(index, value)}
+                  onKeyPress={({ nativeEvent }) => handleKeyPress(index, nativeEvent.key)}
+                  onFocus={() => setActiveIndex(index)}
+                  keyboardType="number-pad"
+                  maxLength={1}
+                  selectTextOnFocus
+                />
+              </Pressable>
+            );
+          })}
+        </View>
+
+        {error || authError ? (
+          <Text style={[styles.errorText, { fontSize: px(13), marginBottom: px(12) }]}>
+            {error || authError}
+          </Text>
+        ) : null}
+
+        <Text style={[styles.timerText, { fontSize: px(13) }]}>
+          Resend OTP in <Text style={styles.timerValue}>{timerLabel}</Text>
+        </Text>
+
+        <Pressable
+          onPress={() => void handleResend()}
+          disabled={timer > 0 || isResending}
+          style={{ marginTop: px(8), marginBottom: px(18) }}>
           <Text
             style={{
+              textAlign: 'center',
               fontSize: px(14),
-              color: colors.grey,
-              textDecorationLine: 'underline',
+              fontWeight: typography.weights.bold,
+              color: timer > 0 || isResending ? colors.border : colors.primary,
             }}>
-            Change
+            {isResending ? 'Resending...' : "Didn't receive the code? Resend OTP"}
           </Text>
+        </Pressable>
+
+        <View style={styles.infoCard}>
+          <Info size={18} color={colors.primary} strokeWidth={2.2} />
+          <Text style={styles.infoText}>
+            <Text style={styles.infoTitle}>Tip: </Text>
+            Check your SMS inbox or spam folder if the code does not arrive.
+          </Text>
+        </View>
+
+        <Pressable
+          disabled={otpValue.length !== 6 || isLoading}
+          onPress={() => void verifyOtp(otpValue)}
+          style={({ pressed }) => [
+            styles.primaryButton,
+            {
+              marginTop: px(spacing.lg),
+              minHeight: px(54),
+              borderRadius: px(14),
+            },
+            (otpValue.length !== 6 || isLoading) && styles.primaryButtonDisabled,
+            pressed && otpValue.length === 6 && !isLoading && styles.pressed,
+          ]}>
+          {isVerifying ? (
+            <View style={styles.buttonContent}>
+              <ActivityIndicator size="small" color={colors.dark} />
+              <Text style={[styles.primaryButtonLabel, { fontSize: px(16) }]}>Verifying...</Text>
+            </View>
+          ) : (
+            <Text style={[styles.primaryButtonLabel, { fontSize: px(16) }]}>
+              {isExistingUser ? 'Verify & Login' : 'Verify & Continue'}
+            </Text>
+          )}
         </Pressable>
       </View>
 
-      <View
-        style={{
-          flexDirection: 'row',
-          justifyContent: 'center',
-          gap: px(8),
-          marginBottom: px(18),
-        }}>
-        <TextInput
-          value=""
-          onChangeText={applyOtpValue}
-          textContentType="oneTimeCode"
-          autoComplete="sms-otp"
-          keyboardType="number-pad"
-          style={{ position: 'absolute', width: 1, height: 1, opacity: 0 }}
-        />
-        {digits.map((digit, index) => {
-          const isActive = activeIndex === index;
-          return (
-            <Pressable
-              key={index}
-              onPress={() => {
-                setActiveIndex(index);
-                inputRefs.current[index]?.focus();
-              }}
-              style={{
-                width: px(48),
-                height: px(56),
-                borderRadius: px(12),
-                borderWidth: isActive ? 2 : 1.5,
-                borderColor: isActive ? colors.primary : colors.border,
-                backgroundColor: colors.background,
-                alignItems: 'center',
-                justifyContent: 'center',
-                overflow: 'hidden',
-              }}>
-              <TextInput
-                ref={ref => {
-                  inputRefs.current[index] = ref;
-                }}
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  fontSize: px(22),
-                  fontWeight: typography.weights.bold,
-                  color: digit || isActive ? colors.dark : 'transparent',
-                  textAlign: 'center',
-                  padding: 0,
-                }}
-                value={digit}
-                onChangeText={value => handleDigitInput(index, value)}
-                onKeyPress={({ nativeEvent }) => handleKeyPress(index, nativeEvent.key)}
-                onFocus={() => setActiveIndex(index)}
-                keyboardType="number-pad"
-                maxLength={1}
-                selectTextOnFocus
-              />
-            </Pressable>
-          );
-        })}
+      <View style={[styles.securityRow, { marginTop: px(spacing.xl) }]}>
+        <ShieldCheck size={18} color={colors.primary} strokeWidth={2.2} />
+        <Text style={[styles.securityText, { fontSize: px(11), lineHeight: px(16) }]}>
+          Your data is secure and encrypted
+        </Text>
       </View>
-
-      {(error || authError) ? (
-        <Text
-          style={{
-            color: colors.error,
-            textAlign: 'center',
-            fontSize: px(13),
-            marginBottom: px(12),
-          }}>
-          {error || authError}
-        </Text>
-      ) : null}
-
-      <Text
-        style={{
-          textAlign: 'center',
-          color: colors.grey,
-          fontSize: px(14),
-          marginBottom: px(8),
-        }}>
-        Didn't receive OTP? Resend in {timerLabel}
-      </Text>
-      <Pressable
-        onPress={() => void handleResend()}
-        disabled={timer > 0 || isResending}
-        style={{ marginBottom: px(20) }}>
-        <Text
-          style={{
-            textAlign: 'center',
-            fontSize: px(14),
-            fontWeight: typography.weights.bold,
-            color: timer > 0 || isResending ? colors.border : colors.primary,
-          }}>
-          {isResending ? 'Resending...' : 'Resend OTP'}
-        </Text>
-      </Pressable>
-
-      <GoldButton
-        label={isLoading ? 'Verifying...' : isExistingUser ? 'Verify & Login' : 'Verify & Continue'}
-        onPress={() => void verifyOtp(otpValue)}
-        style={[shadows.card, { width: '100%' }]}
-        height={px(54)}
-        labelSize={px(17)}
-        borderRadius={px(14)}
-        disabled={isLoading}
-      />
     </AuthFormLayout>
   );
 }
+
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginTop: spacing.md,
+  },
+  iconWrap: {
+    backgroundColor: colors.goldLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    marginBottom: spacing.md,
+  },
+  title: {
+    fontWeight: typography.weights.extrabold,
+    color: colors.dark,
+    textAlign: 'center',
+  },
+  subtitle: {
+    marginTop: spacing.sm,
+    color: colors.grey,
+    textAlign: 'center',
+  },
+  phoneRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  phoneText: {
+    fontWeight: typography.weights.bold,
+    color: colors.dark,
+  },
+  editBtn: { padding: 4 },
+  otpRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  hiddenInput: { position: 'absolute', width: 1, height: 1, opacity: 0 },
+  errorText: { color: colors.error, textAlign: 'center' },
+  timerText: { textAlign: 'center', color: colors.grey },
+  timerValue: { color: colors.primary, fontWeight: typography.weights.bold },
+  infoCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.goldLight,
+  },
+  infoText: {
+    flex: 1,
+    color: colors.dark,
+    fontSize: typography.sizes.sm,
+    lineHeight: 20,
+  },
+  infoTitle: { fontWeight: typography.weights.bold },
+  primaryButton: {
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  primaryButtonDisabled: { opacity: 0.55 },
+  buttonContent: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  primaryButtonLabel: { color: colors.dark, fontWeight: typography.weights.bold },
+  securityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+  },
+  securityText: { color: colors.grey, textAlign: 'center' },
+  pressed: { opacity: 0.9 },
+});

@@ -187,7 +187,7 @@ export default function OnboardingScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.pageBg,
   },
   heroWrap: {
     overflow: 'hidden',
@@ -201,12 +201,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     zIndex: 10,
     borderWidth: 1,
-    borderColor: '#D0D0D0',
-    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    borderColor: colors.border,
+    backgroundColor: 'rgba(255, 255, 255, 0.96)',
   },
   skipPressed: {
     opacity: 0.8,
-    backgroundColor: 'rgba(245, 245, 245, 0.95)',
+    backgroundColor: colors.lightGrey,
   },
   skipText: {
     color: colors.dark,
@@ -215,6 +215,7 @@ const styles = StyleSheet.create({
   panel: {
     flex: 1,
     justifyContent: 'space-between',
+    backgroundColor: colors.pageBg,
   },
   title: {
     fontWeight: typography.weights.extrabold,

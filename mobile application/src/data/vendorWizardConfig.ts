@@ -51,7 +51,7 @@ export const VENDOR_TYPE_CONFIGS: VendorTypeConfig[] = [
   {
     type: 'towing_company',
     title: 'Towing Company',
-    subtitle: 'Fleet operators and towing businesses',
+    subtitle: 'Vendor operators and towing businesses',
     emoji: '🚛',
     steps: steps(
       {

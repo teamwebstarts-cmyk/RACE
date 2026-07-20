@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors, radius, spacing, typography } from '../theme';
+import { colors, radius, shadows, spacing, typography } from '../theme';
 import type { Service } from '../types/models';
 
 interface ServiceItemCardProps {
@@ -20,6 +20,7 @@ export default function ServiceItemCard({
       onPress={onPress}
       style={({ pressed }) => [
         styles.card,
+        shadows.card,
         { borderLeftColor: accent },
         pressed && styles.pressed,
       ]}>

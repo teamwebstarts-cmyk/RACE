@@ -259,7 +259,7 @@ export default function VendorVehiclesScreen() {
       setType('Car Tow');
       setShowForm(false);
       setPage(1);
-      Alert.alert('Vehicle added', 'Fleet vehicle is ready to assign on jobs.');
+      Alert.alert('Vehicle added', 'Vendor vehicle is ready to assign on jobs.');
     } catch (error) {
       Alert.alert('Could not add vehicle', getApiErrorMessage(error, 'Please try again'));
     }
@@ -276,7 +276,7 @@ export default function VendorVehiclesScreen() {
 
   const onRemove = (vehicle: FleetVehicle) => {
     setMenuVehicle(null);
-    Alert.alert('Remove vehicle?', `Remove ${formatPlate(vehicle.registrationNo)} from your fleet?`, [
+    Alert.alert('Remove vehicle?', `Remove ${formatPlate(vehicle.registrationNo)} from your vendor team?`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Remove',
@@ -319,7 +319,7 @@ export default function VendorVehiclesScreen() {
       return;
     }
     if (drivers.length === 0) {
-      Alert.alert('No drivers', 'Add a fleet driver first, then assign them to this vehicle.', [
+      Alert.alert('No drivers', 'Add a vendor driver first, then assign them to this vehicle.', [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Add driver',
@@ -375,9 +375,9 @@ export default function VendorVehiclesScreen() {
         <View style={styles.headerPad}>
           <View style={styles.titleRow}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.title}>Fleet vehicles</Text>
+              <Text style={styles.title}>Vendor vehicles</Text>
               <Text style={styles.subtitle}>
-                Manage your fleet vehicles and keep them road-ready.
+                Manage your vendor vehicles and keep them road-ready.
               </Text>
             </View>
             <Pressable
@@ -533,7 +533,7 @@ export default function VendorVehiclesScreen() {
               <View style={styles.iconWrap}>
                 <Truck size={36} color={colors.primary} strokeWidth={2} />
               </View>
-              <Text style={styles.emptyTitle}>No fleet vehicles yet</Text>
+              <Text style={styles.emptyTitle}>No vendor vehicles yet</Text>
               <Text style={styles.emptySubtitle}>
                 Register a tow vehicle so you can assign it with a driver when a job comes in.
               </Text>
@@ -728,7 +728,7 @@ export default function VendorVehiclesScreen() {
               {assignVehicle ? ` · ${formatPlate(assignVehicle.registrationNo)}` : ''}
             </Text>
             <Text style={styles.assignHint}>
-              Choose a fleet driver to link with this vehicle.
+              Choose a vendor driver to link with this vehicle.
             </Text>
             <ScrollView style={{ maxHeight: 320 }}>
               {(unassignedDrivers.length > 0 ? unassignedDrivers : drivers).map(driver => (

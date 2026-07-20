@@ -116,6 +116,7 @@ export interface ActiveBooking {
   eta: string;
   driver: BookingDriver;
   bookingType: 'towing' | 'driver';
+  tripStartOtp?: string;
 }
 
 export interface BookingHistoryItem {

@@ -110,21 +110,40 @@ export default function ProfileScreen() {
 
   if (isLoading && !profile) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
+      <AppScreenLayout
+        backgroundColor={colors.pageBg}
+        scrollable={false}
+        header={
+          <TabRootHeader
+            title="Profile"
+            subtitle="Manage your account and preferences"
+            showActions={false}
+          />
+        }>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </AppScreenLayout>
     );
   }
 
   return (
     <AppScreenLayout
+      backgroundColor={colors.pageBg}
       header={
         <TabRootHeader
           title="Profile"
           subtitle="Manage your account and preferences"
+          showNotificationBadge={unreadCount > 0}
+          onBellPress={() => navigation.navigate('Notifications')}
           actions={
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: px(12) }}>
-              <Pressable hitSlop={8} style={styles.bellWrap} onPress={() => navigation.navigate('Notifications')}>
+              <Pressable
+                hitSlop={8}
+                style={styles.bellWrap}
+                onPress={() => navigation.navigate('Notifications')}
+                accessibilityRole="button"
+                accessibilityLabel="Notifications">
                 <Bell size={px(22)} color={colors.dark} strokeWidth={2} />
                 {unreadCount > 0 ? <View style={styles.bellDot} /> : null}
               </Pressable>
@@ -159,13 +178,20 @@ export default function ProfileScreen() {
                     <Text
                       numberOfLines={1}
                       style={{
+                        flexShrink: 1,
                         fontSize: px(16),
                         fontWeight: typography.weights.bold,
                         color: colors.dark,
                       }}>
                       {displayName}
                     </Text>
-                    <Pencil size={px(14)} color={colors.grey} strokeWidth={2} />
+                    <Pressable
+                      hitSlop={10}
+                      onPress={() => navigation.navigate('PersonalInformation')}
+                      accessibilityRole="button"
+                      accessibilityLabel="Edit profile">
+                      <Pencil size={px(14)} color={colors.grey} strokeWidth={2} />
+                    </Pressable>
                   </View>
                   <Text style={{ fontSize: px(12), color: colors.grey, marginBottom: px(2) }}>
                     {displayPhone}

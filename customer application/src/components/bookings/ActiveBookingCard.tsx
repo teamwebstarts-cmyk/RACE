@@ -4,6 +4,7 @@ import { Copy, MapPin, Phone, Star } from 'lucide-react-native';
 
 import { images } from '../../assets';
 import DriverAvatar from './DriverAvatar';
+import TripOtpCard from '../booking/TripOtpCard';
 import { getBookingServiceIcon } from '../../constants/bookingsScreen';
 import { brand } from '../../theme/brand';
 import type { ActiveBooking } from '../../types/models';
@@ -227,6 +228,15 @@ export default function ActiveBookingCard({ booking, px, onTrack, onPress }: Pro
           </Text>
         </View>
       </View>
+
+      {booking.tripStartOtp ? (
+        <View style={{ marginBottom: px(10) }}>
+          <TripOtpCard
+            otp={booking.tripStartOtp}
+            subtitle="Share this code with your driver when they arrive to start the trip."
+          />
+        </View>
+      ) : null}
 
       <View style={{ flexDirection: 'row', gap: px(8), marginTop: px(10) }}>
         <Pressable

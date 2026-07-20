@@ -55,27 +55,27 @@ const styles = StyleSheet.create({
     height: 32,
     borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: colors.glass.border,
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.card,
+    backgroundColor: colors.background,
   },
   dotActive: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
   dotText: {
-    color: colors.subtext,
+    color: colors.grey,
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.bold,
   },
   dotTextActive: {
-    color: colors.textLight,
+    color: colors.dark,
   },
   line: {
     width: 28,
     height: 2,
-    backgroundColor: colors.glass.border,
+    backgroundColor: colors.border,
     marginHorizontal: spacing.xs,
   },
   lineActive: {
@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
   label: {
     marginTop: spacing.sm,
     textAlign: 'center',
-    color: colors.subtext,
+    color: colors.grey,
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.semibold,
   },

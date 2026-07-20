@@ -34,22 +34,22 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   labelDark: {
-    color: colors.textLight,
+    color: colors.dark,
   },
   input: {
     height: 52,
-    borderRadius: radius.card,
+    borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
     paddingHorizontal: spacing.md,
     fontSize: typography.sizes.md,
     color: colors.textDark,
-    backgroundColor: colors.backgroundSoft,
+    backgroundColor: colors.background,
   },
   inputDark: {
-    color: colors.textLight,
-    backgroundColor: colors.card,
-    borderColor: colors.glass.border,
+    color: colors.dark,
+    backgroundColor: colors.background,
+    borderColor: colors.border,
   },
   error: {
     marginTop: spacing.xs,

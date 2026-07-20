@@ -17,6 +17,8 @@ export class DriverRepository {
     driverType: string;
     vendorUserId?: Types.ObjectId | string;
     fleetSource?: 'vendor' | 'admin';
+    loginId?: string;
+    passwordHash?: string;
     city: string;
     state?: string;
     vehicleRegistration?: string;
@@ -39,6 +41,8 @@ export class DriverRepository {
           ? new Types.ObjectId(data.vendorUserId.toString())
           : undefined,
         fleetSource: data.fleetSource,
+        loginId: data.loginId,
+        passwordHash: data.passwordHash,
         city: data.city,
         state: data.state ?? 'Odisha',
         vehicleRegistration: data.vehicleRegistration,

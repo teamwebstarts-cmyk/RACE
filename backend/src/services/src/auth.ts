@@ -5,11 +5,20 @@ import {
   revokeRefreshToken,
   verifyRefreshToken,
 } from '../../utils/src/jwt';
+import {
+  normalizeDriverLoginId,
+  verifyDriverPassword,
+} from '../../utils/src/driverPassword';
 import { userRepository } from './userRepository';
 import { computeProfileCompleted } from '../../utils/src/user';
 import type { IUser, UserRole } from '../../models/src/user';
+import { UserModel } from '../../models/src/user';
 import { otpService } from './otp';
-import type { SendOtpDto, VerifyOtpDto } from './authValidator';
+import type {
+  DriverCredentialLoginDto,
+  SendOtpDto,
+  VerifyOtpDto,
+} from './authValidator';
 import { normalizeSendOtpDto, normalizeVerifyOtpDto } from './authValidator';
 import type { RefreshTokenDto } from './authDto';
 
@@ -120,6 +129,17 @@ export class AuthService {
       user = await ensureUserRole(user, role);
       assertAccountActive(user.accountStatus);
 
+      if (
+        role === 'driver' &&
+        user.role === 'driver' &&
+        user.driverProfile?.loginId &&
+        user.driverProfile?.vendorUserId
+      ) {
+        throw new ConflictError(
+          'This number belongs to a vendor driver. Sign in with the Login ID and password provided by your vendor.',
+        );
+      }
+
       const otpResult = await otpService.sendOtp(mobileNumber);
 
       return {
@@ -158,6 +178,16 @@ export class AuthService {
     user = await ensureUserRole(user, role);
     assertAccountActive(user.accountStatus);
 
+    if (
+      role === 'driver' &&
+      user.driverProfile?.loginId &&
+      user.driverProfile?.vendorUserId
+    ) {
+      throw new ConflictError(
+        'This number belongs to a vendor driver. Sign in with the Login ID and password provided by your vendor.',
+      );
+    }
+
     user.isVerified = true;
     user.isProfileCompleted = computeProfileCompleted(user);
     await user.save();
@@ -176,6 +206,54 @@ export class AuthService {
         email: user.email,
       },
       onboardingRequired: !user.isProfileCompleted,
+    };
+  }
+
+  async loginDriverWithCredentials(dto: DriverCredentialLoginDto): Promise<AuthTokensResponse> {
+    const loginId = normalizeDriverLoginId(dto.loginId);
+
+    const user = await UserModel.findOne({
+      role: 'driver',
+      'driverProfile.loginId': loginId,
+    })
+      .select('+driverProfile.passwordHash')
+      .exec();
+
+    if (!user?.driverProfile?.passwordHash) {
+      throw new UnauthorizedError('Invalid login ID or password');
+    }
+
+    const valid = await verifyDriverPassword(dto.password, user.driverProfile.passwordHash);
+    if (!valid) {
+      throw new UnauthorizedError('Invalid login ID or password');
+    }
+
+    assertAccountActive(user.accountStatus);
+
+    if (user.driverProfile.status === 'SUSPENDED' || user.driverProfile.status === 'REJECTED') {
+      throw new ForbiddenError('Your driver account is not active. Contact your vendor.');
+    }
+
+    user.isVerified = true;
+    if (!user.isProfileCompleted) {
+      user.isProfileCompleted = true;
+    }
+    await user.save();
+
+    const tokens = await generateTokenPair(user.id, user.role, user.mobileNumber);
+
+    return {
+      ...tokens,
+      user: {
+        id: user.id,
+        mobileNumber: user.mobileNumber,
+        role: user.role,
+        isVerified: user.isVerified,
+        isProfileCompleted: user.isProfileCompleted,
+        fullName: user.fullName,
+        email: user.email,
+      },
+      onboardingRequired: false,
     };
   }
 

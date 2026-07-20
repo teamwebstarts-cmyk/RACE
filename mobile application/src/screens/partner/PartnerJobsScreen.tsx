@@ -42,7 +42,16 @@ const ACTIVE_STATUSES = new Set(['DRIVER_EN_ROUTE', 'DRIVER_ARRIVED', 'IN_PROGRE
 
 type JobTab = 'all' | 'new' | 'nearby' | 'assigned' | 'in_progress' | 'completed';
 
-const STATUS_TABS: Array<{ key: JobTab; label: string }> = [
+const PAGE_BG = '#F7F7F5';
+
+const DRIVER_TABS: Array<{ key: JobTab; label: string }> = [
+  { key: 'all', label: 'All' },
+  { key: 'new', label: 'Available' },
+  { key: 'in_progress', label: 'Active' },
+  { key: 'completed', label: 'Done' },
+];
+
+const VENDOR_TABS: Array<{ key: JobTab; label: string }> = [
   { key: 'all', label: 'All' },
   { key: 'new', label: 'New' },
   { key: 'nearby', label: 'Nearby' },
@@ -54,12 +63,16 @@ const STATUS_TABS: Array<{ key: JobTab; label: string }> = [
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
   NEW: { bg: '#DBEAFE', text: '#1D4ED8' },
   NEARBY: { bg: '#DCFCE7', text: '#15803D' },
+  APPROVED: { bg: '#FEF3C7', text: '#B45309' },
+  'AWAITING DRIVER': { bg: '#FEF3C7', text: '#B45309' },
   ASSIGNED: { bg: '#F3E8FF', text: '#7E22CE' },
   'IN PROGRESS': { bg: '#FFEDD5', text: '#C2410C' },
   COMPLETED: { bg: '#F3F4F6', text: '#4B5563' },
 };
 
-function statusLabelFor(job: DriverJobBooking, isOffer: boolean): string {
+function statusLabelFor(job: DriverJobBooking, isOffer: boolean, isVendor = false): string {
+  if (isOffer && job.vendorApproved && isVendor) return 'AWAITING DRIVER';
+  if (isOffer && job.vendorApproved) return 'APPROVED';
   if (isOffer) {
     if (typeof job.distanceKm === 'number' && job.distanceKm <= 5) return 'NEARBY';
     return 'NEW';
@@ -70,10 +83,10 @@ function statusLabelFor(job: DriverJobBooking, isOffer: boolean): string {
   return 'NEW';
 }
 
-function tabFor(job: DriverJobBooking, isOffer: boolean): JobTab {
-  const label = statusLabelFor(job, isOffer);
+function tabFor(job: DriverJobBooking, isOffer: boolean, isVendor = false): JobTab {
+  const label = statusLabelFor(job, isOffer, isVendor);
   if (label === 'NEARBY') return 'nearby';
-  if (label === 'NEW') return 'new';
+  if (label === 'NEW' || label === 'APPROVED' || label === 'AWAITING DRIVER') return 'new';
   if (label === 'ASSIGNED') return 'assigned';
   if (label === 'IN PROGRESS') return 'in_progress';
   if (label === 'COMPLETED') return 'completed';
@@ -138,7 +151,34 @@ export default function PartnerJobsScreen() {
 
   const isLoading = isVendor
     ? vendorOffersQuery.isLoading
-    : driverJobsQuery.isLoading && driverOffersQuery.isLoading;
+    : driverJobsQuery.isLoading || driverOffersQuery.isLoading;
+
+  const offerCards = useMemo(
+    () => offers.map(job => ({ job, isOffer: true as const })),
+    [offers],
+  );
+  const mineCards = useMemo(
+    () => myJobs.map(job => ({ job, isOffer: false as const })),
+    [myJobs],
+  );
+
+  const driverAvailableCards = useMemo(() => {
+    if (filter === 'all' || filter === 'new' || filter === 'nearby') {
+      return offerCards.filter(({ job, isOffer }) =>
+        filter === 'all' ? true : tabFor(job, isOffer, false) === filter,
+      );
+    }
+    return [];
+  }, [offerCards, filter]);
+
+  const driverMyCards = useMemo(() => {
+    if (filter === 'all' || filter === 'assigned' || filter === 'in_progress' || filter === 'completed') {
+      return mineCards.filter(({ job, isOffer }) =>
+        filter === 'all' ? true : tabFor(job, isOffer, false) === filter,
+      );
+    }
+    return [];
+  }, [mineCards, filter]);
 
   const isRefetching = isVendor
     ? vendorOffersQuery.isRefetching
@@ -166,7 +206,26 @@ export default function PartnerJobsScreen() {
 
   const cards = isVendor ? allVendorCards : allDriverCards;
 
+  const tabs = isDriver ? DRIVER_TABS : VENDOR_TABS;
+
   const counts = useMemo(() => {
+    if (isDriver) {
+      const activeMine = mineCards.filter(
+        ({ job }) => job.status === 'DRIVER_ASSIGNED' || ACTIVE_STATUSES.has(job.status),
+      ).length;
+      const doneMine = mineCards.filter(
+        ({ job }) => job.status === 'COMPLETED' || job.status === 'RATED',
+      ).length;
+      return {
+        all: offerCards.length + mineCards.length,
+        new: offerCards.length,
+        nearby: 0,
+        assigned: 0,
+        in_progress: activeMine,
+        completed: doneMine,
+      };
+    }
+
     const base: Record<JobTab, number> = {
       all: cards.length,
       new: 0,
@@ -176,16 +235,16 @@ export default function PartnerJobsScreen() {
       completed: 0,
     };
     cards.forEach(({ job, isOffer }) => {
-      const tab = tabFor(job, isOffer);
+      const tab = tabFor(job, isOffer, isVendor);
       base[tab] += 1;
     });
     return base;
-  }, [cards]);
+  }, [isDriver, offerCards, mineCards, cards, isVendor]);
 
   const filteredCards = useMemo(() => {
     if (filter === 'all') return cards;
-    return cards.filter(({ job, isOffer }) => tabFor(job, isOffer) === filter);
-  }, [cards, filter]);
+    return cards.filter(({ job, isOffer }) => tabFor(job, isOffer, isVendor) === filter);
+  }, [cards, filter, isVendor]);
 
   const summary = useMemo(() => {
     const todayStart = new Date();
@@ -242,6 +301,165 @@ export default function PartnerJobsScreen() {
     ]);
   };
 
+  const driverIsEmpty = driverAvailableCards.length === 0 && driverMyCards.length === 0;
+
+  const renderJobCard = ({ job, isOffer }: { job: DriverJobBooking; isOffer: boolean }) => {
+    const label = statusLabelFor(job, isOffer, isVendor);
+    const statusStyle = STATUS_COLORS[label] ?? STATUS_COLORS.NEW;
+    const Icon = job.bookingType === 'towing' ? Truck : Car;
+    const serviceLabel =
+      job.serviceLabel || (job.bookingType === 'towing' ? 'Car Tow' : 'Hire Driver');
+    const busy = actingId === job.id;
+    const canAcceptOffer = isDriver && isOffer;
+    const canRejectAssigned = isDriver && !isOffer && job.status === 'DRIVER_ASSIGNED';
+    const isActive = isDriver && !isOffer && ACTIVE_STATUSES.has(job.status);
+
+    return (
+      <GlassCard
+        key={`${isOffer ? 'o' : 'm'}-${job.bookingType}-${job.id}`}
+        style={[styles.jobCard, isOffer && isDriver && styles.driverOfferCard]}>
+        <View style={styles.jobTop}>
+          <View style={[styles.serviceIcon, { backgroundColor: statusStyle.bg }]}>
+            <Icon size={22} color={statusStyle.text} strokeWidth={2.2} />
+          </View>
+          <View style={styles.jobTopCopy}>
+            <View style={styles.badgeRow}>
+              <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
+                <Text style={[styles.statusBadgeText, { color: statusStyle.text }]}>{label}</Text>
+              </View>
+              <Text style={styles.jobNumber}>#{job.bookingNumber}</Text>
+            </View>
+            {typeof job.distanceKm === 'number' && job.distanceKm < 900 ? (
+              <View style={styles.distanceRow}>
+                <MapPin size={13} color="#16A34A" strokeWidth={2.4} />
+                <Text style={styles.distanceText}>{job.distanceKm.toFixed(1)} km away</Text>
+              </View>
+            ) : null}
+          </View>
+        </View>
+
+        {isOffer && job.vendorApproved ? (
+          <View style={styles.vendorApprovedChip}>
+            <Text style={styles.vendorApprovedChipText}>Vendor approved · vehicle assigned</Text>
+          </View>
+        ) : null}
+
+        <View style={styles.routeBlock}>
+          <View style={styles.routeRail}>
+            <View style={styles.routeDot} />
+            {job.dropoff ? (
+              <>
+                <View style={styles.routeLine} />
+                <View style={[styles.routeDot, styles.routeDotEnd]} />
+              </>
+            ) : null}
+          </View>
+          <View style={styles.routeCopy}>
+            <Text style={styles.routeText} numberOfLines={2}>
+              {formatReadableAddress(job.pickup?.address || job.pickup?.label) || 'Pickup'}
+            </Text>
+            {job.dropoff ? (
+              <Text style={[styles.routeText, { marginTop: spacing.sm }]} numberOfLines={2}>
+                {formatReadableAddress(job.dropoff.address || job.dropoff.label) || 'Drop-off'}
+              </Text>
+            ) : null}
+          </View>
+        </View>
+
+        <View style={styles.timeRow}>
+          <Calendar size={13} color={colors.grey} strokeWidth={2.2} />
+          <Text style={styles.timeText}>{formatJobTime(job.createdAt)}</Text>
+        </View>
+
+        <View style={styles.bottomRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.serviceLabel}>{serviceLabel}</Text>
+            {job.assignedFleetVehicleLabel ? (
+              <Text style={styles.vehicleHint}>Vehicle: {job.assignedFleetVehicleLabel}</Text>
+            ) : null}
+            {typeof job.estimatedFare === 'number' ? (
+              <>
+                <Text style={styles.fare}>₹{Math.round(job.estimatedFare)}</Text>
+                <Text style={styles.fareHint}>Estimated earnings</Text>
+              </>
+            ) : null}
+          </View>
+        </View>
+
+        {isVendor && isOffer && !job.vendorApproved ? (
+          <View style={styles.vendorActions}>
+            <Pressable
+              onPress={() =>
+                navigation.navigate('VendorAssignJob', {
+                  bookingId: job.id,
+                  bookingType: job.bookingType,
+                  bookingNumber: job.bookingNumber,
+                  serviceLabel,
+                  pickupAddress: job.pickup?.address || job.pickup?.label,
+                  estimatedFare: job.estimatedFare,
+                })
+              }
+              style={styles.assignBtn}>
+              <Text style={styles.assignLabel}>Approve & assign vehicle</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => navigation.navigate('VendorVehicles')}
+              style={styles.addVehicleOutline}>
+              <Text style={styles.addVehicleOutlineLabel}>Add vehicle</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
+        {isVendor && isOffer && job.vendorApproved ? (
+          <View style={styles.awaitingDriverBanner}>
+            <Text style={styles.awaitingDriverText}>
+              Awaiting driver — your fleet drivers can accept this job
+            </Text>
+          </View>
+        ) : null}
+
+        {canAcceptOffer ? (
+          <Pressable
+            disabled={busy}
+            onPress={() => void onAccept(job)}
+            style={[styles.acceptBtnFull, busy && styles.disabled]}>
+            <Text style={styles.acceptLabel}>{busy ? 'Accepting…' : 'Accept trip'}</Text>
+          </Pressable>
+        ) : null}
+
+        {canRejectAssigned ? (
+          <View style={styles.actions}>
+            <Pressable
+              disabled={busy}
+              onPress={() => void onAccept(job)}
+              style={[styles.acceptBtn, busy && styles.disabled]}>
+              <Text style={styles.acceptLabel}>{busy ? '…' : 'Start trip'}</Text>
+            </Pressable>
+            <Pressable
+              disabled={busy}
+              onPress={() => onReject(job)}
+              style={[styles.rejectBtn, busy && styles.disabled]}>
+              <Text style={styles.rejectLabel}>Reject</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
+        {isActive ? (
+          <Pressable
+            onPress={() =>
+              navigation.navigate('PartnerActiveJob', {
+                bookingId: job.id,
+                bookingType: job.bookingType,
+              })
+            }
+            style={styles.manageBtn}>
+            <Text style={styles.manageLabel}>Manage active trip →</Text>
+          </Pressable>
+        ) : null}
+      </GlassCard>
+    );
+  };
+
   return (
     <AppScreenLayout
       header={
@@ -252,7 +470,7 @@ export default function PartnerJobsScreen() {
               <Text style={styles.subtitle}>
                 {isVendor
                   ? 'Manage and assign roadside assistance requests.'
-                  : 'Accept allotted bookings — customer tracking updates live'}
+                  : 'Trips approved by your vendor appear here — accept to start.'}
               </Text>
             </View>
             {isVendor ? (
@@ -282,6 +500,28 @@ export default function PartnerJobsScreen() {
               </View>
             </View>
           ) : null}
+
+          {isDriver ? (
+            <View style={styles.summaryCard}>
+              <View style={[styles.summaryIcon, { backgroundColor: colors.goldLight }]}>
+                <Briefcase size={18} color={colors.primaryDark} strokeWidth={2.2} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.summaryTitle}>
+                  <Text style={styles.summaryCount}>{offerCards.length}</Text> ready to accept
+                </Text>
+                <Text style={styles.summaryMeta}>
+                  <Text style={styles.openMeta}>{counts.in_progress} active trip(s)</Text>
+                  {offerCards.length === 0 ? (
+                    <>
+                      {' · '}
+                      <Text style={styles.progressMeta}>Ask vendor to approve jobs first</Text>
+                    </>
+                  ) : null}
+                </Text>
+              </View>
+            </View>
+          ) : null}
         </View>
       }
       scrollable={false}
@@ -306,7 +546,7 @@ export default function PartnerJobsScreen() {
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.tabsRow}>
-            {STATUS_TABS.map(tab => {
+            {tabs.map(tab => {
               const active = filter === tab.key;
               return (
                 <Pressable
@@ -335,152 +575,49 @@ export default function PartnerJobsScreen() {
                 </Text>
               ) : null}
 
-              {filteredCards.length === 0 ? (
+              {isDriver ? (
+                driverIsEmpty ? (
+                  <View style={styles.emptyInline}>
+                    <View style={styles.iconWrap}>
+                      <Navigation size={36} color={colors.primary} strokeWidth={2} />
+                    </View>
+                    <Text style={styles.emptyTitle}>No trips yet</Text>
+                    <Text style={styles.emptySubtitle}>
+                      After your vendor approves a customer request and assigns a vehicle, it will
+                      show up here. Tap Accept trip to claim it — then it becomes your active job.
+                    </Text>
+                  </View>
+                ) : (
+                  <>
+                    {driverAvailableCards.length > 0 ? (
+                      <>
+                        <Text style={styles.sectionHeading}>Available to accept</Text>
+                        {driverAvailableCards.map(renderJobCard)}
+                      </>
+                    ) : null}
+                    {driverMyCards.length > 0 ? (
+                      <>
+                        <Text style={[styles.sectionHeading, driverAvailableCards.length > 0 && styles.sectionHeadingSpaced]}>
+                          My trips
+                        </Text>
+                        {driverMyCards.map(renderJobCard)}
+                      </>
+                    ) : null}
+                  </>
+                )
+              ) : filteredCards.length === 0 ? (
                 <View style={styles.emptyInline}>
                   <View style={styles.iconWrap}>
                     <Navigation size={36} color={colors.primary} strokeWidth={2} />
                   </View>
                   <Text style={styles.emptyTitle}>No jobs yet</Text>
                   <Text style={styles.emptySubtitle}>
-                    {isVendor
-                      ? 'Open roadside requests will appear here for fleet assignment.'
-                      : 'When a customer books near you, the job appears here.'}
+                    Open customer requests appear here. Approve a job and assign a vehicle — your
+                    drivers can accept it.
                   </Text>
                 </View>
               ) : (
-                filteredCards.map(({ job, isOffer }) => {
-                  const label = statusLabelFor(job, isOffer);
-                  const statusStyle = STATUS_COLORS[label] ?? STATUS_COLORS.NEW;
-                  const Icon = job.bookingType === 'towing' ? Truck : Car;
-                  const serviceLabel =
-                    job.serviceLabel || (job.bookingType === 'towing' ? 'Car Tow' : 'Hire Driver');
-                  const busy = actingId === job.id;
-                  const canDecide = isDriver && (isOffer || job.status === 'DRIVER_ASSIGNED');
-                  const isActive = isDriver && !isOffer && ACTIVE_STATUSES.has(job.status);
-
-                  return (
-                    <GlassCard key={`${isOffer ? 'o' : 'm'}-${job.bookingType}-${job.id}`} style={styles.jobCard}>
-                      <View style={styles.jobTop}>
-                        <View style={[styles.serviceIcon, { backgroundColor: statusStyle.bg }]}>
-                          <Icon size={22} color={statusStyle.text} strokeWidth={2.2} />
-                        </View>
-                        <View style={styles.jobTopCopy}>
-                          <View style={styles.badgeRow}>
-                            <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
-                              <Text style={[styles.statusBadgeText, { color: statusStyle.text }]}>
-                                {label}
-                              </Text>
-                            </View>
-                            <Text style={styles.jobNumber}>#{job.bookingNumber}</Text>
-                          </View>
-                          {typeof job.distanceKm === 'number' ? (
-                            <View style={styles.distanceRow}>
-                              <MapPin size={13} color="#16A34A" strokeWidth={2.4} />
-                              <Text style={styles.distanceText}>
-                                {job.distanceKm.toFixed(1)} km away
-                              </Text>
-                            </View>
-                          ) : null}
-                        </View>
-                      </View>
-
-                      <View style={styles.routeBlock}>
-                        <View style={styles.routeRail}>
-                          <View style={styles.routeDot} />
-                          {job.dropoff ? (
-                            <>
-                              <View style={styles.routeLine} />
-                              <View style={[styles.routeDot, styles.routeDotEnd]} />
-                            </>
-                          ) : null}
-                        </View>
-                        <View style={styles.routeCopy}>
-                          <Text style={styles.routeText} numberOfLines={2}>
-                            {formatReadableAddress(job.pickup?.address || job.pickup?.label) ||
-                              'Pickup'}
-                          </Text>
-                          {job.dropoff ? (
-                            <Text style={[styles.routeText, { marginTop: spacing.sm }]} numberOfLines={2}>
-                              {formatReadableAddress(job.dropoff.address || job.dropoff.label) ||
-                                'Drop-off'}
-                            </Text>
-                          ) : null}
-                        </View>
-                      </View>
-
-                      <View style={styles.timeRow}>
-                        <Calendar size={13} color={colors.grey} strokeWidth={2.2} />
-                        <Text style={styles.timeText}>{formatJobTime(job.createdAt)}</Text>
-                      </View>
-
-                      <View style={styles.bottomRow}>
-                        <View>
-                          <Text style={styles.serviceLabel}>{serviceLabel}</Text>
-                          {typeof job.estimatedFare === 'number' ? (
-                            <>
-                              <Text style={styles.fare}>₹{Math.round(job.estimatedFare)}</Text>
-                              <Text style={styles.fareHint}>Estimated earnings</Text>
-                            </>
-                          ) : null}
-                        </View>
-                      </View>
-
-                      {isVendor && isOffer ? (
-                        <View style={styles.vendorActions}>
-                          <Pressable
-                            onPress={() =>
-                              navigation.navigate('VendorAssignJob', {
-                                bookingId: job.id,
-                                bookingType: job.bookingType,
-                                bookingNumber: job.bookingNumber,
-                                serviceLabel,
-                                pickupAddress: job.pickup?.address || job.pickup?.label,
-                                estimatedFare: job.estimatedFare,
-                              })
-                            }
-                            style={styles.assignBtn}>
-                            <Text style={styles.assignLabel}>Assign via fleet drivers</Text>
-                          </Pressable>
-                          <Pressable
-                            onPress={() => navigation.navigate('VendorVehicles')}
-                            style={styles.addVehicleOutline}>
-                            <Text style={styles.addVehicleOutlineLabel}>Add vehicle</Text>
-                          </Pressable>
-                        </View>
-                      ) : null}
-
-                      {canDecide ? (
-                        <View style={styles.actions}>
-                          <Pressable
-                            disabled={busy}
-                            onPress={() => void onAccept(job)}
-                            style={[styles.acceptBtn, busy && styles.disabled]}>
-                            <Text style={styles.acceptLabel}>{busy ? '…' : 'Accept'}</Text>
-                          </Pressable>
-                          <Pressable
-                            disabled={busy}
-                            onPress={() => onReject(job)}
-                            style={[styles.rejectBtn, busy && styles.disabled]}>
-                            <Text style={styles.rejectLabel}>Reject</Text>
-                          </Pressable>
-                        </View>
-                      ) : null}
-
-                      {isActive ? (
-                        <Pressable
-                          onPress={() =>
-                            navigation.navigate('PartnerActiveJob', {
-                              bookingId: job.id,
-                              bookingType: job.bookingType,
-                            })
-                          }
-                          style={styles.manageBtn}>
-                          <Text style={styles.manageLabel}>Manage active job →</Text>
-                        </Pressable>
-                      ) : null}
-                    </GlassCard>
-                  );
-                })
+                filteredCards.map(renderJobCard)
               )}
             </ScrollView>
           )}
@@ -496,7 +633,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
-    backgroundColor: colors.background,
+    backgroundColor: PAGE_BG,
     gap: spacing.md,
   },
   headerTop: {
@@ -590,8 +727,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.xxl,
     gap: spacing.md,
+    backgroundColor: PAGE_BG,
+  },
+  sectionHeading: {
+    color: colors.dark,
+    fontWeight: typography.weights.extrabold,
+    fontSize: typography.sizes.md,
+    marginBottom: spacing.xs,
+  },
+  sectionHeadingSpaced: {
+    marginTop: spacing.lg,
   },
   jobCard: { gap: spacing.md },
+  driverOfferCard: {
+    borderColor: colors.primary,
+    borderWidth: 1.5,
+    backgroundColor: colors.background,
+  },
   jobTop: {
     flexDirection: 'row',
     gap: spacing.md,
@@ -694,6 +846,11 @@ const styles = StyleSheet.create({
     color: colors.grey,
     fontSize: typography.sizes.xs,
   },
+  vehicleHint: {
+    marginTop: 2,
+    color: colors.grey,
+    fontSize: typography.sizes.xs,
+  },
   vendorActions: { gap: spacing.sm },
   assignBtn: {
     minHeight: 48,
@@ -718,6 +875,41 @@ const styles = StyleSheet.create({
   addVehicleOutlineLabel: {
     color: colors.primaryDark,
     fontWeight: typography.weights.bold,
+  },
+  awaitingDriverBanner: {
+    marginTop: spacing.sm,
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    backgroundColor: colors.goldLight,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  awaitingDriverText: {
+    color: colors.primaryDark,
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
+    textAlign: 'center',
+  },
+  vendorApprovedChip: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.goldLight,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  vendorApprovedChipText: {
+    color: colors.primaryDark,
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.bold,
+  },
+  acceptBtnFull: {
+    minHeight: 48,
+    borderRadius: radius.button,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   actions: {
     flexDirection: 'row',

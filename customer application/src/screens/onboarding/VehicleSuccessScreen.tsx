@@ -47,12 +47,22 @@ export default function VehicleSuccessScreen({ route }: Props) {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.surfaceDarker },
+  safeArea: { flex: 1, backgroundColor: colors.pageBg },
   content: { flex: 1, padding: spacing.lg, justifyContent: 'center' },
-  badge: { color: colors.secondary, fontWeight: typography.weights.bold, textTransform: 'uppercase', letterSpacing: 1 },
-  title: { color: colors.textLight, fontSize: typography.sizes.xxl, fontWeight: typography.weights.bold, marginTop: spacing.sm },
-  subtitle: { color: colors.subtext, marginTop: spacing.xs, marginBottom: spacing.lg },
+  badge: {
+    color: colors.success,
+    fontWeight: typography.weights.bold,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  title: {
+    color: colors.dark,
+    fontSize: typography.sizes.xxl,
+    fontWeight: typography.weights.extrabold,
+    marginTop: spacing.sm,
+  },
+  subtitle: { color: colors.grey, marginTop: spacing.xs, marginBottom: spacing.lg, lineHeight: 20 },
   card: { alignItems: 'center', marginBottom: spacing.lg },
   qr: { width: 220, height: 220 },
-  qrHint: { color: colors.subtext, textAlign: 'center', marginTop: spacing.md, lineHeight: 20 },
+  qrHint: { color: colors.grey, textAlign: 'center', marginTop: spacing.md, lineHeight: 20 },
 });

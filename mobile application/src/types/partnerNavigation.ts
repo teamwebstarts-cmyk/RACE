@@ -15,6 +15,8 @@ export type PartnerAuthStackParamList = {
   PartnerSplash: undefined;
   PartnerWelcome: undefined;
   PartnerRoleSelection: undefined;
+  PartnerDriverAuthMode: undefined;
+  PartnerVendorDriverLogin: undefined;
   PartnerLogin: { role?: PartnerRole } | undefined;
   PartnerOtpVerification: {
     mobileNumber: string;

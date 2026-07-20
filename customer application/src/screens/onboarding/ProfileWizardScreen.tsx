@@ -217,9 +217,9 @@ export default function ProfileWizardScreen({ navigation }: Props) {
             {currentStep === 1 ? (
               <>
                 <Text style={styles.stepTitle}>Personal Information</Text>
-                <FormField dark label="Full Name" value={form.fullName} onChangeText={(v) => updateDraft({ fullName: v })} placeholder="Your full name" />
-                <FormField dark label="Email" value={form.email} onChangeText={(v) => updateDraft({ email: v })} placeholder="you@example.com" keyboardType="email-address" autoCapitalize="none" />
-                <FormField dark label="Date of Birth" value={form.dateOfBirth} onChangeText={(v) => updateDraft({ dateOfBirth: v })} placeholder="YYYY-MM-DD" />
+                <FormField label="Full Name" value={form.fullName} onChangeText={(v) => updateDraft({ fullName: v })} placeholder="Your full name" />
+                <FormField label="Email" value={form.email} onChangeText={(v) => updateDraft({ email: v })} placeholder="you@example.com" keyboardType="email-address" autoCapitalize="none" />
+                <FormField label="Date of Birth" value={form.dateOfBirth} onChangeText={(v) => updateDraft({ dateOfBirth: v })} placeholder="YYYY-MM-DD" />
                 <Text style={styles.label}>Gender</Text>
                 <View style={styles.chipRow}>
                   {GENDERS.map((item) => (
@@ -234,19 +234,19 @@ export default function ProfileWizardScreen({ navigation }: Props) {
             {currentStep === 2 ? (
               <>
                 <Text style={styles.stepTitle}>Emergency Details</Text>
-                <FormField dark label="Emergency Contact Name" value={form.emergencyName} onChangeText={(v) => updateDraft({ emergencyContact: { ...draft.emergencyContact, name: v, mobileNumber: form.emergencyMobile } })} placeholder="Contact person" />
-                <FormField dark label="Emergency Contact Number" value={form.emergencyMobile} onChangeText={(v) => updateDraft({ emergencyContact: { name: form.emergencyName, mobileNumber: v.replace(/\D/g, '').slice(0, 10), relationship: form.emergencyRelationship } })} placeholder="10-digit mobile" keyboardType="number-pad" />
-                <FormField dark label="Relationship (optional)" value={form.emergencyRelationship} onChangeText={(v) => updateDraft({ emergencyContact: { name: form.emergencyName, mobileNumber: form.emergencyMobile, relationship: v } })} placeholder="Spouse, Parent..." />
+                <FormField label="Emergency Contact Name" value={form.emergencyName} onChangeText={(v) => updateDraft({ emergencyContact: { ...draft.emergencyContact, name: v, mobileNumber: form.emergencyMobile } })} placeholder="Contact person" />
+                <FormField label="Emergency Contact Number" value={form.emergencyMobile} onChangeText={(v) => updateDraft({ emergencyContact: { name: form.emergencyName, mobileNumber: v.replace(/\D/g, '').slice(0, 10), relationship: form.emergencyRelationship } })} placeholder="10-digit mobile" keyboardType="number-pad" />
+                <FormField label="Relationship (optional)" value={form.emergencyRelationship} onChangeText={(v) => updateDraft({ emergencyContact: { name: form.emergencyName, mobileNumber: form.emergencyMobile, relationship: v } })} placeholder="Spouse, Parent..." />
               </>
             ) : null}
 
             {currentStep === 3 ? (
               <>
                 <Text style={styles.stepTitle}>Address</Text>
-                <FormField dark label="Address" value={form.address} onChangeText={(v) => updateDraft({ address: { ...draft.address, line1: v, city: form.city, state: form.state, pincode: form.pincode, country: 'India' } })} placeholder="House no, street, area" />
-                <FormField dark label="City" value={form.city} onChangeText={(v) => updateDraft({ address: { line1: form.address, city: v, state: form.state, pincode: form.pincode, country: 'India' } })} placeholder="City" />
-                <FormField dark label="State" value={form.state} onChangeText={(v) => updateDraft({ address: { line1: form.address, city: form.city, state: v, pincode: form.pincode, country: 'India' } })} placeholder="State" />
-                <FormField dark label="Pincode" value={form.pincode} onChangeText={(v) => updateDraft({ address: { line1: form.address, city: form.city, state: form.state, pincode: v.replace(/\D/g, '').slice(0, 6), country: 'India' } })} placeholder="6-digit pincode" keyboardType="number-pad" />
+                <FormField label="Address" value={form.address} onChangeText={(v) => updateDraft({ address: { ...draft.address, line1: v, city: form.city, state: form.state, pincode: form.pincode, country: 'India' } })} placeholder="House no, street, area" />
+                <FormField label="City" value={form.city} onChangeText={(v) => updateDraft({ address: { line1: form.address, city: v, state: form.state, pincode: form.pincode, country: 'India' } })} placeholder="City" />
+                <FormField label="State" value={form.state} onChangeText={(v) => updateDraft({ address: { line1: form.address, city: form.city, state: v, pincode: form.pincode, country: 'India' } })} placeholder="State" />
+                <FormField label="Pincode" value={form.pincode} onChangeText={(v) => updateDraft({ address: { line1: form.address, city: form.city, state: form.state, pincode: v.replace(/\D/g, '').slice(0, 6), country: 'India' } })} placeholder="6-digit pincode" keyboardType="number-pad" />
               </>
             ) : null}
 
@@ -254,7 +254,7 @@ export default function ProfileWizardScreen({ navigation }: Props) {
               <>
                 <Text style={styles.stepTitle}>Profile Photo</Text>
                 <Text style={styles.hint}>Upload a clear photo for faster roadside identification. You can skip this step.</Text>
-                <FormField dark label="Photo URL (optional)" value={form.profilePhoto} onChangeText={(v) => updateDraft({ profilePhoto: v })} placeholder="https://..." autoCapitalize="none" />
+                <FormField label="Photo URL (optional)" value={form.profilePhoto} onChangeText={(v) => updateDraft({ profilePhoto: v })} placeholder="https://..." autoCapitalize="none" />
                 <PrimaryButton label="Skip Photo" onPress={goNext} variant="outline" />
               </>
             ) : null}
@@ -287,20 +287,42 @@ export default function ProfileWizardScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.surfaceDarker },
+  safeArea: { flex: 1, backgroundColor: colors.pageBg },
   flex: { flex: 1 },
   content: { padding: spacing.lg, paddingBottom: spacing.xxl },
   header: { alignItems: 'center', marginBottom: spacing.lg },
-  title: { marginTop: spacing.md, color: colors.textLight, fontSize: typography.sizes.xxl, fontWeight: typography.weights.bold },
-  subtitle: { marginTop: spacing.sm, color: colors.subtext, textAlign: 'center' },
-  stepTitle: { color: colors.textLight, fontSize: typography.sizes.xl, fontWeight: typography.weights.bold, marginBottom: spacing.md },
-  label: { color: colors.subtext, fontSize: typography.sizes.sm, fontWeight: typography.weights.semibold, marginBottom: spacing.xs },
-  hint: { color: colors.subtext, lineHeight: 20, marginBottom: spacing.md },
+  title: {
+    marginTop: spacing.md,
+    color: colors.dark,
+    fontSize: typography.sizes.xxl,
+    fontWeight: typography.weights.extrabold,
+  },
+  subtitle: { marginTop: spacing.sm, color: colors.grey, textAlign: 'center', lineHeight: 20 },
+  stepTitle: {
+    color: colors.dark,
+    fontSize: typography.sizes.xl,
+    fontWeight: typography.weights.bold,
+    marginBottom: spacing.md,
+  },
+  label: {
+    color: colors.grey,
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
+    marginBottom: spacing.xs,
+  },
+  hint: { color: colors.grey, lineHeight: 20, marginBottom: spacing.md },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.md },
-  chip: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.pill, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.glass.border },
+  chip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.pill,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
   chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  chipText: { color: colors.subtext, textTransform: 'capitalize' },
-  chipTextActive: { color: colors.textLight, fontWeight: typography.weights.bold },
+  chipText: { color: colors.grey, textTransform: 'capitalize' },
+  chipTextActive: { color: colors.dark, fontWeight: typography.weights.bold },
   completeWrap: { alignItems: 'center', paddingVertical: spacing.lg },
-  completeEmoji: { fontSize: 48, color: colors.secondary, marginBottom: spacing.md },
+  completeEmoji: { fontSize: 48, color: colors.success, marginBottom: spacing.md },
 });

@@ -135,7 +135,13 @@ export class DriverBookingService {
     status?: UnifiedBookingStatus,
   ): Promise<DriverBookingResponseDto[]> {
     const bookings = await driverBookingRepository.findByCustomer(customerId, { status });
-    return Promise.all(bookings.map(mapDriverBookingWithDriver));
+    return Promise.all(
+      bookings.map(async (booking) => {
+        const mapped = await mapDriverBookingWithDriver(booking);
+        mapped.tripStartOtp = customerTripOtp(booking);
+        return mapped;
+      }),
+    );
   }
 
   async getBookingById(

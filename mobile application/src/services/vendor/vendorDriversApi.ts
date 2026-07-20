@@ -3,7 +3,10 @@ import { API_ENDPOINTS } from '../../config/api';
 import type { ApiSuccessResponse } from '../../types/auth';
 import { store } from '../../redux/store';
 
-export type FleetDriver = {
+/** @deprecated Prefer VendorDriver */
+export type FleetDriver = VendorDriver;
+
+export type VendorDriver = {
   id: string;
   name: string;
   phone: string;
@@ -17,9 +20,14 @@ export type FleetDriver = {
   isBusy: boolean;
   rating: number;
   vendorId: string;
+  loginId?: string;
+  hasPasswordLogin?: boolean;
 };
 
-export type CreateFleetDriverInput = {
+/** @deprecated Prefer CreateVendorDriverInput */
+export type CreateFleetDriverInput = CreateVendorDriverInput;
+
+export type CreateVendorDriverInput = {
   name: string;
   phone: string;
   licenseNo: string;
@@ -27,23 +35,25 @@ export type CreateFleetDriverInput = {
   city?: string;
   vehicleRegistration?: string;
   email?: string;
+  loginId: string;
+  password: string;
 };
 
-export async function listVendorDrivers(): Promise<FleetDriver[]> {
-  const { data } = await api.get<ApiSuccessResponse<FleetDriver[]>>(API_ENDPOINTS.vendorDrivers);
+export async function listVendorDrivers(): Promise<VendorDriver[]> {
+  const { data } = await api.get<ApiSuccessResponse<VendorDriver[]>>(API_ENDPOINTS.vendorDrivers);
   return data.data ?? [];
 }
 
-export async function createVendorDriver(payload: CreateFleetDriverInput): Promise<FleetDriver> {
-  const { data } = await api.post<ApiSuccessResponse<FleetDriver>>(
+export async function createVendorDriver(payload: CreateVendorDriverInput): Promise<VendorDriver> {
+  const { data } = await api.post<ApiSuccessResponse<VendorDriver>>(
     API_ENDPOINTS.vendorDrivers,
     payload,
   );
   return data.data;
 }
 
-export async function claimVendorDriver(phone: string): Promise<FleetDriver> {
-  const { data } = await api.post<ApiSuccessResponse<FleetDriver>>(API_ENDPOINTS.vendorDriverClaim, {
+export async function claimVendorDriver(phone: string): Promise<VendorDriver> {
+  const { data } = await api.post<ApiSuccessResponse<VendorDriver>>(API_ENDPOINTS.vendorDriverClaim, {
     phone,
   });
   return data.data;
@@ -57,7 +67,7 @@ export async function uploadVendorDriverDocument(
   driverId: string,
   documentType: string,
   file: { uri: string; name: string; mimeType: string },
-): Promise<FleetDriver> {
+): Promise<VendorDriver> {
   const formData = new FormData();
   formData.append('documentType', documentType);
   formData.append('file', {
@@ -67,7 +77,7 @@ export async function uploadVendorDriverDocument(
   } as unknown as Blob);
 
   const token = store.getState().auth.accessToken;
-  const { data } = await api.post<ApiSuccessResponse<FleetDriver>>(
+  const { data } = await api.post<ApiSuccessResponse<VendorDriver>>(
     API_ENDPOINTS.vendorDriverUploadDocument(driverId),
     formData,
     {

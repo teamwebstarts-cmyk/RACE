@@ -20,10 +20,9 @@ export default function TowingDriverOnWayScreen({ navigation, route }: Props) {
   const trackParams = route.params;
   const bookingId = route.params?.bookingId;
   const booking = useBookingQuery(bookingId ?? '');
-  const { etaLabel, etaMinutes, driverName, driverPhone, driverRating } = useBookingTracking(
-    bookingId,
-    'towing',
-  );
+  const { etaLabel, etaMinutes, driverName, driverPhone, driverRating, tripStartOtp: trackedOtp } =
+    useBookingTracking(bookingId, 'towing');
+  const tripOtp = booking?.tripStartOtp ?? trackedOtp;
 
   const name = driverName ?? booking?.driver?.name ?? 'Assigning driver';
   const rating = booking?.driver?.rating ?? driverRating;
@@ -106,9 +105,9 @@ export default function TowingDriverOnWayScreen({ navigation, route }: Props) {
             {hasDriver ? `Arriving in ${etaMinutes} min` : `ETA: ${etaLabel}`}
           </Text>
 
-          {booking?.tripStartOtp ? (
+          {tripOtp ? (
             <View style={{ marginTop: t.px(16) }}>
-              <TripOtpCard otp={booking.tripStartOtp} />
+              <TripOtpCard otp={tripOtp} />
             </View>
           ) : null}
 
