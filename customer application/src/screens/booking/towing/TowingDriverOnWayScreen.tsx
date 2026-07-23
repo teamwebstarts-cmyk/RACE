@@ -3,7 +3,7 @@ import { ActivityIndicator, Linking, Pressable, Text, View } from 'react-native'
 import { MessageCircle, Phone, Star } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-import MapPlaceholder from '../../../components/booking/MapPlaceholder';
+import LiveTripMap from '../../../components/booking/LiveTripMap';
 import TripOtpCard from '../../../components/booking/TripOtpCard';
 import DriverAvatar from '../../../components/bookings/DriverAvatar';
 import TowingBookingLayout, { useBookingTheme } from '../../../components/booking/TowingBookingLayout';
@@ -11,6 +11,7 @@ import { useBookingTracking } from '../../../hooks/useBookingTracking';
 import { useBookingQuery } from '../../../services/bookings/useBookingQueries';
 import { brand } from '../../../theme/brand';
 import type { HomeStackParamList } from '../../../types/navigation';
+import { formatLocationDisplay } from '../../../utils/readableAddress';
 import { colors, shadows, typography } from '../../../theme';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'TowingDriverOnWay'>;
@@ -20,8 +21,15 @@ export default function TowingDriverOnWayScreen({ navigation, route }: Props) {
   const trackParams = route.params;
   const bookingId = route.params?.bookingId;
   const booking = useBookingQuery(bookingId ?? '');
-  const { etaLabel, etaMinutes, driverName, driverPhone, driverRating, tripStartOtp: trackedOtp } =
-    useBookingTracking(bookingId, 'towing');
+  const {
+    etaLabel,
+    etaMinutes,
+    driverName,
+    driverPhone,
+    driverRating,
+    driverLocation,
+    tripStartOtp: trackedOtp,
+  } = useBookingTracking(bookingId, 'towing');
   const tripOtp = booking?.tripStartOtp ?? trackedOtp;
 
   const name = driverName ?? booking?.driver?.name ?? 'Assigning driver';
@@ -48,8 +56,38 @@ export default function TowingDriverOnWayScreen({ navigation, route }: Props) {
       buttonLabel="Continue"
       onContinue={() => navigation.navigate('TowingCompleted', trackParams)}>
       <View style={{ flex: 1 }}>
-        <View style={{ flex: 1, marginBottom: t.px(14) }}>
-          <MapPlaceholder px={t.px} variant="driver" />
+        <View style={{ flex: 1, marginBottom: t.px(14), minHeight: t.px(200) }}>
+          <LiveTripMap
+            borderRadius={t.px(16)}
+            style={{ flex: 1 }}
+            pickup={
+              booking?.pickup?.latitude != null && booking?.pickup?.longitude != null
+                ? {
+                    latitude: booking.pickup.latitude,
+                    longitude: booking.pickup.longitude,
+                    label: formatLocationDisplay(booking.pickup),
+                  }
+                : null
+            }
+            dropoff={
+              booking?.dropoff?.latitude != null && booking?.dropoff?.longitude != null
+                ? {
+                    latitude: booking.dropoff.latitude,
+                    longitude: booking.dropoff.longitude,
+                    label: formatLocationDisplay(booking.dropoff),
+                  }
+                : null
+            }
+            driver={
+              driverLocation
+                ? {
+                    latitude: driverLocation.latitude,
+                    longitude: driverLocation.longitude,
+                    label: name,
+                  }
+                : null
+            }
+          />
         </View>
 
         <View

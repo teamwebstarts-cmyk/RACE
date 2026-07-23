@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 
+import LiveTripMap from '../../components/booking/LiveTripMap';
 import PrimaryButton from '../../components/ui/PrimaryButton';
 import Screen, { Card, ScreenContent } from '../../components/ui/Screen';
 import { useAppDispatch } from '../../redux/hooks';
@@ -21,12 +22,21 @@ export default function LiveTrackingScreen({ navigation, route }: Props) {
   const dispatch = useAppDispatch();
   const booking = useBookingQuery(route.params.bookingId);
   const [eta, setEta] = useState(booking?.etaMinutes ?? 25);
+  const [driverLocation, setDriverLocation] = useState<
+    { latitude: number; longitude: number } | undefined
+  >();
 
   useEffect(() => {
     if (!booking) return;
     trackingService.connect();
-    const unsubscribe = trackingService.subscribe(booking.id, (update) => {
+    const unsubscribe = trackingService.subscribe(booking.id, update => {
       setEta(update.etaMinutes);
+      if (update.driverLocation) {
+        setDriverLocation({
+          latitude: update.driverLocation.latitude,
+          longitude: update.driverLocation.longitude,
+        });
+      }
       dispatch(
         updateBookingStatus({
           id: booking.id,
@@ -54,21 +64,41 @@ export default function LiveTrackingScreen({ navigation, route }: Props) {
     <Screen>
       <SafeAreaView style={styles.safe}>
         <View style={styles.map}>
+          <LiveTripMap
+            borderRadius={0}
+            style={StyleSheet.absoluteFill}
+            pickup={
+              booking.pickup?.latitude != null && booking.pickup?.longitude != null
+                ? {
+                    latitude: booking.pickup.latitude,
+                    longitude: booking.pickup.longitude,
+                    label: formatLocationDisplay(booking.pickup),
+                  }
+                : null
+            }
+            dropoff={
+              booking.dropoff?.latitude != null && booking.dropoff?.longitude != null
+                ? {
+                    latitude: booking.dropoff.latitude,
+                    longitude: booking.dropoff.longitude,
+                    label: formatLocationDisplay(booking.dropoff),
+                  }
+                : null
+            }
+            driver={
+              driverLocation
+                ? {
+                    ...driverLocation,
+                    label: booking.driver?.name || 'Partner',
+                  }
+                : null
+            }
+          />
           <View style={styles.mapOverlay}>
             <Text style={styles.mapTitle}>Live Tracking</Text>
-            <Text style={styles.mapSub}>#{booking.bookingNumber} · {booking.serviceLabel}</Text>
-          </View>
-          <View style={styles.routeLine} />
-          <View style={[styles.marker, styles.pickup]}>
-            <Text style={styles.markerLabel}>{formatLocationDisplay(booking.pickup)}</Text>
-          </View>
-          {booking.dropoff ? (
-            <View style={[styles.marker, styles.drop]}>
-              <Text style={styles.markerLabel}>{formatLocationDisplay(booking.dropoff)}</Text>
-            </View>
-          ) : null}
-          <View style={styles.truckMarker}>
-            <Ionicons name="car" size={28} color={colors.textDark} />
+            <Text style={styles.mapSub}>
+              #{booking.bookingNumber} · {booking.serviceLabel}
+            </Text>
           </View>
           <View style={styles.etaBubble}>
             <Text style={styles.etaText}>{eta} min away</Text>
@@ -100,7 +130,9 @@ export default function LiveTrackingScreen({ navigation, route }: Props) {
             <View style={styles.tripRow}>
               <Text style={styles.tripPoint}>{formatLocationDisplay(booking.pickup)}</Text>
               <Ionicons name="arrow-forward" size={16} color={colors.textMuted} />
-              <Text style={styles.tripPoint}>{booking.dropoff ? formatLocationDisplay(booking.dropoff) : 'On-site'}</Text>
+              <Text style={styles.tripPoint}>
+                {booking.dropoff ? formatLocationDisplay(booking.dropoff) : 'On-site'}
+              </Text>
             </View>
 
             <View style={styles.actions}>
@@ -119,10 +151,12 @@ export default function LiveTrackingScreen({ navigation, route }: Props) {
             {booking.status === 'SERVICE_COMPLETED' || booking.status === 'PAID' ? (
               <PrimaryButton
                 label="Rate Experience"
-                onPress={() => navigation.navigate('RatingReview', {
-                  bookingId: booking.id,
-                  bookingType: booking.bookingType,
-                })}
+                onPress={() =>
+                  navigation.navigate('RatingReview', {
+                    bookingId: booking.id,
+                    bookingType: booking.bookingType,
+                  })
+                }
               />
             ) : null}
           </ScreenContent>
@@ -146,83 +180,77 @@ const styles = StyleSheet.create({
     top: spacing.lg,
     left: spacing.lg,
     zIndex: 2,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    borderRadius: 12,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
   },
-  mapTitle: { fontWeight: typography.weights.bold, fontSize: typography.sizes.lg, color: colors.textDark },
-  mapSub: { color: colors.textMuted, fontSize: typography.sizes.sm },
-  routeLine: {
-    position: 'absolute',
-    top: '40%',
-    left: '20%',
-    right: '20%',
-    height: 3,
-    backgroundColor: colors.primary,
-    borderRadius: 2,
-    transform: [{ rotate: '-8deg' }],
+  mapTitle: {
+    color: colors.textDark,
+    fontWeight: typography.weights.bold,
+    fontSize: typography.sizes.md,
   },
-  marker: {
-    position: 'absolute',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: 8,
-  },
-  pickup: { top: '30%', left: '15%', backgroundColor: colors.success },
-  drop: { top: '55%', right: '15%', backgroundColor: colors.accentRed },
-  markerLabel: { color: colors.textLight, fontSize: typography.sizes.xs, fontWeight: typography.weights.bold },
-  truckMarker: {
-    position: 'absolute',
-    top: '42%',
-    left: '45%',
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
+  mapSub: {
+    color: colors.textMuted,
+    marginTop: 2,
+    fontSize: typography.sizes.sm,
   },
   etaBubble: {
     position: 'absolute',
-    top: '35%',
-    left: '40%',
-    backgroundColor: colors.background,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: 8,
+    bottom: spacing.lg,
+    alignSelf: 'center',
+    left: '30%',
+    right: '30%',
+    backgroundColor: colors.primary,
+    borderRadius: 20,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+    zIndex: 2,
   },
-  etaText: { fontWeight: typography.weights.bold, color: colors.textDark, fontSize: typography.sizes.sm },
-  sheet: {
-    flex: 1,
-    backgroundColor: colors.background,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    marginTop: -20,
+  etaText: {
+    color: colors.dark,
+    fontWeight: typography.weights.bold,
   },
+  sheet: { flex: 1, backgroundColor: colors.background },
   sheetHandle: {
     width: 40,
     height: 4,
-    backgroundColor: colors.border,
     borderRadius: 2,
+    backgroundColor: colors.border,
     alignSelf: 'center',
-    marginBottom: spacing.lg,
+    marginVertical: spacing.md,
   },
   etaLarge: {
     fontSize: typography.sizes.xxl,
     fontWeight: typography.weights.extrabold,
     color: colors.textDark,
-    textAlign: 'center',
   },
-  liveBadge: { textAlign: 'center', color: colors.success, marginBottom: spacing.lg },
-  driverCard: { marginBottom: spacing.md },
-  driverRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  driverName: { fontSize: typography.sizes.lg, fontWeight: typography.weights.bold, color: colors.textDark },
-  driverMeta: { color: colors.primary, marginTop: spacing.xs },
-  driverExp: { color: colors.textMuted, fontSize: typography.sizes.sm },
+  liveBadge: {
+    color: colors.success,
+    marginTop: spacing.xs,
+    marginBottom: spacing.lg,
+    fontWeight: typography.weights.semibold,
+  },
+  driverCard: { marginBottom: spacing.lg },
+  driverRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  driverName: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
+    color: colors.textDark,
+  },
+  driverMeta: { color: colors.textMuted, marginTop: 2 },
+  driverExp: { color: colors.textMuted, marginTop: 2 },
   tripRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.md,
+    gap: spacing.sm,
     marginBottom: spacing.lg,
   },
-  tripPoint: { fontWeight: typography.weights.semibold, color: colors.textDark },
-  actions: { gap: spacing.md, marginBottom: spacing.md },
+  tripPoint: { flex: 1, color: colors.textDark, fontWeight: typography.weights.semibold },
+  actions: { gap: spacing.sm, marginBottom: spacing.lg },
 });

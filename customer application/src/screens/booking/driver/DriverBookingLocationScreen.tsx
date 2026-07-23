@@ -146,11 +146,6 @@ export default function DriverBookingLocationScreen({ navigation }: Props) {
                 numberOfLines={2}>
                 {hasPickup ? pickupLabel || formatLocationDisplay(pickup) : PLACEHOLDER}
               </Text>
-              {hasPickup && pickupLat && pickupLng ? (
-                <Text style={{ marginTop: t.px(4), fontSize: t.caption, color: colors.grey }}>
-                  {pickupLat.toFixed(5)}, {pickupLng.toFixed(5)}
-                </Text>
-              ) : null}
             </View>
             <ChevronRight size={t.iconSm} color={colors.grey} />
           </View>

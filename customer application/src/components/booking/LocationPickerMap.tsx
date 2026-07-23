@@ -158,7 +158,7 @@ export default function LocationPickerMap({
   const handleConfirm = useCallback(() => {
     const region = regionRef.current;
     onLocationSelected({
-      address: address || `Lat: ${region.latitude.toFixed(5)}, Lng: ${region.longitude.toFixed(5)}`,
+      address: address || 'Selected location',
       latitude: region.latitude,
       longitude: region.longitude,
     });

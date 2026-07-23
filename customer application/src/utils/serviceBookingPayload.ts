@@ -37,7 +37,7 @@ export function buildTowingBookingRequest(
   vehicles: Vehicle[],
 ): CreateTowingBookingRequest {
   const vehicleId = resolveBookingVehicleId(
-    booking.serviceLocation?.vehicleId,
+    booking.vehicleId || booking.serviceLocation?.vehicleId,
     vehicles,
   );
 

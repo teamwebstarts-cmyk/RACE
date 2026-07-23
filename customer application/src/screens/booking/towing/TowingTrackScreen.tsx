@@ -3,7 +3,7 @@ import { ActivityIndicator, Text, View } from 'react-native';
 import { Clock, MapPin, Navigation, Radio } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-import MapPlaceholder from '../../../components/booking/MapPlaceholder';
+import LiveTripMap from '../../../components/booking/LiveTripMap';
 import DriverAvatar from '../../../components/bookings/DriverAvatar';
 import TripOtpCard from '../../../components/booking/TripOtpCard';
 import TowingBookingLayout, { useBookingTheme } from '../../../components/booking/TowingBookingLayout';
@@ -127,8 +127,38 @@ export default function TowingTrackScreen({ navigation, route }: Props) {
           </Text>
         </View>
 
-        <View style={{ flex: 1, marginBottom: t.px(12) }}>
-          <MapPlaceholder px={t.px} variant="route" />
+        <View style={{ flex: 1, marginBottom: t.px(12), minHeight: t.px(200) }}>
+          <LiveTripMap
+            borderRadius={t.px(16)}
+            style={{ flex: 1 }}
+            pickup={
+              booking?.pickup?.latitude != null && booking?.pickup?.longitude != null
+                ? {
+                    latitude: booking.pickup.latitude,
+                    longitude: booking.pickup.longitude,
+                    label: formatLocationDisplay(booking.pickup),
+                  }
+                : null
+            }
+            dropoff={
+              booking?.dropoff?.latitude != null && booking?.dropoff?.longitude != null
+                ? {
+                    latitude: booking.dropoff.latitude,
+                    longitude: booking.dropoff.longitude,
+                    label: formatLocationDisplay(booking.dropoff),
+                  }
+                : null
+            }
+            driver={
+              driverLocation
+                ? {
+                    latitude: driverLocation.latitude,
+                    longitude: driverLocation.longitude,
+                    label: displayDriverName,
+                  }
+                : null
+            }
+          />
         </View>
 
         <View
@@ -232,11 +262,11 @@ export default function TowingTrackScreen({ navigation, route }: Props) {
                 Towing · {formatLocationDisplay(booking?.pickup) || 'Pickup en route'}
               </Text>
             </View>
-            {!!driverLocation && (
-              <Text style={{ fontSize: t.caption, color: colors.grey }}>
-                Live: {driverLocation.latitude.toFixed(4)}, {driverLocation.longitude.toFixed(4)}
+            {driverLocation ? (
+              <Text style={{ fontSize: t.caption, color: colors.success, marginTop: t.px(2) }}>
+                Partner location updating live
               </Text>
-            )}
+            ) : null}
           </View>
         </View>
 

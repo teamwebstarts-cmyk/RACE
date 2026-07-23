@@ -200,7 +200,7 @@ export default function TowingReviewScreen({ navigation }: Props) {
           <SummaryRow
             Icon={Car}
             label="Vehicle"
-            value={getVehicleLabel(booking.vehicleType)}
+            value={booking.vehicleLabel || getVehicleLabel(booking.vehicleType)}
             t={t}
           />
           <SummaryRow

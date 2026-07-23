@@ -134,7 +134,7 @@ export default function DriverReviewScreen({ navigation }: Props) {
 
   const totalPrice = fareBreakdown?.totalFare ?? localPricing.totalPrice;
   const advancePayment = fareBreakdown?.advanceAmount ?? localPricing.advancePayment;
-  const canContinue = Boolean(booking.vehicleCategory) && !isLoadingFare && totalPrice > 0;
+  const canContinue = Boolean(booking.vehicleId && booking.vehicleCategory) && !isLoadingFare && totalPrice > 0;
 
   const handleContinue = () => {
     if (!booking.vehicleCategory || !totalPrice) return;

@@ -234,14 +234,6 @@ export class TowingBookingService {
           driverName: driverUser.fullName ?? driver?.name,
           driverPhone: driverUser.mobileNumber ?? driver?.phone,
         };
-      } else if (driver) {
-        // Assigned but no live GPS yet — still expose name/phone for the app
-        driverLocation = {
-          latitude: booking.pickup.latitude,
-          longitude: booking.pickup.longitude,
-          driverName: driver.name,
-          driverPhone: driver.phone,
-        };
       }
     }
 

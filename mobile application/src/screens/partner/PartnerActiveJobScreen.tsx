@@ -16,6 +16,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import GlassCard from '../../components/ui/GlassCard';
 import PrimaryButton from '../../components/ui/PrimaryButton';
 import AppScreenLayout from '../../components/ui/AppScreenLayout';
+import LiveTripMap from '../../components/booking/LiveTripMap';
 import { useDriverLocationReporting } from '../../hooks/useDriverLocationReporting';
 import {
   useDriverActiveJobQuery,
@@ -164,11 +165,35 @@ export default function PartnerActiveJobScreen({ navigation, route }: Props) {
           </Text>
         </View>
 
+        <LiveTripMap
+          borderRadius={radius.lg}
+          style={styles.map}
+          showsUserLocation
+          pickup={
+            job.pickup?.latitude != null && job.pickup?.longitude != null
+              ? {
+                  latitude: job.pickup.latitude,
+                  longitude: job.pickup.longitude,
+                  label: pickup || 'Pickup',
+                }
+              : null
+          }
+          dropoff={
+            job.dropoff?.latitude != null && job.dropoff?.longitude != null
+              ? {
+                  latitude: job.dropoff.latitude,
+                  longitude: job.dropoff.longitude,
+                  label: dropoff || 'Drop-off',
+                }
+              : null
+          }
+        />
+
         <View style={styles.locationRow}>
           <MapPin size={18} color={colors.primary} />
           <View style={{ flex: 1 }}>
             <Text style={styles.locationLabel}>Pickup</Text>
-            <Text style={styles.locationValue}>{pickup}</Text>
+            <Text style={styles.locationValue}>{pickup || 'Pickup location'}</Text>
           </View>
         </View>
 
@@ -258,6 +283,7 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.sm,
   },
   card: { gap: spacing.md, marginBottom: spacing.lg },
+  map: { height: 220, width: '100%' },
   typeRow: {
     flexDirection: 'row',
     alignItems: 'center',

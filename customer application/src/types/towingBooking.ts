@@ -18,6 +18,9 @@ export interface ServiceLocationData {
 export interface TowingBookingState {
   serviceMode: TowingServiceModeId;
   vehicleType: TowingVehicleTypeId;
+  /** Customer's registered vehicle selected for this booking */
+  vehicleId?: string;
+  vehicleLabel?: string;
   pickup: string;
   pickupLabel?: string;
   pickupLat?: number;

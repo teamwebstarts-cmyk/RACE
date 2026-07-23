@@ -241,13 +241,6 @@ export class DriverBookingService {
           driverName: driverUser.fullName ?? driver?.name,
           driverPhone: driverUser.mobileNumber ?? driver?.phone,
         };
-      } else if (driver) {
-        driverLocation = {
-          latitude: booking.pickup.latitude,
-          longitude: booking.pickup.longitude,
-          driverName: driver.name,
-          driverPhone: driver.phone,
-        };
       }
     }
 
