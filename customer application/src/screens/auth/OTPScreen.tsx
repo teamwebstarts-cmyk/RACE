@@ -13,6 +13,7 @@ import { Info, MessageCircle, Pencil, ShieldCheck } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import AuthFormLayout from '../../components/auth/AuthFormLayout';
+import AuthToast from '../../components/auth/AuthToast';
 import { useAuthActions } from '../../hooks/useAuth';
 import { sendOtp } from '../../services/authService';
 import { getApiErrorMessage } from '../../services/api';
@@ -29,7 +30,7 @@ const REF_W = 390;
 type Props = NativeStackScreenProps<AuthStackParamList, 'OTP'>;
 
 export default function OTPScreen({ navigation, route }: Props) {
-  const { phone, isExistingUser } = route.params;
+  const { phone, isExistingUser, devOtp, otpMessage } = route.params;
   const { verifyOtp: verifyOtpAction, error: authError, isLoading, clearError } = useAuthActions();
   const { width } = useWindowDimensions();
   const px = (n: number) => Math.max(1, Math.round(n * (width / REF_W)));
@@ -38,13 +39,36 @@ export default function OTPScreen({ navigation, route }: Props) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [timer, setTimer] = useState(60);
   const [error, setError] = useState('');
+  const [backendOtpToast, setBackendOtpToast] = useState('');
   const [isResending, setIsResending] = useState(false);
   const inputRefs = useRef<Array<TextInput | null>>([]);
   const isVerifyingRef = useRef(false);
+  const lastVerifiedOtpRef = useRef<string | null>(null);
+  const otpToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
 
   const otpValue = digits.join('');
   const mobileNumber = getPhoneDigits(phone);
   const destinationLabel = maskMobile(phone);
+
+  const extractOtpFromMessage = (message?: string): string | null => {
+    if (!message) return null;
+    const match = message.match(/\b(\d{6})\b/);
+    return match?.[1] ?? null;
+  };
+
+  const showBackendOtpToast = (otp: string) => {
+    setBackendOtpToast(`OTP: ${otp}`);
+    if (otpToastTimerRef.current) clearTimeout(otpToastTimerRef.current);
+    otpToastTimerRef.current = setTimeout(() => setBackendOtpToast(''), 8000);
+  };
+
+  useEffect(() => {
+    const otp = devOtp ?? extractOtpFromMessage(otpMessage);
+    if (!otp) return;
+    showBackendOtpToast(otp);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [devOtp, otpMessage]);
 
   const verifyOtp = useCallback(
     async (value: string) => {
@@ -53,6 +77,8 @@ export default function OTPScreen({ navigation, route }: Props) {
         setError('Please enter the 6-digit OTP');
         return;
       }
+      if (isAuthenticated) return;
+      if (lastVerifiedOtpRef.current === code) return;
       if (isVerifyingRef.current) return;
 
       isVerifyingRef.current = true;
@@ -63,11 +89,13 @@ export default function OTPScreen({ navigation, route }: Props) {
           mobileNumber,
           otp: code,
         });
+        lastVerifiedOtpRef.current = code;
         if (useAuthStore.getState().onboardingRequired) {
           const step = useAuthStore.getState().customerOnboardingStep;
           navigation.navigate(getCustomerOnboardingRouteFromStep(step));
         }
       } catch (err) {
+        lastVerifiedOtpRef.current = null;
         if (isRoleMismatchError(err)) {
           setError(
             getRoleMismatchMessage(
@@ -78,11 +106,14 @@ export default function OTPScreen({ navigation, route }: Props) {
         } else {
           setError(getApiErrorMessage(err, 'Invalid OTP. Please try again'));
         }
+        setDigits(['', '', '', '', '', '']);
+        setActiveIndex(0);
+        inputRefs.current[0]?.focus();
       } finally {
         isVerifyingRef.current = false;
       }
     },
-    [clearError, mobileNumber, navigation, verifyOtpAction],
+    [clearError, isAuthenticated, mobileNumber, navigation, verifyOtpAction],
   );
 
   const applyOtpValue = useCallback(
@@ -164,7 +195,10 @@ export default function OTPScreen({ navigation, route }: Props) {
     setError('');
     clearError();
     try {
-      await sendOtp({ mobileNumber });
+      lastVerifiedOtpRef.current = null;
+      const result = await sendOtp({ mobileNumber });
+      const nextOtp = result.devOtp ?? extractOtpFromMessage(result.message);
+      if (nextOtp) showBackendOtpToast(nextOtp);
       setTimer(60);
       setDigits(['', '', '', '', '', '']);
       setActiveIndex(0);
@@ -254,6 +288,7 @@ export default function OTPScreen({ navigation, route }: Props) {
           })}
         </View>
 
+        <AuthToast message={backendOtpToast} type="success" />
         {error || authError ? (
           <Text style={[styles.errorText, { fontSize: px(13), marginBottom: px(12) }]}>
             {error || authError}

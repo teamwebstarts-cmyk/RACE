@@ -22,7 +22,7 @@ export class OtpService {
     }
   }
 
-  async sendOtp(mobileNumber: string): Promise<{ message: string; expiresIn: number }> {
+  async sendOtp(mobileNumber: string): Promise<{ message: string; expiresIn: number; devOtp?: string }> {
     await this.assertResendAllowed(mobileNumber);
     await authRepository.invalidatePendingOtps(mobileNumber);
 
@@ -45,6 +45,9 @@ export class OtpService {
     return {
       message: 'OTP sent to your mobile number',
       expiresIn: env.OTP_EXPIRY_SECONDS,
+      // In non-production environments (or when Twilio is not configured), include
+      // the OTP in the response so the mobile/web UI can show it as a toast.
+      ...(env.NODE_ENV !== 'production' ? { devOtp: mobileOtp } : {}),
     };
   }
 

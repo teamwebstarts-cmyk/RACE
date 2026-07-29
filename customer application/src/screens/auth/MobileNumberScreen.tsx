@@ -95,6 +95,8 @@ export default function MobileNumberScreen({ navigation }: Props) {
       navigation.navigate('OtpVerification', {
         mobileNumber,
         isExistingUser: result.isExistingUser ?? false,
+        devOtp: result.devOtp,
+        otpMessage: result.message,
       });
     } catch (err) {
       if (isRoleMismatchError(err)) {

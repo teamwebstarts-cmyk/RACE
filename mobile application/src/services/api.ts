@@ -46,7 +46,10 @@ export async function clearTokens(): Promise<void> {
 
 api.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
   const token = await getAccessToken();
-  if (token && config.headers) {
+  if (token) {
+    // Some axios request configs may not have `headers` initialized; ensure the
+    // Authorization header is always attached.
+    config.headers = config.headers ?? {};
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
@@ -75,9 +78,10 @@ api.interceptors.response.use(
             reject(error);
             return;
           }
-          if (originalRequest.headers) {
-            originalRequest.headers.Authorization = `Bearer ${token}`;
+          if (!originalRequest.headers) {
+            originalRequest.headers = {};
           }
+          originalRequest.headers.Authorization = `Bearer ${token}`;
           resolve(api(originalRequest));
         });
       });
@@ -95,9 +99,10 @@ api.interceptors.response.use(
       await saveTokens(accessToken, newRefreshToken);
       processQueue(accessToken);
 
-      if (originalRequest.headers) {
-        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+      if (!originalRequest.headers) {
+        originalRequest.headers = {};
       }
+      originalRequest.headers.Authorization = `Bearer ${accessToken}`;
       return api(originalRequest);
     } catch (refreshError) {
       processQueue(null);

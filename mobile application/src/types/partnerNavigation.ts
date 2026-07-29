@@ -21,6 +21,8 @@ export type PartnerAuthStackParamList = {
   PartnerOtpVerification: {
     mobileNumber: string;
     isExistingUser?: boolean;
+    devOtp?: string;
+    otpMessage?: string;
   };
 };
 

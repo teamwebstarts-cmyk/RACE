@@ -96,10 +96,17 @@ export type AuthStackParamList = {
   AccountType: undefined;
   SignupVendorType: { accountType?: 'customer' | 'vendor' } | undefined;
   MobileNumber: undefined;
-  OtpVerification: { mobileNumber: string; isExistingUser: boolean };
+  OtpVerification: {
+    mobileNumber: string;
+    isExistingUser: boolean;
+    devOtp?: string;
+    otpMessage?: string;
+  };
   OTP: {
     phone: string;
     isExistingUser: boolean;
+    devOtp?: string;
+    otpMessage?: string;
   };
   ForgotPassword: undefined;
   ResetPassword: { phone: string };

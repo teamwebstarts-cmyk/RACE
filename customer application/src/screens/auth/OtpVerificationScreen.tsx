@@ -46,7 +46,7 @@ function formatTimer(seconds: number): string {
 
 export default function OtpVerificationScreen({ navigation, route }: Props) {
   const dispatch = useAppDispatch();
-  const { mobileNumber, isExistingUser = false } = route.params;
+  const { mobileNumber, isExistingUser = false, devOtp, otpMessage } = route.params;
   const loading = useAppSelector(state => state.auth.loading);
   const partnerSignupRequired = useAppSelector(state => state.onboarding.partnerSignupRequired);
   const signupVendorType = useAppSelector(state => state.onboarding.signupVendorType);
@@ -61,8 +61,22 @@ export default function OtpVerificationScreen({ navigation, route }: Props) {
   const [success, setSuccess] = useState('');
   const [secondsLeft, setSecondsLeft] = useState(RESEND_SECONDS);
   const [verified, setVerified] = useState(false);
+  const [backendOtpToast, setBackendOtpToast] = useState('');
   const [activeOtpIndex, setActiveOtpIndex] = useState(0);
   const verifyLockRef = useRef(false);
+  const backendOtpTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const extractOtpFromMessage = (message?: string): string | null => {
+    if (!message) return null;
+    const match = message.match(/\b(\d{6})\b/);
+    return match?.[1] ?? null;
+  };
+
+  const showBackendOtpToast = (otp: string) => {
+    setBackendOtpToast(`OTP: ${otp}`);
+    if (backendOtpTimerRef.current) clearTimeout(backendOtpTimerRef.current);
+    backendOtpTimerRef.current = setTimeout(() => setBackendOtpToast(''), 8000);
+  };
 
   const otpDigits = Array.from({ length: 6 }, (_, i) => otp[i] ?? '');
   const verifyOtpMutation = useVerifyOtpMutation();
@@ -73,6 +87,13 @@ export default function OtpVerificationScreen({ navigation, route }: Props) {
     const timer = setInterval(() => setSecondsLeft(prev => prev - 1), 1000);
     return () => clearInterval(timer);
   }, [secondsLeft]);
+
+  useEffect(() => {
+    const otp = devOtp ?? extractOtpFromMessage(otpMessage);
+    if (!otp) return;
+    showBackendOtpToast(otp);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [devOtp, otpMessage]);
 
   const handleVerify = useCallback(
     async (codeOverride?: string) => {
@@ -140,12 +161,18 @@ export default function OtpVerificationScreen({ navigation, route }: Props) {
 
     try {
       const result = await sendOtpMutation.mutateAsync({ mobileNumber });
+      const nextOtp = result.devOtp ?? extractOtpFromMessage(result.message);
+      if (nextOtp) showBackendOtpToast(nextOtp);
       setSuccess('OTP resent successfully');
       setSecondsLeft(RESEND_SECONDS);
       setOtp('');
       setActiveOtpIndex(0);
       if (result.isExistingUser !== undefined) {
-        navigation.setParams({ isExistingUser: result.isExistingUser });
+        navigation.setParams({
+          isExistingUser: result.isExistingUser,
+          devOtp: result.devOtp,
+          otpMessage: result.message,
+        });
       }
     } catch (err) {
       setError(getApiErrorMessage(err, 'Unable to resend OTP'));
@@ -224,6 +251,7 @@ export default function OtpVerificationScreen({ navigation, route }: Props) {
               px={px}
             />
 
+            <AuthToast message={backendOtpToast} type="success" />
             <AuthToast message={error} type="error" />
             <AuthToast message={success} type="success" />
 

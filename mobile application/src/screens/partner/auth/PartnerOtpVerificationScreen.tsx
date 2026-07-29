@@ -11,6 +11,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import PartnerOtpInput from '../../../components/partner/PartnerOtpInput';
 import PartnerScreenLayout from '../../../components/partner/PartnerScreenLayout';
+import AuthToast from '../../../components/auth/AuthToast';
 import { useAppDispatch, useAppSelector } from '../../../redux/hooks';
 import { completeOnboarding } from '../../../redux/auth/authSlice';
 import { usePartnerOnboardingStore } from '../../../store/partnerOnboardingStore';
@@ -47,7 +48,7 @@ function formatTimer(seconds: number): string {
 
 export default function PartnerOtpVerificationScreen({ navigation, route }: Props) {
   const dispatch = useAppDispatch();
-  const { mobileNumber } = route.params;
+  const { mobileNumber, devOtp, otpMessage } = route.params;
   const loading = useAppSelector((state) => state.auth.loading);
   const signupAccountType = useAppSelector((state) => state.onboarding.signupAccountType);
   const selectedRole = usePartnerOnboardingStore((state) => state.selectedRole);
@@ -56,7 +57,21 @@ export default function PartnerOtpVerificationScreen({ navigation, route }: Prop
   const [error, setError] = useState('');
   const [secondsLeft, setSecondsLeft] = useState(RESEND_SECONDS);
   const [verified, setVerified] = useState(false);
+  const [backendOtpToast, setBackendOtpToast] = useState('');
   const verifyLockRef = useRef(false);
+  const backendOtpTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const extractOtpFromMessage = (message?: string): string | null => {
+    if (!message) return null;
+    const match = message.match(/\b(\d{6})\b/);
+    return match?.[1] ?? null;
+  };
+
+  const showBackendOtpToast = (otpValue: string) => {
+    setBackendOtpToast(`OTP: ${otpValue}`);
+    if (backendOtpTimerRef.current) clearTimeout(backendOtpTimerRef.current);
+    backendOtpTimerRef.current = setTimeout(() => setBackendOtpToast(''), 8000);
+  };
 
   const verifyOtpMutation = useVerifyOtpMutation();
   const sendOtpMutation = useSendOtpMutation();
@@ -68,6 +83,13 @@ export default function PartnerOtpVerificationScreen({ navigation, route }: Prop
     const timer = setInterval(() => setSecondsLeft((prev) => prev - 1), 1000);
     return () => clearInterval(timer);
   }, [secondsLeft]);
+
+  useEffect(() => {
+    const otp = devOtp ?? extractOtpFromMessage(otpMessage);
+    if (!otp) return;
+    showBackendOtpToast(otp);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [devOtp, otpMessage]);
 
   const goToPartnerMain = useCallback(() => {
     const rootNavigation =
@@ -184,10 +206,14 @@ export default function PartnerOtpVerificationScreen({ navigation, route }: Prop
       }
 
       const result = await sendOtpMutation.mutateAsync({ mobileNumber, role });
+      const nextOtp = result.devOtp ?? extractOtpFromMessage(result.message);
+      if (nextOtp) showBackendOtpToast(nextOtp);
       setSecondsLeft(RESEND_SECONDS);
       setOtp('');
       navigation.setParams({
         isExistingUser: result.isExistingUser,
+        devOtp: result.devOtp,
+        otpMessage: result.message,
       });
     } catch (err) {
       if (isRoleMismatchError(err)) {
@@ -245,6 +271,7 @@ export default function PartnerOtpVerificationScreen({ navigation, route }: Prop
         onComplete={(code) => void handleVerify(code)}
       />
 
+      <AuthToast message={backendOtpToast} type="success" />
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
       <Text style={styles.timerText}>

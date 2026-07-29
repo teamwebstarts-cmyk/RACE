@@ -80,6 +80,8 @@ export default function LoginScreen({ navigation }: Props) {
       navigation.navigate('OTP', {
         phone: formatPhoneE164(phoneDigits),
         isExistingUser: result.isExistingUser,
+        devOtp: result.devOtp,
+        otpMessage: result.message,
       });
     } catch (error) {
       if (isRoleMismatchError(error)) {

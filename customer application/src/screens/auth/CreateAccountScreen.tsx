@@ -75,6 +75,8 @@ export default function CreateAccountScreen({ navigation }: Props) {
       navigation.navigate('OTP', {
         phone: formatPhoneE164(phoneDigits),
         isExistingUser: result.isExistingUser,
+        devOtp: result.devOtp,
+        otpMessage: result.message,
       });
     } catch (error) {
       if (isRoleMismatchError(error)) {

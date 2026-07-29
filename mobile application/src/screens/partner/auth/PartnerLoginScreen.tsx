@@ -111,6 +111,8 @@ export default function PartnerLoginScreen({ navigation, route }: Props) {
       navigation.navigate('PartnerOtpVerification', {
         mobileNumber,
         isExistingUser: result.isExistingUser ?? false,
+        devOtp: result.devOtp,
+        otpMessage: result.message,
       });
     } catch (err) {
       if (isRoleMismatchError(err)) {

@@ -22,6 +22,7 @@ export interface SendOtpResult {
   isExistingUser: boolean;
   isProfileCompleted: boolean;
   onboardingRequired?: boolean;
+  devOtp?: string;
 }
 
 export async function sendOtp(payload: SendOtpPayload): Promise<SendOtpResult> {
