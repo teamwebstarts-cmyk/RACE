@@ -6,7 +6,8 @@ const googleMapsApiKey =
 module.exports = {
   expo: {
     name: 'RACE Partner',
-    slug: 'race-partner',
+    slug: 'race-partners',
+    owner: 'race-service',
     version: '1.0.0',
     orientation: 'portrait',
     icon: './src/assets/images/logo.png',
@@ -18,6 +19,7 @@ module.exports = {
     },
     ios: {
       bundleIdentifier: 'com.racecar.partner',
+      buildNumber: '1',
       supportsTablet: true,
       config: {
         googleMapsApiKey,
@@ -25,6 +27,7 @@ module.exports = {
     },
     android: {
       package: 'com.racecar.partner',
+      versionCode: 1,
       softwareKeyboardLayoutMode: 'resize',
       adaptiveIcon: {
         foregroundImage: './src/assets/images/logo.png',
@@ -62,6 +65,9 @@ module.exports = {
     extra: {
       apiUrl: process.env.EXPO_PUBLIC_API_URL ?? 'http://34.93.103.86:3000',
       googleMapsApiKey,
+      eas: {
+        projectId: '1b84fe6e-9373-418d-9fae-94b232c153d4',
+      },
     },
   },
 };
