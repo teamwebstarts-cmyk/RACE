@@ -30,7 +30,11 @@ import AuthToast, { AuthLoadingOverlay } from '../../components/auth/AuthToast';
 import { API_CONFIG } from '../../config/api';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import { clearSignupPath } from '../../redux/onboarding/onboardingSlice';
-import { getApiErrorMessage, useSendOtpMutation } from '../../services/auth/useAuthMutations';
+import {
+  getApiErrorMessage,
+  useSendOtpMutation,
+  useVerifyOtpMutation,
+} from '../../services/auth/useAuthMutations';
 import { getRoleMismatchMessage, isRoleMismatchError } from '../../utils/roleMismatch';
 import type { AuthStackParamList } from '../../types/navigation';
 import { colors, layout, radius, shadows, spacing, typography } from '../../theme';
@@ -40,6 +44,15 @@ type Props = NativeStackScreenProps<AuthStackParamList, 'MobileNumber'>;
 const MOBILE_REGEX = /^[6-9]\d{9}$/;
 const REF_W = 390;
 const SUCCESS_GREEN = '#22C55E';
+
+/** TEMP: skip OTP UI — auto-verify with backend dev OTP. Re-enable OTP by flipping this off. */
+const SKIP_OTP_AUTH = true;
+
+function extractOtpFromMessage(message?: string): string | null {
+  if (!message) return null;
+  const match = message.match(/\b(\d{6})\b/);
+  return match?.[1] ?? null;
+}
 
 const TRUST_ITEMS = [
   { title: '24/7 Help', subtitle: 'Always on the road', Icon: Zap },
@@ -57,6 +70,7 @@ export default function MobileNumberScreen({ navigation }: Props) {
   const loading = useAppSelector(state => state.auth.loading);
   const signupAccountType = useAppSelector(state => state.onboarding.signupAccountType);
   const signupVendorType = useAppSelector(state => state.onboarding.signupVendorType);
+  const partnerSignupRequired = useAppSelector(state => state.onboarding.partnerSignupRequired);
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const scale = width / REF_W;
@@ -67,6 +81,7 @@ export default function MobileNumberScreen({ navigation }: Props) {
   const [focused, setFocused] = useState(false);
 
   const sendOtpMutation = useSendOtpMutation();
+  const verifyOtpMutation = useVerifyOtpMutation();
   const isValid = useMemo(() => MOBILE_REGEX.test(mobileNumber), [mobileNumber]);
 
   const isSignup = Boolean(signupAccountType);
@@ -89,15 +104,41 @@ export default function MobileNumberScreen({ navigation }: Props) {
 
     try {
       const result = await sendOtpMutation.mutateAsync({ mobileNumber });
-      if (result.isExistingUser) {
+      const isExistingUser = result.isExistingUser ?? false;
+      if (isExistingUser) {
         dispatch(clearSignupPath());
       }
-      navigation.navigate('OtpVerification', {
-        mobileNumber,
-        isExistingUser: result.isExistingUser ?? false,
-        devOtp: result.devOtp,
-        otpMessage: result.message,
-      });
+
+      // --- OTP auth bypass (temporary) ---
+      if (SKIP_OTP_AUTH) {
+        const otp = result.devOtp ?? extractOtpFromMessage(result.message);
+        if (!otp) {
+          setError('Dev OTP unavailable. Turn off SKIP_OTP_AUTH or use a non-production API.');
+          return;
+        }
+        const verifyResult = await verifyOtpMutation.mutateAsync({ mobileNumber, otp });
+        if (isExistingUser || verifyResult.user.isProfileCompleted) {
+          dispatch(clearSignupPath());
+        }
+        if (verifyResult.onboardingRequired && !verifyResult.user.isProfileCompleted) {
+          navigation.replace('ProfileWizard');
+          return;
+        }
+        if (partnerSignupRequired && signupVendorType && verifyResult.user.isProfileCompleted) {
+          navigation.replace('VendorWizard', { vendorType: signupVendorType });
+          return;
+        }
+        // Existing user / profile complete → RootNavigator swaps to Main
+        return;
+      }
+      // --- end OTP bypass ---
+
+      // navigation.navigate('OtpVerification', {
+      //   mobileNumber,
+      //   isExistingUser,
+      //   devOtp: result.devOtp,
+      //   otpMessage: result.message,
+      // });
     } catch (err) {
       if (isRoleMismatchError(err)) {
         setError(
@@ -108,7 +149,7 @@ export default function MobileNumberScreen({ navigation }: Props) {
         );
         return;
       }
-      setError(getApiErrorMessage(err, 'Unable to send OTP'));
+      setError(getApiErrorMessage(err, SKIP_OTP_AUTH ? 'Unable to sign in' : 'Unable to send OTP'));
     }
   };
 
@@ -168,8 +209,12 @@ export default function MobileNumberScreen({ navigation }: Props) {
                   { fontSize: px(14), lineHeight: px(21), marginTop: px(6) },
                 ]}>
                 {isSignup
-                  ? 'Verify your mobile number with a secure OTP to continue.'
-                  : 'Sign in to your RACE account with a secure OTP.'}
+                  ? SKIP_OTP_AUTH
+                    ? 'Enter your mobile number to create your account.'
+                    : 'Verify your mobile number with a secure OTP to continue.'
+                  : SKIP_OTP_AUTH
+                    ? 'Enter your mobile number to sign in to RACE.'
+                    : 'Sign in to your RACE account with a secure OTP.'}
               </Text>
               {roleLabel ? (
                 <View style={[styles.rolePill, { marginTop: px(10) }]}>
@@ -213,7 +258,9 @@ export default function MobileNumberScreen({ navigation }: Props) {
                   styles.cardSubtitle,
                   { fontSize: px(13), lineHeight: px(19), marginTop: px(6) },
                 ]}>
-                We'll send a 6-digit OTP to verify your account.
+                {SKIP_OTP_AUTH
+                  ? 'We will sign you in with this number.'
+                  : "We'll send a 6-digit OTP to verify your account."}
               </Text>
 
               <Text style={[styles.fieldLabel, { fontSize: px(13), marginTop: px(22) }]}>
@@ -280,7 +327,13 @@ export default function MobileNumberScreen({ navigation }: Props) {
                 ]}>
                 <Send size={px(18)} color={colors.dark} strokeWidth={2.4} />
                 <Text style={[styles.sendButtonLabel, { fontSize: px(16) }]}>
-                  {loading ? 'Sending OTP...' : 'Send OTP'}
+                  {loading
+                    ? SKIP_OTP_AUTH
+                      ? 'Signing in...'
+                      : 'Sending OTP...'
+                    : SKIP_OTP_AUTH
+                      ? 'Continue'
+                      : 'Send OTP'}
                 </Text>
               </Pressable>
 
@@ -333,7 +386,10 @@ export default function MobileNumberScreen({ navigation }: Props) {
         </KeyboardAvoidingView>
       </View>
 
-      <AuthLoadingOverlay visible={loading} label="Sending OTP..." />
+      <AuthLoadingOverlay
+        visible={loading}
+        label={SKIP_OTP_AUTH ? 'Signing in...' : 'Sending OTP...'}
+      />
     </>
   );
 }
