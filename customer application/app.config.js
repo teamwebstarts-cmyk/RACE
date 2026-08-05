@@ -26,7 +26,7 @@ module.exports = {
     },
     android: {
       package: 'com.racecar.customer',
-      versionCode: 3,
+      versionCode: 4,
       softwareKeyboardLayoutMode: 'resize',
       adaptiveIcon: {
         foregroundImage: './src/assets/images/logo.png',
