@@ -14,10 +14,7 @@ Agent memory bank + parallel-agent lock added under `.cursor/memory/`. Product w
 
 - Added git-tracked agent memory (`.cursor/memory/`).
 - Installed **Unlazy** as a project skill (`.cursor/skills/unlazy/`) for gate-based completion on long tasks.
-
-## Next (when the user asks)
-
-Product work on the two Expo apps + admin + backend. Read `agents-lock.md` before touching a surface.
+- Added complementary skills (not full marketplaces): `brainstorming`, `systematic-debugging`, `verification-before-completion`, `requesting-code-review`, `security-and-hardening`. Catalog in `AGENTS.md` + `.cursor/skills/SOURCES.md`.
 
 ## Next (when the user asks)
 

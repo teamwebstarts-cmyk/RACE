@@ -12,3 +12,4 @@ web-build/
 .unlazy/
 .unlazy-hook-state.json
 .claude/settings.local.json
+.superpowers/

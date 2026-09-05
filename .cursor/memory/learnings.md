@@ -7,3 +7,4 @@
 - Expo SDK is **54**, not 56. Nested `AGENTS.md` files that said v56 were wrong.
 - `CLIENT_FEATURES.md` said admin uses Redux — it uses Zustand + TanStack Query.
 - `owner: 'race-service'` and Mongo DB name `race-service` are strings, not the deleted folder.
+- Do not vendor the full Superpowers pack: TDD-always clashes with empty `__tests__`. Complementary skills only.

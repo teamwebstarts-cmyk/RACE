@@ -31,7 +31,7 @@ Write a short plan before editing:
 - Edge cases: roles, empty data, stub payments, OTP skip flag
 - How you will verify (command or flow)
 
-If the change is large, stop after the plan until the user confirms.
+If the change is large, stop after the plan until the user confirms. New feature / unclear product change: load `.cursor/skills/brainstorming/SKILL.md` first.
 
 ## 4. Implement
 
@@ -39,12 +39,16 @@ If the change is large, stop after the plan until the user confirms.
 - No new app, no extra abstraction layer, no unused files.
 - Stay on `v2.0.1-cleanup`.
 - Long / multi-part task: load `.cursor/skills/unlazy/SKILL.md` and write gates before claiming done.
+- Auth / OTP / JWT / payments / untrusted input: also load `.cursor/skills/security-and-hardening/SKILL.md`.
+- Bugs: load `.cursor/skills/systematic-debugging/SKILL.md` before proposing a fix.
 
 ## 5. Verify
 
+- Load `.cursor/skills/verification-before-completion/SKILL.md` before claiming done.
 - Typecheck the touched app (`tsc --noEmit` / `npm run lint` where it exists).
 - For UI: exercise the flow if a browser/dev server is available.
 - State what you could not run.
+- Major change: load `.cursor/skills/requesting-code-review/SKILL.md`.
 
 ## 6. Memory
 

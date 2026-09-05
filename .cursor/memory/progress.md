@@ -8,6 +8,7 @@
 - [x] Remove `customerweb/`, `partnerweb/`, `web application/`, `race-service/`
 - [x] Agent rules + skills + memory bank
 - [x] Unlazy skill vendored for long-task gates
+- [x] Complementary skills: brainstorming, systematic-debugging, verification-before-completion, requesting-code-review, security-and-hardening
 
 ## Known gaps (product — not started this branch)
 
