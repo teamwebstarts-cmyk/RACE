@@ -1,0 +1,42 @@
+---
+name: race-task-workflow
+description: Plan-first workflow for RACE tasks. Use when the user gives a feature, bug, cleanup, or any non-trivial implementation request.
+---
+
+# RACE task workflow
+
+Do not jump to code on a large or unclear task.
+
+## 1. Review (repo)
+
+- Find the live entry: customer `App.tsx` → `RootNavigator`; partner `PartnerAppNavigator`; admin `apps/admin-web/src/App.tsx`; backend `src/controller/src/index.ts`.
+- Search for an existing implementation. Reuse it.
+
+## 2. Research (internet)
+
+- Open **version-matched** docs (Expo 54, Express 5, the library version in that app’s `package.json`).
+- Confirm APIs that are easy to get wrong (Expo modules, JWT, Socket.IO, Maps).
+- If docs and repo disagree, **repo wins** unless the user asked for an upgrade.
+
+## 3. Plan
+
+Write a short plan before editing:
+
+- Goal and non-goals
+- Files to change (existing first)
+- Edge cases: roles, empty data, stub payments, OTP skip flag
+- How you will verify (command or flow)
+
+If the change is large, stop after the plan until the user confirms.
+
+## 4. Implement
+
+- Smallest change that matches existing style.
+- No new app, no extra abstraction layer, no unused files.
+- Stay on `v2.0.1-cleanup`.
+
+## 5. Verify
+
+- Typecheck the touched app (`tsc --noEmit` / `npm run lint` where it exists).
+- For UI: exercise the flow if a browser/dev server is available.
+- State what you could not run.
