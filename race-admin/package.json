@@ -1,0 +1,27 @@
+{
+  "name": "race-admin",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=@race/admin-web",
+    "dev:turbo": "turbo dev --filter=@race/admin-web",
+    "dev:admin": "npm run dev --workspace=@race/admin-web",
+    "build": "turbo build --filter=@race/admin-web",
+    "lint": "turbo lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\""
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "prettier": "^3.5.3",
+    "turbo": "^2.5.4",
+    "typescript": "^5.8.3"
+  },
+  "packageManager": "npm@10.9.2",
+  "engines": {
+    "node": ">=20"
+  }
+}

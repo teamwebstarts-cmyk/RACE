@@ -1,0 +1,93 @@
+import type { Request, Response } from 'express';
+
+import { asyncHandler } from '../../utils/src/asyncHandler';
+import { sendSuccess } from '../../utils/src/apiResponse';
+import { emitDriverLocation } from '../../services/src/socket';
+import { getAuthUser, getParamId } from '../../utils/src/request';
+import { UserModel } from '../../models/src/user';
+import { driverSelfService } from '../../services/src/driverSelf';
+import { driverService } from '../../services/src/driver';
+
+export class DriverController {
+  updateAvailability = asyncHandler(async (req: Request, res: Response) => {
+    const user = getAuthUser(req);
+    const result = await driverService.updateAvailability(user.id, user.role, req.body);
+    return sendSuccess(res, result);
+  });
+
+  updateLocation = asyncHandler(async (req: Request, res: Response) => {
+    const user = getAuthUser(req);
+    const result = await driverService.updateLocation(user.id, user.role, req.body);
+
+    const driver = await UserModel.findById(user.id).select('_id activeBookingId').exec();
+    if (driver?.activeBookingId) {
+      emitDriverLocation(
+        driver.activeBookingId.toString(),
+        user.id,
+        result.location.latitude,
+        result.location.longitude,
+      );
+    }
+
+    return sendSuccess(res, result);
+  });
+
+  listBookings = asyncHandler(async (req: Request, res: Response) => {
+    const user = getAuthUser(req);
+    const bookings = await driverService.listBookings(user.id, user.role, req.query as never);
+    return sendSuccess(res, bookings);
+  });
+
+  listOpenOffers = asyncHandler(async (req: Request, res: Response) => {
+    const user = getAuthUser(req);
+    const offers = await driverService.listOpenOffers(user.id, user.role);
+    return sendSuccess(res, offers);
+  });
+
+  getActiveBooking = asyncHandler(async (req: Request, res: Response) => {
+    const user = getAuthUser(req);
+    const result = await driverService.getActiveBooking(user.id, user.role);
+    return sendSuccess(res, result);
+  });
+
+  updateBookingStatus = asyncHandler(async (req: Request, res: Response) => {
+    const user = getAuthUser(req);
+    const booking = await driverService.updateBookingStatus(
+      user.id,
+      user.role,
+      getParamId(req.params.id),
+      req.body,
+    );
+    return sendSuccess(res, booking);
+  });
+
+  acceptBooking = asyncHandler(async (req: Request, res: Response) => {
+    const user = getAuthUser(req);
+    const booking = await driverService.acceptBooking(
+      user.id,
+      user.role,
+      getParamId(req.params.id),
+      req.body.bookingType,
+    );
+    return sendSuccess(res, booking);
+  });
+
+  rejectBooking = asyncHandler(async (req: Request, res: Response) => {
+    const user = getAuthUser(req);
+    const result = await driverService.rejectBooking(
+      user.id,
+      user.role,
+      getParamId(req.params.id),
+      req.body.bookingType,
+    );
+    return sendSuccess(res, result);
+  });
+
+  registerSelf = asyncHandler(async (req: Request, res: Response) => {
+    const user = getAuthUser(req);
+    const result = await driverSelfService.register(user.id, req.body);
+    return sendSuccess(res, result, 201);
+  });
+}
+
+export const driverController = new DriverController();

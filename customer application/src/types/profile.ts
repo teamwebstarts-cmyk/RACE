@@ -1,0 +1,71 @@
+export type SavedLocationType = 'home' | 'office' | 'custom';
+
+export interface SavedLocation {
+  id: string;
+  type: SavedLocationType;
+  label: string;
+  address: string;
+  latitude?: number;
+  longitude?: number;
+}
+
+export type PaymentMethodType = 'upi' | 'card' | 'netbanking' | 'wallet';
+
+export interface PaymentMethod {
+  id: string;
+  type: PaymentMethodType;
+  label: string;
+  details: string;
+  isDefault?: boolean;
+  provider?: string;
+}
+
+export interface WalletBalance {
+  balance: number;
+  currency: string;
+}
+
+export interface NotificationPreference {
+  id: string;
+  title: string;
+  description: string;
+  enabled: boolean;
+  category: 'booking' | 'offers' | 'subscription' | 'general';
+}
+
+export interface AppNotification {
+  id: string;
+  title: string;
+  body: string;
+  category: NotificationPreference['category'];
+  read: boolean;
+  createdAt: string;
+}
+
+export interface AppSettings {
+  language: string;
+  darkMode: boolean;
+  pushEnabled: boolean;
+}
+
+export type SubscriptionPlanId = string;
+
+export interface SubscriptionPlan {
+  id: SubscriptionPlanId;
+  slug?: string;
+  name: string;
+  price: number;
+  period: 'monthly' | 'yearly';
+  features: Array<{ label: string; included: boolean }>;
+  popular?: boolean;
+  description?: string;
+  category?: string;
+  actionType?: string;
+}
+
+export interface UserSubscription {
+  planId: SubscriptionPlanId;
+  planName?: string;
+  status: 'active' | 'expired' | 'none' | 'cancelled';
+  expiresAt?: string;
+}

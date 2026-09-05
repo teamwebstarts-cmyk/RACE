@@ -1,0 +1,192 @@
+import { API_ENDPOINTS } from '../../config/api';
+import type { ApiSuccessResponse } from '../../types/auth';
+import type { Booking, BookingStatus, SubmitRatingRequest } from '../../types/booking';
+import type { CombinedBookingListItem, ServiceBooking } from '../../types/serviceBooking';
+import { apiClient } from '../api/apiClient';
+import { formatReadableAddress } from '../../utils/readableAddress';
+import {
+  getDriverBooking,
+  getDriverBookingTracking,
+  getTowingBooking,
+  getTowingBookingTracking,
+} from './serviceBookingApi';
+
+function mapUnifiedStatus(status: string): BookingStatus {
+  switch (status) {
+    case 'PENDING':
+    case 'CONFIRMED':
+    case 'DRIVER_ASSIGNED':
+      return 'ASSIGNED';
+    case 'DRIVER_EN_ROUTE':
+      return 'EN_ROUTE';
+    case 'DRIVER_ARRIVED':
+      return 'ARRIVED';
+    case 'IN_PROGRESS':
+      return 'SERVICE_STARTED';
+    case 'COMPLETED':
+      return 'SERVICE_COMPLETED';
+    case 'RATED':
+      return 'PAID';
+    default:
+      return 'ASSIGNED';
+  }
+}
+
+function toBookingLocation(point: { address: string; latitude: number; longitude: number }) {
+  const label = formatReadableAddress(point.address);
+  return {
+    label,
+    address: point.address,
+    latitude: point.latitude,
+    longitude: point.longitude,
+  };
+}
+
+function mapServiceBookingToBooking(
+  item: ServiceBooking,
+  bookingType: 'towing' | 'driver',
+  serviceLabel: string,
+): Booking {
+  const status = mapUnifiedStatus(item.status);
+  return {
+    id: item.id,
+    bookingNumber: item.bookingNumber,
+    bookingType,
+    unifiedStatus: item.status,
+    categoryId: bookingType,
+    serviceId: bookingType,
+    serviceLabel,
+    status,
+    vehicleId: item.vehicleId,
+    vehicleNumber: '',
+    pickup: toBookingLocation(item.pickup),
+    dropoff: item.dropoff ? toBookingLocation(item.dropoff) : undefined,
+    scheduledAt: item.scheduledAt,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+    distanceKm: item.distanceKm,
+    durationMinutes: item.estimatedDurationHours
+      ? Math.round(item.estimatedDurationHours * 60)
+      : undefined,
+    driver: item.driver
+      ? {
+          id: item.driver.id,
+          name: item.driver.name,
+          rating: item.driver.rating,
+          phone: item.driver.phone,
+          experience: 'RACE verified',
+          verified: true,
+        }
+      : undefined,
+    vendorId: item.vendorId,
+    assignedFleetVehicleLabel: item.assignedFleetVehicleLabel,
+    tripStartOtp: item.tripStartOtp,
+    invoice: {
+      baseFare: item.estimatedFare,
+      total: item.estimatedFare,
+      currency: 'INR',
+      paymentMethod: item.advancePaid ? 'UPI' : undefined,
+    },
+    timeline: item.statusHistory.map(entry => ({
+      status: mapUnifiedStatus(entry.status),
+      label: entry.status.replace(/_/g, ' '),
+      timestamp: entry.timestamp,
+      completed: true,
+    })),
+    rating: item.rating?.score,
+    review: item.rating?.review,
+    advanceAmount: item.advanceAmount,
+    remainingAmount: item.remainingAmount,
+    advancePaid: item.advancePaid,
+    remainingPaid: item.remainingPaid,
+    paymentStatus: item.paymentStatus,
+  };
+}
+
+function mapCombinedItem(item: CombinedBookingListItem): Booking {
+  return mapServiceBookingToBooking(item, item.bookingType, item.serviceLabel);
+}
+
+export async function listBookings(): Promise<Booking[]> {
+  const { data } = await apiClient.get<ApiSuccessResponse<CombinedBookingListItem[]>>(
+    API_ENDPOINTS.bookings,
+  );
+  return data.data.map(mapCombinedItem);
+}
+
+export async function getBooking(id: string): Promise<Booking | null> {
+  try {
+    const towing = await getTowingBooking(id);
+    return mapServiceBookingToBooking(towing, 'towing', 'Towing');
+  } catch {
+    try {
+      const driver = await getDriverBooking(id);
+      return mapServiceBookingToBooking(driver, 'driver', 'Driver Hire');
+    } catch {
+      throw new Error('Unable to fetch booking details');
+    }
+  }
+}
+
+/** @deprecated Use towing/driver booking APIs via Home flow. */
+export async function createBookingApi(_payload: unknown): Promise<Booking | null> {
+  return null;
+}
+
+export async function submitBookingRating(
+  bookingId: string,
+  bookingType: 'towing' | 'driver',
+  payload: SubmitRatingRequest,
+): Promise<Booking> {
+  const { submitServiceBookingRating } = await import('./serviceBookingApi');
+  const result = await submitServiceBookingRating(bookingId, bookingType, payload);
+  return mapServiceBookingToBooking(
+    result,
+    bookingType,
+    bookingType === 'towing' ? 'Towing' : 'Driver Hire',
+  );
+}
+
+export interface BookingTracking {
+  bookingId: string;
+  status: string;
+  etaMinutes: number;
+  driver?: Booking['driver'];
+  driverLocation?: { latitude: number; longitude: number };
+  pickup: Booking['pickup'];
+  dropoff?: Booking['dropoff'];
+  tripStartOtp?: string;
+  assignedFleetVehicleLabel?: string;
+}
+
+export async function getBookingTracking(bookingId: string): Promise<BookingTracking | null> {
+  try {
+    const towing = await getTowingBookingTracking(bookingId);
+    return {
+      bookingId: towing.bookingId,
+      status: towing.status,
+      etaMinutes: 15,
+      driverLocation: towing.driverLocation,
+      pickup: toBookingLocation(towing.pickup),
+      dropoff: towing.dropoff ? toBookingLocation(towing.dropoff) : undefined,
+      tripStartOtp: towing.tripStartOtp,
+      assignedFleetVehicleLabel: towing.assignedFleetVehicleLabel,
+    };
+  } catch {
+    try {
+      const driver = await getDriverBookingTracking(bookingId);
+      return {
+        bookingId: driver.bookingId,
+        status: driver.status,
+        etaMinutes: 15,
+        driverLocation: driver.driverLocation,
+        pickup: toBookingLocation(driver.pickup),
+        dropoff: driver.dropoff ? toBookingLocation(driver.dropoff) : undefined,
+        tripStartOtp: driver.tripStartOtp,
+        assignedFleetVehicleLabel: driver.assignedFleetVehicleLabel,
+      };
+    } catch {
+      throw new Error('Unable to fetch booking tracking');
+    }
+  }
+}

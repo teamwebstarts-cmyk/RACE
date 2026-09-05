@@ -1,0 +1,465 @@
+import React, { useEffect, useMemo } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
+import {
+  ArrowRight,
+  Bell,
+  Check,
+  ChevronRight,
+  Crown,
+  LogOut,
+  Pencil,
+  Shield,
+  UserRound,
+} from 'lucide-react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+
+import { PROFILE_MENU_ITEMS } from '../constants/profileScreen';
+import { PROFILE_MENU_ROUTES } from '../constants/profileSubScreens';
+import AppScreenLayout from '../components/ui/AppScreenLayout';
+import TabRootHeader from '../components/ui/TabRootHeader';
+import { getProfileFirstName } from '../utils/profileDisplay';
+import { useAuthActions } from '../hooks/useAuth';
+import { useAuthStore } from '../store/authStore';
+import { useNotificationsQuery, useWalletQuery } from '../services/profile/useProfileQueries';
+import { useProfileStore } from '../store/profileStore';
+import type { ProfileStackParamList } from '../types/navigation';
+import { colors, shadows, typography } from '../theme';
+
+const REF_W = 390;
+
+function ProfileAvatar({ size, px }: { size: number; px: (n: number) => number }) {
+  return (
+    <View
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        backgroundColor: colors.goldLight,
+        borderWidth: 2,
+        borderColor: colors.primary,
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
+      }}>
+      <UserRound
+        size={px(Math.round(size * 0.42))}
+        color={colors.primary}
+        fill={colors.primary}
+        strokeWidth={1.5}
+      />
+    </View>
+  );
+}
+
+export default function ProfileScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const { logout } = useAuthActions();
+  const authUser = useAuthStore(state => state.user);
+  const { profile, fetchProfile, isLoading } = useProfileStore();
+  const { data: notificationsData } = useNotificationsQuery();
+  const {
+    data: wallet,
+    isLoading: isWalletLoading,
+    isError: isWalletError,
+    refetch: refetchWallet,
+  } = useWalletQuery();
+  const unreadCount = notificationsData?.unreadCount ?? 0;
+  const { width } = useWindowDimensions();
+  const s = width / REF_W;
+  const px = (n: number) => Math.round(n * s);
+
+  useEffect(() => {
+    void fetchProfile();
+  }, [fetchProfile]);
+
+  const displayName =
+    getProfileFirstName(profile?.fullName) ||
+    getProfileFirstName(authUser?.fullName) ||
+    'User';
+  const displayPhone = profile?.mobileNumber ?? authUser?.mobileNumber ?? '';
+
+  const walletLabel = useMemo(() => {
+    if (isWalletLoading) return '...';
+    if (isWalletError) return 'Tap to retry';
+    if (wallet) return `₹${wallet.balance.toLocaleString('en-IN')}`;
+    return '—';
+  }, [isWalletError, isWalletLoading, wallet]);
+
+  const handleLogout = () => {
+    Alert.alert('Logout', 'Are you sure you want to logout?', [
+      { text: 'No', style: 'cancel' },
+      {
+        text: 'Yes',
+        onPress: () => {
+          void logout().catch(() => {
+            Alert.alert('Logout failed', 'Please try again or reload the app.');
+          });
+        },
+      },
+    ]);
+  };
+
+  if (isLoading && !profile) {
+    return (
+      <AppScreenLayout
+        backgroundColor={colors.pageBg}
+        scrollable={false}
+        header={
+          <TabRootHeader
+            title="Profile"
+            subtitle="Manage your account and preferences"
+            showActions={false}
+          />
+        }>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </AppScreenLayout>
+    );
+  }
+
+  return (
+    <AppScreenLayout
+      backgroundColor={colors.pageBg}
+      header={
+        <TabRootHeader
+          title="Profile"
+          subtitle="Manage your account and preferences"
+          showNotificationBadge={unreadCount > 0}
+          onBellPress={() => navigation.navigate('Notifications')}
+          actions={
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: px(12) }}>
+              <Pressable
+                hitSlop={8}
+                style={styles.bellWrap}
+                onPress={() => navigation.navigate('Notifications')}
+                accessibilityRole="button"
+                accessibilityLabel="Notifications">
+                <Bell size={px(22)} color={colors.dark} strokeWidth={2} />
+                {unreadCount > 0 ? <View style={styles.bellDot} /> : null}
+              </Pressable>
+              <ProfileAvatar size={px(40)} px={px} />
+            </View>
+          }
+        />
+      }>
+            <View
+              style={[
+                {
+                  marginTop: px(16),
+                  marginBottom: px(14),
+                  borderRadius: px(16),
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  backgroundColor: colors.background,
+                  padding: px(14),
+                },
+                shadows.card,
+              ]}>
+              <View style={{ flexDirection: 'row', alignItems: 'stretch', gap: px(12) }}>
+                <ProfileAvatar size={px(64)} px={px} />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: px(6),
+                      marginBottom: px(4),
+                    }}>
+                    <Text
+                      numberOfLines={1}
+                      style={{
+                        flexShrink: 1,
+                        fontSize: px(16),
+                        fontWeight: typography.weights.bold,
+                        color: colors.dark,
+                      }}>
+                      {displayName}
+                    </Text>
+                    <Pressable
+                      hitSlop={10}
+                      onPress={() => navigation.navigate('PersonalInformation')}
+                      accessibilityRole="button"
+                      accessibilityLabel="Edit profile">
+                      <Pencil size={px(14)} color={colors.grey} strokeWidth={2} />
+                    </Pressable>
+                  </View>
+                  <Text style={{ fontSize: px(12), color: colors.grey, marginBottom: px(2) }}>
+                    {displayPhone}
+                  </Text>
+                  <Text
+                    numberOfLines={1}
+                    style={{ fontSize: px(12), color: colors.grey, marginBottom: px(8) }}>
+                    {profile?.email ?? ''}
+                  </Text>
+                  <View
+                    style={{
+                      alignSelf: 'flex-start',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: px(4),
+                      paddingHorizontal: px(8),
+                      paddingVertical: px(4),
+                      borderRadius: px(12),
+                      backgroundColor: '#E8F8EE',
+                    }}>
+                    <Check size={px(11)} color={colors.success} strokeWidth={3} />
+                    <Text
+                      style={{
+                        fontSize: px(10),
+                        fontWeight: typography.weights.bold,
+                        color: colors.success,
+                      }}>
+                      Verified User
+                    </Text>
+                  </View>
+                </View>
+                <View
+                  style={{
+                    width: 1,
+                    backgroundColor: colors.border,
+                    marginVertical: px(2),
+                  }}
+                />
+                <Pressable
+                  onPress={() => navigation.navigate('SubscriptionPlans')}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    alignSelf: 'center',
+                    flexShrink: 0,
+                    gap: px(2),
+                  }}>
+                  <View style={{ alignItems: 'center' }}>
+                    <Crown size={px(20)} color={colors.primary} fill={colors.primary} />
+                    <Text
+                      style={{
+                        marginTop: px(3),
+                        fontSize: px(9),
+                        fontWeight: typography.weights.bold,
+                        color: colors.primary,
+                        lineHeight: px(11),
+                      }}>
+                      Premium
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: px(9),
+                        fontWeight: typography.weights.bold,
+                        color: colors.primary,
+                        lineHeight: px(11),
+                      }}>
+                      Member
+                    </Text>
+                  </View>
+                  <ChevronRight size={px(12)} color={colors.primary} strokeWidth={2.5} />
+                </Pressable>
+              </View>
+            </View>
+
+            <Pressable
+              onPress={() => {
+                if (isWalletError) {
+                  void refetchWallet();
+                  return;
+                }
+                navigation.navigate('PaymentMethods');
+              }}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                borderRadius: px(14),
+                borderWidth: 1,
+                borderColor: colors.border,
+                backgroundColor: colors.background,
+                paddingVertical: px(14),
+                paddingHorizontal: px(16),
+                marginBottom: px(14),
+              }}>
+              <View>
+                <Text style={{ fontSize: px(11), color: colors.grey }}>Wallet Balance</Text>
+                <Text
+                  style={{
+                    marginTop: px(4),
+                    fontSize: px(18),
+                    fontWeight: typography.weights.bold,
+                    color: colors.primary,
+                  }}>
+                  {walletLabel}
+                </Text>
+              </View>
+              <ChevronRight size={px(18)} color={colors.primary} strokeWidth={2} />
+            </Pressable>
+
+            <View
+              style={{
+                borderRadius: px(16),
+                borderWidth: 1,
+                borderColor: colors.border,
+                backgroundColor: colors.background,
+                marginBottom: px(14),
+                overflow: 'hidden',
+              }}>
+              {PROFILE_MENU_ITEMS.map((item, index) => (
+                <Pressable
+                  key={item.id}
+                  onPress={() =>
+                    navigation.navigate(
+                      PROFILE_MENU_ROUTES[item.id as keyof typeof PROFILE_MENU_ROUTES],
+                    )
+                  }
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: px(12),
+                    paddingHorizontal: px(14),
+                    paddingVertical: px(13),
+                    borderBottomWidth: index < PROFILE_MENU_ITEMS.length - 1 ? 1 : 0,
+                    borderBottomColor: colors.border,
+                  }}>
+                  <View
+                    style={{
+                      width: px(36),
+                      height: px(36),
+                      borderRadius: px(18),
+                      backgroundColor: colors.goldLight,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                    }}>
+                    <item.Icon size={px(17)} color={colors.primary} strokeWidth={2.2} />
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text
+                      style={{
+                        fontSize: px(14),
+                        fontWeight: typography.weights.bold,
+                        color: colors.dark,
+                        marginBottom: px(2),
+                      }}>
+                      {item.title}
+                    </Text>
+                    <Text numberOfLines={1} style={{ fontSize: px(11), color: colors.grey }}>
+                      {item.subtitle}
+                    </Text>
+                  </View>
+                  <ChevronRight size={px(16)} color={colors.primary} strokeWidth={2} />
+                </Pressable>
+              ))}
+            </View>
+
+            <View
+              style={{
+                borderRadius: px(14),
+                backgroundColor: colors.goldLight,
+                padding: px(14),
+                marginBottom: px(12),
+              }}>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: px(10) }}>
+                <View
+                  style={{
+                    width: px(40),
+                    height: px(40),
+                    borderRadius: px(20),
+                    backgroundColor: colors.background,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}>
+                  <Shield size={px(20)} color={colors.primary} strokeWidth={2} />
+                </View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text
+                    style={{
+                      fontSize: px(15),
+                      fontWeight: typography.weights.bold,
+                      color: colors.dark,
+                      marginBottom: px(4),
+                    }}>
+                    RACE Premium
+                  </Text>
+                  <Text
+                    style={{
+                      fontSize: px(11),
+                      color: colors.grey,
+                      lineHeight: px(16),
+                      marginBottom: px(10),
+                    }}>
+                    Priority support, faster dispatch & exclusive benefits
+                  </Text>
+                  <Pressable
+                    onPress={() => navigation.navigate('SubscriptionPlans')}
+                    style={{
+                      alignSelf: 'flex-start',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: px(4),
+                      paddingHorizontal: px(12),
+                      paddingVertical: px(8),
+                      borderRadius: px(10),
+                      backgroundColor: colors.primary,
+                    }}>
+                    <Text
+                      style={{
+                        fontSize: px(12),
+                        fontWeight: typography.weights.bold,
+                        color: colors.dark,
+                      }}>
+                      Upgrade Now
+                    </Text>
+                    <ArrowRight size={px(14)} color={colors.dark} strokeWidth={2.5} />
+                  </Pressable>
+                </View>
+              </View>
+            </View>
+
+            <Pressable
+              onPress={handleLogout}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: px(10),
+                paddingVertical: px(12),
+              }}>
+              <LogOut size={px(18)} color={colors.error} strokeWidth={2.2} />
+              <Text
+                style={{
+                  flex: 1,
+                  fontSize: px(14),
+                  fontWeight: typography.weights.bold,
+                  color: colors.error,
+                }}>
+                Logout
+              </Text>
+              <ChevronRight size={px(16)} color={colors.error} strokeWidth={2} />
+            </Pressable>
+    </AppScreenLayout>
+  );
+}
+
+const styles = StyleSheet.create({
+  bellWrap: {
+    position: 'relative',
+  },
+  bellDot: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
+    borderWidth: 1.5,
+    borderColor: colors.background,
+  },
+});

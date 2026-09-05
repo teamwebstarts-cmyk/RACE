@@ -1,0 +1,147 @@
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
+
+import GlassCard from '../../components/ui/GlassCard';
+import PrimaryButton from '../../components/ui/PrimaryButton';
+import { getApiErrorMessage } from '../../services/api';
+import { verifyVehicle } from '../../services/vehicleService';
+import type { HomeStackParamList } from '../../types/navigation';
+import type { VehicleVerifyValidResponse } from '../../types/vehicle';
+import { colors, spacing, typography } from '../../theme';
+
+type Props = NativeStackScreenProps<HomeStackParamList, 'VehicleQrEmergency'>;
+
+function formatTelUrl(number: string): string {
+  const digits = number.replace(/\D/g, '');
+  if (digits.startsWith('91') && digits.length >= 12) {
+    return `tel:+${digits}`;
+  }
+  return `tel:+91${digits}`;
+}
+
+export default function VehicleQrEmergencyScreen({ route }: Props) {
+  const { vehicleId } = route.params;
+  const [verified, setVerified] = useState<VehicleVerifyValidResponse | null>(null);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
+  const [isVerifying, setIsVerifying] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setIsVerifying(true);
+    setVerifyError(null);
+
+    verifyVehicle(vehicleId)
+      .then(result => {
+        if (cancelled) return;
+        if (!result.valid) {
+          setVerifyError('Vehicle not found or invalid QR');
+          return;
+        }
+        setVerified(result);
+      })
+      .catch(err => {
+        if (!cancelled) setVerifyError(getApiErrorMessage(err, 'Vehicle not found or invalid QR'));
+      })
+      .finally(() => {
+        if (!cancelled) setIsVerifying(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [vehicleId]);
+
+  const callNumber = (number?: string) => {
+    if (!number?.trim()) {
+      Alert.alert('Unavailable', 'No phone number on file for this contact.');
+      return;
+    }
+    void Linking.openURL(formatTelUrl(number));
+  };
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.badge}>
+          <Ionicons name="warning" size={16} color={colors.textLight} />
+          <Text style={styles.badgeText}>Emergency QR</Text>
+        </View>
+
+        {isVerifying ? (
+          <View style={{ alignItems: 'center', paddingVertical: spacing.xl }}>
+            <ActivityIndicator color={colors.primary} />
+            <Text style={styles.meta}>Verifying vehicle...</Text>
+          </View>
+        ) : verifyError ? (
+          <View style={{ alignItems: 'center', paddingVertical: spacing.lg }}>
+            <Text style={styles.errorText}>{verifyError}</Text>
+          </View>
+        ) : verified ? (
+          <>
+            <GlassCard>
+              <Text style={styles.plate}>{verified.vehicleNumber}</Text>
+              <Text style={styles.meta}>
+                {verified.brand} {verified.model}
+              </Text>
+              {verified.color ? (
+                <Text style={styles.meta}>{verified.color} · {verified.fuelType}</Text>
+              ) : null}
+              {verified.ownerName ? (
+                <Text style={styles.owner}>Owner: {verified.ownerName}</Text>
+              ) : null}
+            </GlassCard>
+
+            <PrimaryButton
+              label={`Contact Owner${verified.ownerName ? `: ${verified.ownerName}` : ''}`}
+              onPress={() => callNumber(verified.ownerMobile)}
+            />
+            <PrimaryButton
+              label={`Emergency: ${verified.emergencyName ?? 'Contact'}`}
+              onPress={() => callNumber(verified.emergencyMobile)}
+              variant="outline"
+            />
+            <PrimaryButton
+              label="Request Towing"
+              onPress={() => Alert.alert('Towing', 'Open RACE app to book towing service.')}
+              variant="outline"
+            />
+          </>
+        ) : null}
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: colors.surfaceDarker },
+  content: { padding: spacing.lg },
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    alignSelf: 'flex-start',
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: 999,
+    marginBottom: spacing.lg,
+  },
+  badgeText: { color: colors.textLight, fontWeight: typography.weights.bold },
+  plate: {
+    color: colors.textLight,
+    fontSize: typography.sizes.xxl,
+    fontWeight: typography.weights.bold,
+    textAlign: 'center',
+  },
+  meta: { color: colors.grey, textAlign: 'center', marginTop: spacing.xs, textTransform: 'capitalize' },
+  owner: {
+    color: colors.textLight,
+    textAlign: 'center',
+    marginTop: spacing.sm,
+    fontWeight: typography.weights.semibold,
+  },
+  errorText: { color: colors.error, textAlign: 'center' },
+});

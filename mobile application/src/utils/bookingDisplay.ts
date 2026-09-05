@@ -1,0 +1,112 @@
+import type { Booking } from '../types/booking';
+import type { ActiveBooking, BookingHistoryItem } from '../types/models';
+import type { ServiceBookingType } from '../types/serviceBooking';
+import { formatLocationDisplay } from './readableAddress';
+
+export const ONGOING_UNIFIED_STATUSES = [
+  'PENDING',
+  'CONFIRMED',
+  'DRIVER_ASSIGNED',
+  'DRIVER_EN_ROUTE',
+  'DRIVER_ARRIVED',
+  'IN_PROGRESS',
+] as const;
+
+export const COMPLETED_UNIFIED_STATUSES = ['COMPLETED', 'RATED', 'CANCELLED'] as const;
+
+export function formatUnifiedStatusLabel(status: string): string {
+  return status
+    .toLowerCase()
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+export function isOngoingUnifiedStatus(status?: string): boolean {
+  if (!status) return false;
+  return ONGOING_UNIFIED_STATUSES.includes(status as (typeof ONGOING_UNIFIED_STATUSES)[number]);
+}
+
+export function isCompletedUnifiedStatus(status?: string): boolean {
+  if (!status) return false;
+  return COMPLETED_UNIFIED_STATUSES.includes(
+    status as (typeof COMPLETED_UNIFIED_STATUSES)[number],
+  );
+}
+
+export function isBookingOngoing(booking: Booking): boolean {
+  if (booking.unifiedStatus) {
+    return isOngoingUnifiedStatus(booking.unifiedStatus);
+  }
+  return ['CREATED', 'ASSIGNED', 'ACCEPTED', 'EN_ROUTE', 'ARRIVED', 'SERVICE_STARTED'].includes(
+    booking.status,
+  );
+}
+
+export function isBookingCompleted(booking: Booking): boolean {
+  if (booking.unifiedStatus) {
+    return isCompletedUnifiedStatus(booking.unifiedStatus);
+  }
+  return ['SERVICE_COMPLETED', 'PAYMENT_PENDING', 'PAID'].includes(booking.status);
+}
+
+export function formatBookingDisplayId(bookingNumber: string): string {
+  return bookingNumber.startsWith('#') ? bookingNumber : `#${bookingNumber}`;
+}
+
+export function mapBookingToActiveCard(booking: Booking): ActiveBooking {
+  return {
+    id: booking.id,
+    displayId: formatBookingDisplayId(booking.bookingNumber),
+    service: booking.serviceLabel,
+    status: booking.unifiedStatus
+      ? formatUnifiedStatusLabel(booking.unifiedStatus)
+      : formatUnifiedStatusLabel(booking.status),
+    pickup: formatLocationDisplay(booking.pickup),
+    drop:
+      formatLocationDisplay(booking.dropoff) === '—'
+        ? 'On-site service'
+        : formatLocationDisplay(booking.dropoff),
+    eta: booking.etaMinutes ? `${booking.etaMinutes} min` : '15 min',
+    driver: booking.driver
+      ? {
+          name: booking.driver.name,
+          rating: booking.driver.rating,
+          photo: booking.driver.avatarUrl ?? null,
+          experience: booking.driver.experience ?? 'RACE verified',
+        }
+      : {
+          name: 'Assigning driver',
+          rating: 4.8,
+          photo: null,
+          experience: 'RACE verified',
+        },
+    bookingType: booking.bookingType ?? 'towing',
+  };
+}
+
+export function mapBookingToHistoryRow(booking: Booking): BookingHistoryItem {
+  return {
+    id: booking.id,
+    displayId: formatBookingDisplayId(booking.bookingNumber),
+    service: booking.serviceLabel,
+    date: new Date(booking.createdAt).toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    }),
+    location: formatLocationDisplay(booking.pickup),
+    amount: booking.invoice?.total ?? 0,
+    status: booking.unifiedStatus
+      ? formatUnifiedStatusLabel(booking.unifiedStatus)
+      : 'Completed',
+    bookingType: booking.bookingType ?? 'towing',
+  };
+}
+
+export function resolveBookingType(
+  booking: Booking | null | undefined,
+  fallback: ServiceBookingType = 'towing',
+): ServiceBookingType {
+  return booking?.bookingType ?? fallback;
+}

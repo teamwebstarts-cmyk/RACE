@@ -1,0 +1,277 @@
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native';
+import {
+  Camera,
+  ChevronDown,
+  Mail,
+  Plus,
+  User,
+} from 'lucide-react-native';
+
+import FormField from '../../components/auth/FormField';
+import DateOfBirthField from '../../components/auth/DateOfBirthField';
+import GoldButton from '../../components/auth/GoldButton';
+import ProfileAddressFields, {
+  type AddressFormValues,
+} from '../../components/profile/ProfileAddressFields';
+import ProfileEmergencyContactFields, {
+  type EmergencyContactFormValues,
+} from '../../components/profile/ProfileEmergencyContactFields';
+import ProfileSubScreenLayout, { useProfilePx } from '../../components/profile/ProfileSubScreenLayout';
+import { EMERGENCY_RELATIONSHIP_OPTIONS } from '../../constants/profileForm';
+import { useProfileStore } from '../../store/profileStore';
+import { getApiErrorMessage } from '../../services/api';
+import { buildUpdateProfilePayload, validateProfileForm } from '../../utils/profilePayload';
+import { colors, shadows, typography } from '../../theme';
+
+function formatRelationship(value?: string): string {
+  if (!value) return '';
+  const match = EMERGENCY_RELATIONSHIP_OPTIONS.find(
+    option => option.toLowerCase() === value.toLowerCase(),
+  );
+  return match ?? value;
+}
+
+export default function PersonalInformationScreen() {
+  const px = useProfilePx();
+  const { profile, fetchProfile, updateProfile, isLoading } = useProfileStore();
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [dob, setDob] = useState('');
+  const [gender, setGender] = useState('');
+  const [emergency, setEmergency] = useState<EmergencyContactFormValues>({
+    name: '',
+    phone: '',
+    relationship: '',
+  });
+  const [address, setAddress] = useState<AddressFormValues>({
+    line1: '',
+    line2: '',
+    city: '',
+    state: '',
+    pincode: '',
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    void fetchProfile();
+  }, [fetchProfile]);
+
+  useEffect(() => {
+    if (!profile) return;
+    setName(profile.fullName ?? '');
+    setEmail(profile.email ?? '');
+    setDob(profile.dateOfBirth ?? '');
+    setGender(profile.gender ?? '');
+    setEmergency({
+      name: profile.emergencyContact?.name ?? '',
+      phone: profile.emergencyContact?.mobileNumber ?? '',
+      relationship: formatRelationship(profile.emergencyContact?.relationship),
+    });
+    setAddress({
+      line1: profile.address?.line1 ?? '',
+      line2: profile.address?.line2 ?? '',
+      city: profile.address?.city ?? '',
+      state: profile.address?.state ?? '',
+      pincode: profile.address?.pincode ?? '',
+    });
+  }, [profile]);
+
+  const clearError = (key: string) => {
+    if (errors[key]) {
+      setErrors(prev => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    }
+  };
+
+  const handleSave = async () => {
+    const nextErrors = validateProfileForm({
+      fullName: name,
+      email,
+      gender,
+      dateOfBirth: dob,
+      emergencyPhone: emergency.phone,
+      emergencyName: emergency.name,
+      emergencyRelationship: emergency.relationship,
+      addressLine1: address.line1,
+      addressLine2: address.line2,
+      city: address.city,
+      state: address.state,
+      pincode: address.pincode,
+      country: profile?.address?.country,
+    });
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
+
+    try {
+      await updateProfile(
+        buildUpdateProfilePayload({
+          fullName: name,
+          email,
+          gender,
+          dateOfBirth: dob,
+          emergencyPhone: emergency.phone,
+          emergencyName: emergency.name,
+          emergencyRelationship: emergency.relationship,
+          addressLine1: address.line1,
+          addressLine2: address.line2,
+          city: address.city,
+          state: address.state,
+          pincode: address.pincode,
+          country: profile?.address?.country,
+        }),
+      );
+      Alert.alert('Saved', 'Your profile has been updated.');
+    } catch (error) {
+      Alert.alert('Profile', getApiErrorMessage(error, 'Unable to update profile'));
+    }
+  };
+
+  const optionalTag = (
+    <Text style={{ fontSize: px(11), color: colors.grey }}>(Optional)</Text>
+  );
+
+  if (isLoading && !profile) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  return (
+    <ProfileSubScreenLayout title="Personal Information" subtitle="Update your details">
+      <Pressable
+        style={{
+          alignSelf: 'center',
+          alignItems: 'center',
+          marginBottom: px(22),
+        }}>
+        <View style={{ position: 'relative' }}>
+          <View
+            style={{
+              width: px(88),
+              height: px(88),
+              borderRadius: px(44),
+              backgroundColor: colors.goldLight,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+            <Camera size={px(30)} color={colors.primary} strokeWidth={2} />
+          </View>
+          <View
+            style={{
+              position: 'absolute',
+              right: 0,
+              bottom: 0,
+              width: px(26),
+              height: px(26),
+              borderRadius: px(13),
+              backgroundColor: colors.primary,
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderWidth: 2,
+              borderColor: colors.background,
+            }}>
+            <Plus size={px(14)} color={colors.dark} strokeWidth={2.5} />
+          </View>
+        </View>
+        <Text
+          style={{
+            marginTop: px(8),
+            fontSize: px(13),
+            fontWeight: typography.weights.bold,
+            color: colors.primary,
+          }}>
+          Change Photo
+        </Text>
+      </Pressable>
+
+      <View style={{ gap: px(12), marginBottom: px(20) }}>
+        <FormField
+          label="Full Name"
+          value={name}
+          onChangeText={text => {
+            setName(text);
+            clearError('name');
+          }}
+          placeholder="e.g. Shivam Ramdasani"
+          Icon={User}
+          variant="outlined"
+          compact
+          required
+          error={errors.name}
+        />
+        <FormField
+          label="Email (optional)"
+          value={email}
+          onChangeText={text => {
+            setEmail(text);
+            clearError('email');
+          }}
+          placeholder="your@email.com"
+          Icon={Mail}
+          variant="outlined"
+          compact
+          keyboardType="email-address"
+          autoCapitalize="none"
+          error={errors.email}
+        />
+        <DateOfBirthField
+          value={dob}
+          onChange={text => {
+            setDob(text);
+            clearError('dob');
+          }}
+          error={errors.dob}
+        />
+        <FormField
+          label="Gender"
+          value={gender}
+          onChangeText={() => {}}
+          placeholder="Select gender"
+          Icon={User}
+          variant="outlined"
+          compact
+          editable={false}
+          onPress={() =>
+            Alert.alert('Select Gender', '', [
+              { text: 'Male', onPress: () => setGender('Male') },
+              { text: 'Female', onPress: () => setGender('Female') },
+              { text: 'Other', onPress: () => setGender('Other') },
+              { text: 'Cancel', style: 'cancel' },
+            ])
+          }
+          rightElement={
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: px(6) }}>
+              {optionalTag}
+              <ChevronDown size={px(16)} color={colors.grey} />
+            </View>
+          }
+        />
+        <ProfileEmergencyContactFields
+          values={emergency}
+          errors={errors}
+          onChange={patch => setEmergency(prev => ({ ...prev, ...patch }))}
+          onClearError={clearError}
+        />
+        <ProfileAddressFields
+          values={address}
+          errors={errors}
+          onChange={patch => setAddress(prev => ({ ...prev, ...patch }))}
+          onClearError={clearError}
+        />
+      </View>
+
+      <GoldButton
+        label={isLoading ? 'Saving...' : 'Save Changes'}
+        onPress={() => void handleSave()}
+        style={shadows.card}
+        disabled={isLoading}
+      />
+    </ProfileSubScreenLayout>
+  );
+}

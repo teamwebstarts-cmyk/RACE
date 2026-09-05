@@ -1,0 +1,988 @@
+import React, { useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import {
+  Briefcase,
+  Calendar,
+  Car,
+  MapPin,
+  Navigation,
+  Plus,
+  Truck,
+} from 'lucide-react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import axios from 'axios';
+
+import GlassCard from '../../components/ui/GlassCard';
+import AppScreenLayout from '../../components/ui/AppScreenLayout';
+import { useAppSelector } from '../../redux/hooks';
+import {
+  useAcceptDriverJobMutation,
+  useDriverJobOffersQuery,
+  useDriverJobsQuery,
+  useRejectDriverJobMutation,
+} from '../../services/driver/useDriverQueries';
+import type { DriverJobBooking } from '../../services/driver/driverApi';
+import { useVendorBookingOffersQuery } from '../../services/vendor/useVendorBookingsQueries';
+import { formatReadableAddress } from '../../utils/readableAddress';
+import type { PartnerJobsStackParamList } from '../../types/partnerNavigation';
+import { colors, radius, spacing, typography } from '../../theme';
+import { getApiErrorMessage } from '../../services/auth/useAuthMutations';
+
+const ACTIVE_STATUSES = new Set(['DRIVER_EN_ROUTE', 'DRIVER_ARRIVED', 'IN_PROGRESS']);
+
+type JobTab = 'all' | 'new' | 'nearby' | 'assigned' | 'in_progress' | 'completed';
+
+const PAGE_BG = '#F7F7F5';
+
+const DRIVER_TABS: Array<{ key: JobTab; label: string }> = [
+  { key: 'all', label: 'All' },
+  { key: 'new', label: 'Available' },
+  { key: 'in_progress', label: 'Active' },
+  { key: 'completed', label: 'Done' },
+];
+
+const VENDOR_TABS: Array<{ key: JobTab; label: string }> = [
+  { key: 'all', label: 'All' },
+  { key: 'new', label: 'New' },
+  { key: 'nearby', label: 'Nearby' },
+  { key: 'assigned', label: 'Assigned' },
+  { key: 'in_progress', label: 'In progress' },
+  { key: 'completed', label: 'Completed' },
+];
+
+const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
+  NEW: { bg: '#DBEAFE', text: '#1D4ED8' },
+  NEARBY: { bg: '#DCFCE7', text: '#15803D' },
+  APPROVED: { bg: '#FEF3C7', text: '#B45309' },
+  'AWAITING DRIVER': { bg: '#FEF3C7', text: '#B45309' },
+  ASSIGNED: { bg: '#F3E8FF', text: '#7E22CE' },
+  'IN PROGRESS': { bg: '#FFEDD5', text: '#C2410C' },
+  COMPLETED: { bg: '#F3F4F6', text: '#4B5563' },
+};
+
+function statusLabelFor(job: DriverJobBooking, isOffer: boolean, isVendor = false): string {
+  if (isOffer && job.vendorApproved && isVendor) return 'AWAITING DRIVER';
+  if (isOffer && job.vendorApproved) return 'APPROVED';
+  if (isOffer) {
+    if (typeof job.distanceKm === 'number' && job.distanceKm <= 5) return 'NEARBY';
+    return 'NEW';
+  }
+  if (job.status === 'DRIVER_ASSIGNED') return 'ASSIGNED';
+  if (ACTIVE_STATUSES.has(job.status)) return 'IN PROGRESS';
+  if (job.status === 'COMPLETED' || job.status === 'RATED') return 'COMPLETED';
+  return 'NEW';
+}
+
+function tabFor(job: DriverJobBooking, isOffer: boolean, isVendor = false): JobTab {
+  const label = statusLabelFor(job, isOffer, isVendor);
+  if (label === 'NEARBY') return 'nearby';
+  if (label === 'NEW' || label === 'APPROVED' || label === 'AWAITING DRIVER') return 'new';
+  if (label === 'ASSIGNED') return 'assigned';
+  if (label === 'IN PROGRESS') return 'in_progress';
+  if (label === 'COMPLETED') return 'completed';
+  return 'all';
+}
+
+function formatJobTime(iso?: string) {
+  if (!iso) return '';
+  const date = new Date(iso);
+  if (Number.isNaN(+date)) return '';
+  const today = new Date();
+  const sameDay =
+    date.getFullYear() === today.getFullYear() &&
+    date.getMonth() === today.getMonth() &&
+    date.getDate() === today.getDate();
+  const time = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  return sameDay
+    ? `Today, ${time}`
+    : date.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
+function isPendingApprovalError(error: unknown): boolean {
+  return (
+    axios.isAxiosError(error) &&
+    error.response?.status === 403 &&
+    String((error.response?.data as { message?: string } | undefined)?.message ?? '')
+      .toLowerCase()
+      .includes('pending admin approval')
+  );
+}
+
+export default function PartnerJobsScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<PartnerJobsStackParamList>>();
+  const user = useAppSelector(state => state.auth.user);
+  const isDriver = user?.role === 'driver';
+  const isVendor = user?.role === 'vendor';
+
+  const [filter, setFilter] = useState<JobTab>('all');
+  const [actingId, setActingId] = useState<string | null>(null);
+
+  const driverJobsQuery = useDriverJobsQuery(isDriver);
+  const driverOffersQuery = useDriverJobOffersQuery(isDriver);
+  const vendorOffersQuery = useVendorBookingOffersQuery(isVendor);
+
+  const acceptMutation = useAcceptDriverJobMutation();
+  const rejectMutation = useRejectDriverJobMutation();
+
+  const offers: DriverJobBooking[] = isVendor
+    ? (vendorOffersQuery.data ?? [])
+    : (driverOffersQuery.data ?? []);
+  const myJobs: DriverJobBooking[] = isDriver ? (driverJobsQuery.data ?? []) : [];
+
+  const pendingApproval =
+    isPendingApprovalError(driverJobsQuery.error) ||
+    isPendingApprovalError(driverOffersQuery.error) ||
+    isPendingApprovalError(vendorOffersQuery.error);
+
+  const loadError =
+    (!pendingApproval &&
+      (driverJobsQuery.error || driverOffersQuery.error || vendorOffersQuery.error)) ||
+    null;
+
+  const isLoading = isVendor
+    ? vendorOffersQuery.isLoading
+    : driverJobsQuery.isLoading || driverOffersQuery.isLoading;
+
+  const offerCards = useMemo(
+    () => offers.map(job => ({ job, isOffer: true as const })),
+    [offers],
+  );
+  const mineCards = useMemo(
+    () => myJobs.map(job => ({ job, isOffer: false as const })),
+    [myJobs],
+  );
+
+  const driverAvailableCards = useMemo(() => {
+    if (filter === 'all' || filter === 'new' || filter === 'nearby') {
+      return offerCards.filter(({ job, isOffer }) =>
+        filter === 'all' ? true : tabFor(job, isOffer, false) === filter,
+      );
+    }
+    return [];
+  }, [offerCards, filter]);
+
+  const driverMyCards = useMemo(() => {
+    if (filter === 'all' || filter === 'assigned' || filter === 'in_progress' || filter === 'completed') {
+      return mineCards.filter(({ job, isOffer }) =>
+        filter === 'all' ? true : tabFor(job, isOffer, false) === filter,
+      );
+    }
+    return [];
+  }, [mineCards, filter]);
+
+  const isRefetching = isVendor
+    ? vendorOffersQuery.isRefetching
+    : driverJobsQuery.isRefetching || driverOffersQuery.isRefetching;
+
+  const refetchAll = () => {
+    if (isVendor) {
+      void vendorOffersQuery.refetch();
+    } else if (isDriver) {
+      void driverJobsQuery.refetch();
+      void driverOffersQuery.refetch();
+    }
+  };
+
+  const allVendorCards = useMemo(
+    () => offers.map(job => ({ job, isOffer: true as const })),
+    [offers],
+  );
+
+  const allDriverCards = useMemo(() => {
+    const offerCards = offers.map(job => ({ job, isOffer: true as const }));
+    const mineCards = myJobs.map(job => ({ job, isOffer: false as const }));
+    return [...offerCards, ...mineCards];
+  }, [offers, myJobs]);
+
+  const cards = isVendor ? allVendorCards : allDriverCards;
+
+  const tabs = isDriver ? DRIVER_TABS : VENDOR_TABS;
+
+  const counts = useMemo(() => {
+    if (isDriver) {
+      const activeMine = mineCards.filter(
+        ({ job }) => job.status === 'DRIVER_ASSIGNED' || ACTIVE_STATUSES.has(job.status),
+      ).length;
+      const doneMine = mineCards.filter(
+        ({ job }) => job.status === 'COMPLETED' || job.status === 'RATED',
+      ).length;
+      return {
+        all: offerCards.length + mineCards.length,
+        new: offerCards.length,
+        nearby: 0,
+        assigned: 0,
+        in_progress: activeMine,
+        completed: doneMine,
+      };
+    }
+
+    const base: Record<JobTab, number> = {
+      all: cards.length,
+      new: 0,
+      nearby: 0,
+      assigned: 0,
+      in_progress: 0,
+      completed: 0,
+    };
+    cards.forEach(({ job, isOffer }) => {
+      const tab = tabFor(job, isOffer, isVendor);
+      base[tab] += 1;
+    });
+    return base;
+  }, [isDriver, offerCards, mineCards, cards, isVendor]);
+
+  const filteredCards = useMemo(() => {
+    if (filter === 'all') return cards;
+    return cards.filter(({ job, isOffer }) => tabFor(job, isOffer, isVendor) === filter);
+  }, [cards, filter, isVendor]);
+
+  const summary = useMemo(() => {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const jobsToday = cards.filter(({ job }) => {
+      if (!job.createdAt) return false;
+      return new Date(job.createdAt) >= todayStart;
+    }).length;
+    return {
+      jobsToday,
+      open: counts.new + counts.nearby,
+      inProgress: counts.assigned + counts.in_progress,
+    };
+  }, [cards, counts]);
+
+  const onAccept = async (job: DriverJobBooking) => {
+    setActingId(job.id);
+    try {
+      await acceptMutation.mutateAsync({ bookingId: job.id, bookingType: job.bookingType });
+      navigation.navigate('PartnerActiveJob', {
+        bookingId: job.id,
+        bookingType: job.bookingType,
+      });
+    } catch (error) {
+      Alert.alert('Accept failed', getApiErrorMessage(error, 'Could not accept job'));
+      refetchAll();
+    } finally {
+      setActingId(null);
+    }
+  };
+
+  const onReject = (job: DriverJobBooking) => {
+    Alert.alert('Reject job?', 'This booking will go back to the open pool.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Reject',
+        style: 'destructive',
+        onPress: () => {
+          void (async () => {
+            setActingId(job.id);
+            try {
+              await rejectMutation.mutateAsync({
+                bookingId: job.id,
+                bookingType: job.bookingType,
+              });
+            } catch (error) {
+              Alert.alert('Reject failed', getApiErrorMessage(error, 'Could not reject job'));
+            } finally {
+              setActingId(null);
+            }
+          })();
+        },
+      },
+    ]);
+  };
+
+  const driverIsEmpty = driverAvailableCards.length === 0 && driverMyCards.length === 0;
+
+  const renderJobCard = ({ job, isOffer }: { job: DriverJobBooking; isOffer: boolean }) => {
+    const label = statusLabelFor(job, isOffer, isVendor);
+    const statusStyle = STATUS_COLORS[label] ?? STATUS_COLORS.NEW;
+    const Icon = job.bookingType === 'towing' ? Truck : Car;
+    const serviceLabel =
+      job.serviceLabel || (job.bookingType === 'towing' ? 'Car Tow' : 'Hire Driver');
+    const busy = actingId === job.id;
+    const canAcceptOffer = isDriver && isOffer;
+    const canRejectAssigned = isDriver && !isOffer && job.status === 'DRIVER_ASSIGNED';
+    const isActive = isDriver && !isOffer && ACTIVE_STATUSES.has(job.status);
+
+    return (
+      <GlassCard
+        key={`${isOffer ? 'o' : 'm'}-${job.bookingType}-${job.id}`}
+        style={[styles.jobCard, isOffer && isDriver && styles.driverOfferCard]}>
+        <View style={styles.jobTop}>
+          <View style={[styles.serviceIcon, { backgroundColor: statusStyle.bg }]}>
+            <Icon size={22} color={statusStyle.text} strokeWidth={2.2} />
+          </View>
+          <View style={styles.jobTopCopy}>
+            <View style={styles.badgeRow}>
+              <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
+                <Text style={[styles.statusBadgeText, { color: statusStyle.text }]}>{label}</Text>
+              </View>
+              <Text style={styles.jobNumber}>#{job.bookingNumber}</Text>
+            </View>
+            {typeof job.distanceKm === 'number' && job.distanceKm < 900 ? (
+              <View style={styles.distanceRow}>
+                <MapPin size={13} color="#16A34A" strokeWidth={2.4} />
+                <Text style={styles.distanceText}>{job.distanceKm.toFixed(1)} km away</Text>
+              </View>
+            ) : null}
+          </View>
+        </View>
+
+        {isOffer && job.vendorApproved ? (
+          <View style={styles.vendorApprovedChip}>
+            <Text style={styles.vendorApprovedChipText}>Vendor approved · vehicle assigned</Text>
+          </View>
+        ) : null}
+
+        <View style={styles.routeBlock}>
+          <View style={styles.routeRail}>
+            <View style={styles.routeDot} />
+            {job.dropoff ? (
+              <>
+                <View style={styles.routeLine} />
+                <View style={[styles.routeDot, styles.routeDotEnd]} />
+              </>
+            ) : null}
+          </View>
+          <View style={styles.routeCopy}>
+            <Text style={styles.routeText} numberOfLines={2}>
+              {formatReadableAddress(job.pickup?.address || job.pickup?.label) || 'Pickup'}
+            </Text>
+            {job.dropoff ? (
+              <Text style={[styles.routeText, { marginTop: spacing.sm }]} numberOfLines={2}>
+                {formatReadableAddress(job.dropoff.address || job.dropoff.label) || 'Drop-off'}
+              </Text>
+            ) : null}
+          </View>
+        </View>
+
+        <View style={styles.timeRow}>
+          <Calendar size={13} color={colors.grey} strokeWidth={2.2} />
+          <Text style={styles.timeText}>{formatJobTime(job.createdAt)}</Text>
+        </View>
+
+        <View style={styles.bottomRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.serviceLabel}>{serviceLabel}</Text>
+            {job.assignedFleetVehicleLabel ? (
+              <Text style={styles.vehicleHint}>Vehicle: {job.assignedFleetVehicleLabel}</Text>
+            ) : null}
+            {typeof job.estimatedFare === 'number' ? (
+              <>
+                <Text style={styles.fare}>₹{Math.round(job.estimatedFare)}</Text>
+                <Text style={styles.fareHint}>Estimated earnings</Text>
+              </>
+            ) : null}
+          </View>
+        </View>
+
+        {isVendor && isOffer && !job.vendorApproved ? (
+          <View style={styles.vendorActions}>
+            <Pressable
+              onPress={() =>
+                navigation.navigate('VendorAssignJob', {
+                  bookingId: job.id,
+                  bookingType: job.bookingType,
+                  bookingNumber: job.bookingNumber,
+                  serviceLabel,
+                  pickupAddress: job.pickup?.address || job.pickup?.label,
+                  estimatedFare: job.estimatedFare,
+                })
+              }
+              style={styles.assignBtn}>
+              <Text style={styles.assignLabel}>Approve & assign vehicle</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => navigation.navigate('VendorVehicles')}
+              style={styles.addVehicleOutline}>
+              <Text style={styles.addVehicleOutlineLabel}>Add vehicle</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
+        {isVendor && isOffer && job.vendorApproved ? (
+          <View style={styles.awaitingDriverBanner}>
+            <Text style={styles.awaitingDriverText}>
+              Awaiting driver — your fleet drivers can accept this job
+            </Text>
+          </View>
+        ) : null}
+
+        {canAcceptOffer ? (
+          <Pressable
+            disabled={busy}
+            onPress={() => void onAccept(job)}
+            style={[styles.acceptBtnFull, busy && styles.disabled]}>
+            <Text style={styles.acceptLabel}>{busy ? 'Accepting…' : 'Accept trip'}</Text>
+          </Pressable>
+        ) : null}
+
+        {canRejectAssigned ? (
+          <View style={styles.actions}>
+            <Pressable
+              disabled={busy}
+              onPress={() => void onAccept(job)}
+              style={[styles.acceptBtn, busy && styles.disabled]}>
+              <Text style={styles.acceptLabel}>{busy ? '…' : 'Start trip'}</Text>
+            </Pressable>
+            <Pressable
+              disabled={busy}
+              onPress={() => onReject(job)}
+              style={[styles.rejectBtn, busy && styles.disabled]}>
+              <Text style={styles.rejectLabel}>Reject</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
+        {isActive ? (
+          <Pressable
+            onPress={() =>
+              navigation.navigate('PartnerActiveJob', {
+                bookingId: job.id,
+                bookingType: job.bookingType,
+              })
+            }
+            style={styles.manageBtn}>
+            <Text style={styles.manageLabel}>Manage active trip →</Text>
+          </Pressable>
+        ) : null}
+      </GlassCard>
+    );
+  };
+
+  return (
+    <AppScreenLayout
+      header={
+        <View style={styles.headerPad}>
+          <View style={styles.headerTop}>
+            <View style={styles.headerCopy}>
+              <Text style={styles.title}>Jobs</Text>
+              <Text style={styles.subtitle}>
+                {isVendor
+                  ? 'Manage and assign roadside assistance requests.'
+                  : 'Trips approved by your vendor appear here — accept to start.'}
+              </Text>
+            </View>
+            {isVendor ? (
+              <Pressable
+                onPress={() => navigation.navigate('VendorVehicles')}
+                style={styles.addVehicleBtn}>
+                <Plus size={16} color={colors.dark} strokeWidth={2.6} />
+                <Text style={styles.addVehicleLabel}>Vehicle</Text>
+              </Pressable>
+            ) : null}
+          </View>
+
+          {isVendor ? (
+            <View style={styles.summaryCard}>
+              <View style={styles.summaryIcon}>
+                <Briefcase size={18} color="#2563EB" strokeWidth={2.2} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.summaryTitle}>
+                  Jobs today: <Text style={styles.summaryCount}>{summary.jobsToday}</Text>
+                </Text>
+                <Text style={styles.summaryMeta}>
+                  <Text style={styles.openMeta}>{summary.open} Open</Text>
+                  {' · '}
+                  <Text style={styles.progressMeta}>{summary.inProgress} In progress</Text>
+                </Text>
+              </View>
+            </View>
+          ) : null}
+
+          {isDriver ? (
+            <View style={styles.summaryCard}>
+              <View style={[styles.summaryIcon, { backgroundColor: colors.goldLight }]}>
+                <Briefcase size={18} color={colors.primaryDark} strokeWidth={2.2} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.summaryTitle}>
+                  <Text style={styles.summaryCount}>{offerCards.length}</Text> ready to accept
+                </Text>
+                <Text style={styles.summaryMeta}>
+                  <Text style={styles.openMeta}>{counts.in_progress} active trip(s)</Text>
+                  {offerCards.length === 0 ? (
+                    <>
+                      {' · '}
+                      <Text style={styles.progressMeta}>Ask vendor to approve jobs first</Text>
+                    </>
+                  ) : null}
+                </Text>
+              </View>
+            </View>
+          ) : null}
+        </View>
+      }
+      scrollable={false}
+      contentStyle={styles.content}>
+      {!isDriver && !isVendor ? (
+        <View style={styles.empty}>
+          <Text style={styles.emptyTitle}>Partner jobs</Text>
+          <Text style={styles.emptySubtitle}>
+            Sign in as a vendor or driver to see customer requests.
+          </Text>
+        </View>
+      ) : pendingApproval ? (
+        <View style={styles.empty}>
+          <Text style={styles.emptyTitle}>Waiting for approval</Text>
+          <Text style={styles.emptySubtitle}>
+            Your account is pending admin approval. Jobs will appear here once approved.
+          </Text>
+        </View>
+      ) : (
+        <>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.tabsRow}>
+            {tabs.map(tab => {
+              const active = filter === tab.key;
+              return (
+                <Pressable
+                  key={tab.key}
+                  onPress={() => setFilter(tab.key)}
+                  style={[styles.tab, active && styles.tabActive]}>
+                  <Text style={[styles.tabText, active && styles.tabTextActive]}>
+                    {tab.label} ({counts[tab.key]})
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+
+          {isLoading ? (
+            <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.xxl }} />
+          ) : (
+            <ScrollView
+              contentContainerStyle={styles.list}
+              refreshControl={
+                <RefreshControl refreshing={isRefetching} onRefresh={refetchAll} />
+              }>
+              {loadError ? (
+                <Text style={styles.errorText}>
+                  {getApiErrorMessage(loadError, 'Unable to load jobs')}
+                </Text>
+              ) : null}
+
+              {isDriver ? (
+                driverIsEmpty ? (
+                  <View style={styles.emptyInline}>
+                    <View style={styles.iconWrap}>
+                      <Navigation size={36} color={colors.primary} strokeWidth={2} />
+                    </View>
+                    <Text style={styles.emptyTitle}>No trips yet</Text>
+                    <Text style={styles.emptySubtitle}>
+                      After your vendor approves a customer request and assigns a vehicle, it will
+                      show up here. Tap Accept trip to claim it — then it becomes your active job.
+                    </Text>
+                  </View>
+                ) : (
+                  <>
+                    {driverAvailableCards.length > 0 ? (
+                      <>
+                        <Text style={styles.sectionHeading}>Available to accept</Text>
+                        {driverAvailableCards.map(renderJobCard)}
+                      </>
+                    ) : null}
+                    {driverMyCards.length > 0 ? (
+                      <>
+                        <Text style={[styles.sectionHeading, driverAvailableCards.length > 0 && styles.sectionHeadingSpaced]}>
+                          My trips
+                        </Text>
+                        {driverMyCards.map(renderJobCard)}
+                      </>
+                    ) : null}
+                  </>
+                )
+              ) : filteredCards.length === 0 ? (
+                <View style={styles.emptyInline}>
+                  <View style={styles.iconWrap}>
+                    <Navigation size={36} color={colors.primary} strokeWidth={2} />
+                  </View>
+                  <Text style={styles.emptyTitle}>No jobs yet</Text>
+                  <Text style={styles.emptySubtitle}>
+                    Open customer requests appear here. Approve a job and assign a vehicle — your
+                    drivers can accept it.
+                  </Text>
+                </View>
+              ) : (
+                filteredCards.map(renderJobCard)
+              )}
+            </ScrollView>
+          )}
+        </>
+      )}
+    </AppScreenLayout>
+  );
+}
+
+const styles = StyleSheet.create({
+  headerPad: {
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+    backgroundColor: PAGE_BG,
+    gap: spacing.md,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+  },
+  headerCopy: { flex: 1 },
+  title: {
+    color: colors.dark,
+    fontSize: typography.sizes.xxl,
+    fontWeight: typography.weights.extrabold,
+  },
+  subtitle: {
+    marginTop: spacing.xs,
+    color: colors.grey,
+    fontSize: typography.sizes.sm,
+    lineHeight: 20,
+  },
+  addVehicleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.primary,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  addVehicleLabel: {
+    color: colors.dark,
+    fontWeight: typography.weights.bold,
+    fontSize: typography.sizes.sm,
+  },
+  summaryCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+  },
+  summaryIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#DBEAFE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  summaryTitle: {
+    color: colors.dark,
+    fontWeight: typography.weights.semibold,
+  },
+  summaryCount: {
+    fontWeight: typography.weights.extrabold,
+    fontSize: typography.sizes.lg,
+  },
+  summaryMeta: {
+    marginTop: 2,
+    fontSize: typography.sizes.sm,
+  },
+  openMeta: { color: '#2563EB', fontWeight: typography.weights.semibold },
+  progressMeta: { color: colors.primaryDark, fontWeight: typography.weights.semibold },
+  content: { flexGrow: 1 },
+  tabsRow: {
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    gap: spacing.sm,
+  },
+  tab: {
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.lightGrey,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  tabActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  tabText: {
+    color: colors.grey,
+    fontWeight: typography.weights.semibold,
+    fontSize: typography.sizes.sm,
+  },
+  tabTextActive: { color: colors.dark },
+  list: {
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.xxl,
+    gap: spacing.md,
+    backgroundColor: PAGE_BG,
+  },
+  sectionHeading: {
+    color: colors.dark,
+    fontWeight: typography.weights.extrabold,
+    fontSize: typography.sizes.md,
+    marginBottom: spacing.xs,
+  },
+  sectionHeadingSpaced: {
+    marginTop: spacing.lg,
+  },
+  jobCard: { gap: spacing.md },
+  driverOfferCard: {
+    borderColor: colors.primary,
+    borderWidth: 1.5,
+    backgroundColor: colors.background,
+  },
+  jobTop: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  serviceIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  jobTopCopy: { flex: 1, gap: 4 },
+  badgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flexWrap: 'wrap',
+  },
+  statusBadge: {
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+  },
+  statusBadgeText: {
+    fontSize: 10,
+    fontWeight: typography.weights.bold,
+    letterSpacing: 0.4,
+  },
+  jobNumber: {
+    color: colors.dark,
+    fontWeight: typography.weights.bold,
+  },
+  distanceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  distanceText: {
+    color: '#16A34A',
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
+  },
+  routeBlock: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  routeRail: {
+    width: 10,
+    alignItems: 'center',
+    paddingTop: 4,
+  },
+  routeDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#2563EB',
+  },
+  routeDotEnd: {
+    backgroundColor: colors.primary,
+  },
+  routeLine: {
+    width: 2,
+    flex: 1,
+    minHeight: 18,
+    backgroundColor: colors.border,
+    marginVertical: 2,
+  },
+  routeCopy: { flex: 1 },
+  routeText: {
+    color: colors.dark,
+    fontSize: typography.sizes.sm,
+    lineHeight: 20,
+  },
+  timeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  timeText: {
+    color: colors.grey,
+    fontSize: typography.sizes.sm,
+  },
+  bottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+  },
+  serviceLabel: {
+    color: '#2563EB',
+    fontWeight: typography.weights.semibold,
+    fontSize: typography.sizes.sm,
+  },
+  fare: {
+    marginTop: 2,
+    color: colors.dark,
+    fontWeight: typography.weights.extrabold,
+    fontSize: typography.sizes.xxl,
+  },
+  fareHint: {
+    color: colors.grey,
+    fontSize: typography.sizes.xs,
+  },
+  vehicleHint: {
+    marginTop: 2,
+    color: colors.grey,
+    fontSize: typography.sizes.xs,
+  },
+  vendorActions: { gap: spacing.sm },
+  assignBtn: {
+    minHeight: 48,
+    borderRadius: radius.button,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  assignLabel: {
+    color: colors.dark,
+    fontWeight: typography.weights.bold,
+    fontSize: typography.sizes.md,
+  },
+  addVehicleOutline: {
+    minHeight: 44,
+    borderRadius: radius.button,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addVehicleOutlineLabel: {
+    color: colors.primaryDark,
+    fontWeight: typography.weights.bold,
+  },
+  awaitingDriverBanner: {
+    marginTop: spacing.sm,
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    backgroundColor: colors.goldLight,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  awaitingDriverText: {
+    color: colors.primaryDark,
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
+    textAlign: 'center',
+  },
+  vendorApprovedChip: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.goldLight,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  vendorApprovedChipText: {
+    color: colors.primaryDark,
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.bold,
+  },
+  acceptBtnFull: {
+    minHeight: 48,
+    borderRadius: radius.button,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  acceptBtn: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: radius.button,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  acceptLabel: {
+    color: colors.dark,
+    fontWeight: typography.weights.bold,
+  },
+  rejectBtn: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: radius.button,
+    borderWidth: 1.5,
+    borderColor: colors.error,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rejectLabel: {
+    color: colors.error,
+    fontWeight: typography.weights.bold,
+  },
+  manageBtn: {
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+  },
+  manageLabel: {
+    color: colors.primary,
+    fontWeight: typography.weights.bold,
+  },
+  disabled: { opacity: 0.5 },
+  empty: {
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.xxxl,
+  },
+  emptyInline: {
+    alignItems: 'center',
+    paddingVertical: spacing.xl,
+    paddingHorizontal: spacing.md,
+  },
+  iconWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: colors.goldLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  emptyTitle: {
+    color: colors.dark,
+    fontSize: typography.sizes.xl,
+    fontWeight: typography.weights.bold,
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    color: colors.grey,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginTop: spacing.sm,
+  },
+  errorText: {
+    color: colors.error,
+    fontSize: typography.sizes.sm,
+    marginBottom: spacing.sm,
+  },
+});

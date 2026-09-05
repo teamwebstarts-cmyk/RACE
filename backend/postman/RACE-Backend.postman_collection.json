@@ -1,0 +1,641 @@
+{
+  "info": {
+    "name": "RACE Backend API",
+    "description": "Full RACE Service API — Auth, Profile, Vehicles, Bookings, Subscriptions, SOS, Notifications",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "accessToken", "value": "" },
+    { "key": "vehicleId", "value": "" },
+    { "key": "bookingId", "value": "" },
+    { "key": "towingBookingId", "value": "" },
+    { "key": "driverBookingId", "value": "" },
+    { "key": "paymentTransactionId", "value": "" },
+    { "key": "locationId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. Health & Public",
+      "item": [
+        {
+          "name": "GET Health",
+          "request": { "method": "GET", "url": "{{baseUrl}}/health" }
+        },
+        {
+          "name": "GET Services",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/services" }
+        },
+        {
+          "name": "GET Upcoming Services",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/services/upcoming" }
+        },
+        {
+          "name": "GET Brand",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/brand" }
+        },
+        {
+          "name": "GET Subscription Plans",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/subscriptions/plans" }
+        },
+        {
+          "name": "GET SOS Config",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/sos/config" }
+        }
+      ]
+    },
+    {
+      "name": "2. Auth (run first)",
+      "item": [
+        {
+          "name": "POST Send OTP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mobileNumber\": \"9876543210\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/send-otp",
+            "description": "Check backend terminal for OTP code in dev mode."
+          }
+        },
+        {
+          "name": "POST Verify OTP",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.success && json.data.accessToken) {",
+                  "  pm.collectionVariables.set('accessToken', json.data.accessToken);",
+                  "  console.log('Token saved to collection variable accessToken');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mobileNumber\": \"9876543210\",\n  \"otp\": \"123456\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/verify-otp",
+            "description": "Replace 123456 with OTP from backend terminal. Token auto-saves."
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Profile",
+      "item": [
+        {
+          "name": "GET Profile",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/profile"
+          }
+        },
+        {
+          "name": "PUT Complete Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Rahul Kumar\",\n  \"email\": \"rahul@example.com\",\n  \"gender\": \"male\",\n  \"dateOfBirth\": \"1998-05-12\",\n  \"emergencyContact\": {\n    \"name\": \"Priya Kumar\",\n    \"mobileNumber\": \"9876543211\",\n    \"relationship\": \"spouse\"\n  },\n  \"address\": {\n    \"line1\": \"123, MG Road\",\n    \"city\": \"Bhubaneswar\",\n    \"state\": \"Odisha\",\n    \"pincode\": \"751024\",\n    \"country\": \"India\"\n  }\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/profile/complete"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Vehicles",
+      "item": [
+        {
+          "name": "POST Create Vehicle",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.success && json.data.id) {",
+                  "  pm.collectionVariables.set('vehicleId', json.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vehicleType\": \"car\",\n  \"vehicleNumber\": \"OD05AB1234\",\n  \"brand\": \"Honda\",\n  \"model\": \"City ZX\",\n  \"color\": \"Red\",\n  \"fuelType\": \"petrol\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/vehicles"
+          }
+        },
+        {
+          "name": "GET All Vehicles",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/vehicles"
+          }
+        },
+        {
+          "name": "GET Vehicle By ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/vehicles/{{vehicleId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Bookings (combined)",
+      "item": [
+        {
+          "name": "GET All Bookings (towing + driver)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/bookings",
+            "description": "Merged list of towing and driver bookings. Optional: ?status=PENDING&type=towing"
+          }
+        }
+      ]
+    },
+    {
+      "name": "5b. Towing Bookings",
+      "item": [
+        {
+          "name": "POST Create Towing Booking",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.success && json.data.id) {",
+                  "  pm.collectionVariables.set('towingBookingId', json.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vehicleId\": \"{{vehicleId}}\",\n  \"pickup\": {\n    \"address\": \"Patia Square, Bhubaneswar\",\n    \"latitude\": 20.2961,\n    \"longitude\": 85.8245\n  },\n  \"dropoff\": {\n    \"address\": \"Cuttack Road, Bhubaneswar\",\n    \"latitude\": 20.4625,\n    \"longitude\": 85.8830\n  }\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/bookings/towing"
+          }
+        },
+        {
+          "name": "GET Towing Bookings",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/bookings/towing"
+          }
+        },
+        {
+          "name": "GET Towing Booking By ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/bookings/towing/{{towingBookingId}}"
+          }
+        },
+        {
+          "name": "PATCH Towing Booking Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"DRIVER_ASSIGNED\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/bookings/towing/{{towingBookingId}}/status"
+          }
+        },
+        {
+          "name": "GET Towing Tracking",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/bookings/towing/{{towingBookingId}}/tracking"
+          }
+        }
+      ]
+    },
+    {
+      "name": "5c. Driver Bookings",
+      "item": [
+        {
+          "name": "POST Create Driver Booking",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.success && json.data.id) {",
+                  "  pm.collectionVariables.set('driverBookingId', json.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vehicleId\": \"{{vehicleId}}\",\n  \"pickup\": {\n    \"address\": \"Patia Square, Bhubaneswar\",\n    \"latitude\": 20.2961,\n    \"longitude\": 85.8245\n  },\n  \"estimatedDurationHours\": 3\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/bookings/driver"
+          }
+        },
+        {
+          "name": "GET Driver Bookings",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/bookings/driver"
+          }
+        },
+        {
+          "name": "GET Driver Booking By ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/bookings/driver/{{driverBookingId}}"
+          }
+        },
+        {
+          "name": "PATCH Driver Booking Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"DRIVER_ASSIGNED\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/bookings/driver/{{driverBookingId}}/status"
+          }
+        },
+        {
+          "name": "GET Driver Tracking",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/bookings/driver/{{driverBookingId}}/tracking"
+          }
+        }
+      ]
+    },
+    {
+      "name": "5d. Roadside Bookings",
+      "item": [
+        {
+          "name": "GET Roadside Availability",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/bookings/roadside/availability"
+          }
+        },
+        {
+          "name": "POST Roadside Booking (Towing redirect)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serviceType\": \"towing_instant\",\n  \"vehicleId\": \"{{vehicleId}}\",\n  \"pickup\": {\n    \"address\": \"NH-16, Bhubaneswar\",\n    \"latitude\": 20.2961,\n    \"longitude\": 85.8245\n  }\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/bookings/roadside"
+          }
+        },
+        {
+          "name": "POST Roadside Booking (Coming soon)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serviceType\": \"roadside_battery_jump\",\n  \"vehicleId\": \"{{vehicleId}}\",\n  \"pickup\": {\n    \"address\": \"Patia Square, Bhubaneswar\",\n    \"latitude\": 20.2961,\n    \"longitude\": 85.8245\n  }\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/bookings/roadside"
+          }
+        }
+      ]
+    },
+    {
+      "name": "5e. Booking Payments (stub)",
+      "item": [
+        {
+          "name": "POST Initiate Advance Payment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.success && json.data.transactionId) {",
+                  "  pm.collectionVariables.set('paymentTransactionId', json.data.transactionId);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bookingId\": \"{{towingBookingId}}\",\n  \"bookingType\": \"towing\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/payments/advance"
+          }
+        },
+        {
+          "name": "POST Verify Advance Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transactionId\": \"{{paymentTransactionId}}\",\n  \"status\": \"success\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/payments/advance/verify"
+          }
+        },
+        {
+          "name": "POST Initiate Final Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bookingId\": \"{{towingBookingId}}\",\n  \"bookingType\": \"towing\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/payments/final"
+          }
+        },
+        {
+          "name": "POST Verify Final Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transactionId\": \"{{paymentTransactionId}}\",\n  \"status\": \"success\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/payments/final/verify"
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Locations",
+      "item": [
+        {
+          "name": "GET Saved Locations",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/profile/locations"
+          }
+        },
+        {
+          "name": "POST Saved Location",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.success && json.data.id) {",
+                  "  pm.collectionVariables.set('locationId', json.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"label\": \"Home\",\n  \"type\": \"home\",\n  \"address\": \"123, MG Road, Bhubaneswar\",\n  \"isDefault\": true\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/profile/locations"
+          }
+        },
+        {
+          "name": "DELETE Saved Location",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/profile/locations/{{locationId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Payments & Wallet",
+      "item": [
+        {
+          "name": "GET Payment Methods",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/profile/payment-methods"
+          }
+        },
+        {
+          "name": "POST Payment Method",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"upi\",\n  \"label\": \"Google Pay\",\n  \"details\": \"rahul@okaxis\",\n  \"isDefault\": true\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/profile/payment-methods"
+          }
+        },
+        {
+          "name": "GET Wallet",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/profile/wallet"
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Notifications",
+      "item": [
+        {
+          "name": "GET Notifications",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/profile/notifications"
+          }
+        },
+        {
+          "name": "PATCH Mark All Read",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/profile/notifications/read-all"
+          }
+        },
+        {
+          "name": "GET Notification Preferences",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/profile/notifications/preferences"
+          }
+        },
+        {
+          "name": "PATCH Notification Preferences",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pushEnabled\": true,\n  \"bookingUpdates\": true,\n  \"promotions\": false\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/profile/notifications/preferences"
+          }
+        }
+      ]
+    },
+    {
+      "name": "9. Subscriptions",
+      "item": [
+        {
+          "name": "GET Current Subscription",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/subscriptions"
+          }
+        },
+        {
+          "name": "POST Subscribe",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"planSlug\": \"towing_premium_monthly\",\n  \"billingCycle\": \"monthly\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/subscriptions"
+          }
+        },
+        {
+          "name": "POST Cancel Subscription",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/subscriptions/cancel"
+          }
+        }
+      ]
+    },
+    {
+      "name": "10. SOS",
+      "item": [
+        {
+          "name": "GET SOS Context",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/sos/context?vehicleId={{vehicleId}}"
+          }
+        },
+        {
+          "name": "POST SOS Alert",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"sos\",\n  \"vehicleId\": \"{{vehicleId}}\",\n  \"address\": \"Patia Square, Bhubaneswar\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/sos/alert"
+          }
+        }
+      ]
+    }
+  ]
+}

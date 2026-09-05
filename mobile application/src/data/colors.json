@@ -1,0 +1,13 @@
+{
+  "primary": "#F5A800",
+  "background": "#FFFFFF",
+  "pageBg": "#F7F7F5",
+  "dark": "#1A1A1A",
+  "grey": "#666666",
+  "lightGrey": "#F5F5F5",
+  "border": "#E8E8E8",
+  "success": "#22C55E",
+  "error": "#EF4444",
+  "cardBg": "#FFFFFF",
+  "goldLight": "#FFF8E7"
+}
