@@ -7,3 +7,8 @@ web-build/
 .env*.local
 .DS_Store
 *.log
+
+# Unlazy / agent runtime (machine-local; do not commit)
+.unlazy/
+.unlazy-hook-state.json
+.claude/settings.local.json

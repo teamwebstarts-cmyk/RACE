@@ -21,6 +21,11 @@ Root `npm install` does not install the apps. `cd` into each folder.
 
 ## Method
 
-Plan and read existing code before implementing. Research current docs for the versions in `package.json`. Reuse what is already here. Do not add parallel modules. Do not delete suspected-dead screens without a proven unused import graph — that breaks runtime.
+1. Read `.cursor/memory/activeContext.md` and `agents-lock.md`. Claim a surface before editing.
+2. Plan and read existing code. Research version-matched docs (`package.json`).
+3. Reuse what exists. Do not add parallel modules. Do not delete leftover screens without an import graph.
+4. Update memory when done; clear the lock.
 
-Details: `.cursor/rules/`, `.cursor/skills/race-project-map/`, `docs/client/`.
+Substantial / multi-part work: use the **unlazy** skill (`.cursor/skills/unlazy/`) — write `GATES.md` first, do not report done while gates are unmet.
+
+Details: `.cursor/rules/`, `.cursor/skills/`, `.cursor/memory/`, `docs/client/`.

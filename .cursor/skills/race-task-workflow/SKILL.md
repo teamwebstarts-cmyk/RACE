@@ -7,6 +7,10 @@ description: Plan-first workflow for RACE tasks. Use when the user gives a featu
 
 Do not jump to code on a large or unclear task.
 
+## 0. Memory
+
+Read `.cursor/memory/activeContext.md` and `agents-lock.md`. Claim the surface you will edit. If locked, stop.
+
 ## 1. Review (repo)
 
 - Find the live entry: customer `App.tsx` → `RootNavigator`; partner `PartnerAppNavigator`; admin `apps/admin-web/src/App.tsx`; backend `src/controller/src/index.ts`.
@@ -34,9 +38,14 @@ If the change is large, stop after the plan until the user confirms.
 - Smallest change that matches existing style.
 - No new app, no extra abstraction layer, no unused files.
 - Stay on `v2.0.1-cleanup`.
+- Long / multi-part task: load `.cursor/skills/unlazy/SKILL.md` and write gates before claiming done.
 
 ## 5. Verify
 
 - Typecheck the touched app (`tsc --noEmit` / `npm run lint` where it exists).
 - For UI: exercise the flow if a browser/dev server is available.
 - State what you could not run.
+
+## 6. Memory
+
+Update `.cursor/memory/activeContext.md`. Append progress/decisions/learnings if needed. Clear `agents-lock.md`.
