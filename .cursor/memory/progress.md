@@ -9,6 +9,7 @@
 - [x] Agent rules + skills + memory bank
 - [x] Unlazy skill vendored for long-task gates
 - [x] Complementary skills: brainstorming, systematic-debugging, verification-before-completion, requesting-code-review, security-and-hardening
+- [x] GCP IAP SSH to `race-server`; copied gitignored `.env`; log snapshot in `docs/ops/vps-snapshot-2026-09-05.md`
 
 ## Known gaps (product — not started this branch)
 

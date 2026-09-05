@@ -2,6 +2,10 @@
 
 Newest first. One block per decision. Do not rewrite history — add a new block if we reverse.
 
+## 2026-09-05 — VPS env stays gitignored; snapshot is keys + errors only
+
+Production `.env` lives in app folders for local education. Secrets never go in git or `.cursor/memory`. Sanitized findings: `docs/ops/vps-snapshot-2026-09-05.md`.
+
 ## 2026-09-05 — Unlazy is the long-task closer
 
 Vendored `Leonxlnx/unlazy` into `.cursor/skills/unlazy/`. Use for substantial work (gates + evidence). Do not use for a one-line reply. Did not vendor obra/superpowers (TDD-first, huge); user can `/plugin-add superpowers` in Cursor if they want it globally.

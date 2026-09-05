@@ -4,24 +4,25 @@ Updated: 2026-09-05
 
 ## Current focus
 
-Agent memory bank + parallel-agent lock added under `.cursor/memory/`. Product work after v2 folder cleanup has not started yet.
+VPS connected (`race-server` / `townow-j5hir`). Production `.env` copied into gitignored app paths. Log review written to `docs/ops/vps-snapshot-2026-09-05.md`. Product fixes not started.
 
 ## Branch
 
-`v2.0.1-cleanup` @ `b1050e8` (pushed). `main` frozen.
+`v2.0.1-cleanup` (workspace). **Live VM still on frozen `release/13July26` @ `1cb88eb`.**
 
 ## Last done
 
-- Added git-tracked agent memory (`.cursor/memory/`).
-- Installed **Unlazy** as a project skill (`.cursor/skills/unlazy/`) for gate-based completion on long tasks.
-- Added complementary skills (not full marketplaces): `brainstorming`, `systematic-debugging`, `verification-before-completion`, `requesting-code-review`, `security-and-hardening`. Catalog in `AGENTS.md` + `.cursor/skills/SOURCES.md`.
+- IAP SSH to `race-server` (`34.93.103.86`).
+- Copied four VPS `.env` files into matching workspace folders (gitignored).
+- Reviewed PM2 + nginx logs; documented real bugs vs scanner noise.
 
 ## Next (when the user asks)
 
-Product work on the two Expo apps + admin + backend. Read `agents-lock.md` before touching a surface.
+Fix education/local env using VPS env + snapshot findings (Mongo `test` db, APP_BASE_URL LAN leftover, Twilio trial 502, maps placeholder on customer app). Do not deploy cleanup to the VM until asked.
 
 ## Do not
 
 - Push/merge to `main` or old release branches.
 - Recreate customerweb / partnerweb.
 - Delete unused-looking screens without an import graph.
+- Commit `.env` or dump secrets into memory.
