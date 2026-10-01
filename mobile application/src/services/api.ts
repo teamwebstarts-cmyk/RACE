@@ -79,7 +79,7 @@ api.interceptors.response.use(
             return;
           }
           if (!originalRequest.headers) {
-            originalRequest.headers = {};
+            originalRequest.headers = {} as never;
           }
           originalRequest.headers.Authorization = `Bearer ${token}`;
           resolve(api(originalRequest));
@@ -100,7 +100,7 @@ api.interceptors.response.use(
       processQueue(accessToken);
 
       if (!originalRequest.headers) {
-        originalRequest.headers = {};
+        originalRequest.headers = {} as never;
       }
       originalRequest.headers.Authorization = `Bearer ${accessToken}`;
       return api(originalRequest);
