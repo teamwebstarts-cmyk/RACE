@@ -211,7 +211,7 @@ export default function VendorVehiclesScreen() {
   const goDrivers = () => {
     const parent = navigation.getParent();
     if (parent) {
-      parent.navigate('PartnerAccount' as never, { screen: 'VendorDrivers' } as never);
+      (parent as any).navigate('PartnerAccount', { screen: 'VendorDrivers' });
       return;
     }
     navigation.navigate('VendorDrivers' as never);
@@ -304,7 +304,7 @@ export default function VendorVehiclesScreen() {
         driverType: driverTypeLabel(driver.driverType),
         city: driver.city,
         vehicleRegistration: assignVehicle.registrationNo,
-      });
+      } as any);
       setAssignVehicle(null);
       await refetchDrivers();
       Alert.alert('Driver assigned', `${driver.name} is linked to ${formatPlate(assignVehicle.registrationNo)}.`);
