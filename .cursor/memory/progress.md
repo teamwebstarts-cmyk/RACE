@@ -10,6 +10,11 @@
 - [x] Unlazy skill vendored for long-task gates
 - [x] Complementary skills: brainstorming, systematic-debugging, verification-before-completion, requesting-code-review, security-and-hardening
 - [x] GCP IAP SSH to `race-server`; copied gitignored `.env`; log snapshot in `docs/ops/vps-snapshot-2026-09-05.md`
+- [x] Client doc vs build gap report: `docs/client/CLIENT_DOC_VS_BUILD.md`
+- [x] Local MongoDB container initialized and running on port 27017
+- [x] Backend, Admin Web, Customer Mobile, and Partner Mobile dependencies installed and typechecked
+- [x] Database seeded with platform data and demo drivers
+- [x] All 4 services running concurrently in Codespace (ports 3000, 3001, 8081, 8082)
 
 ## Known gaps (product — not started this branch)
 
