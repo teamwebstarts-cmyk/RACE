@@ -97,15 +97,17 @@ export default function PartnerLoginScreen({ navigation, route }: Props) {
     }
   }, [route.params?.role, setSelectedRole]);
 
-  const partnerRole =
+  // Fallback to 'driver' if user navigated straight to Login without going through Role Selection
+  const partnerRole: PartnerRole =
     route.params?.role ??
     (signupAccountType === 'vendor' || signupAccountType === 'driver'
       ? signupAccountType
       : null) ??
-    selectedRole;
+    selectedRole ??
+    'driver';
 
   const roleLabel =
-    partnerRole === 'vendor' ? 'Vendor' : partnerRole === 'driver' ? 'Driver' : null;
+    partnerRole === 'vendor' ? 'Vendor' : partnerRole === 'driver' ? 'Driver' : 'Driver';
 
   const goToPartnerMain = () => {
     const rootNavigation =
@@ -264,12 +266,14 @@ export default function PartnerLoginScreen({ navigation, route }: Props) {
               ) : null}
             </View>
 
-            <Image
-              source={images.homeHeroTruck}
-              style={[styles.heroImage, { height: px(110), marginTop: px(spacing.md) }]}
-              resizeMode="contain"
-              accessibilityLabel="RACE Partner tow truck"
-            />
+            <View pointerEvents="none">
+              <Image
+                source={images.homeHeroTruck}
+                style={[styles.heroImage, { height: px(110), marginTop: px(spacing.md) }]}
+                resizeMode="contain"
+                accessibilityLabel="RACE Partner tow truck"
+              />
+            </View>
 
             <View
               style={[
@@ -343,16 +347,19 @@ export default function PartnerLoginScreen({ navigation, route }: Props) {
               <AuthToast message={error} type="error" />
 
               <Pressable
-                disabled={!isValid || loading || !partnerRole}
+                disabled={!isValid || loading}
                 onPress={() => void handleSendOtp()}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                 style={({ pressed }) => [
                   styles.sendButton,
                   {
                     marginTop: px(spacing.lg),
                     minHeight: px(54),
                     borderRadius: px(14),
+                    zIndex: 999,
+                    elevation: 5,
                   },
-                  (!isValid || loading || !partnerRole) && styles.sendButtonDisabled,
+                  (!isValid || loading) && styles.sendButtonDisabled,
                   pressed && isValid && !loading && styles.pressed,
                 ]}>
                 <Send size={px(18)} color={colors.dark} strokeWidth={2.4} />
