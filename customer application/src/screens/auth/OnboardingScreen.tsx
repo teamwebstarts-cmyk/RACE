@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#DCE7F1',
   },
   heroPlaceholder: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: colors.lightGrey,
   },
   skipBtn: {

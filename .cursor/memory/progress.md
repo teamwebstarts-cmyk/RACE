@@ -15,6 +15,9 @@
 - [x] Backend, Admin Web, Customer Mobile, and Partner Mobile dependencies installed and typechecked
 - [x] Database seeded with platform data and demo drivers
 - [x] All 4 services running concurrently in Codespace (ports 3000, 3001, 8081, 8082)
+- [x] Customer mobile app upgraded to Expo SDK 57 for compatibility with latest Expo Go app
+- [x] Seamless Codespace-to-phone tunnel configured with ngrok; documented in `docs/CODESPACE_PHONE_CONNECTION_PLAYBOOK.md`
+- [x] Universal Mock OTP (`123456`) and full mock testing suite seeded and validated
 
 ## Known gaps (product — not started this branch)
 

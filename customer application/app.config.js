@@ -62,9 +62,6 @@ module.exports = {
     extra: {
       apiUrl: process.env.EXPO_PUBLIC_API_URL ?? 'http://34.93.103.86:3000',
       googleMapsApiKey,
-      eas: {
-        projectId: 'd2ee249a-2460-48ef-8fab-0ac41d53eb49',
-      },
     },
   },
 };

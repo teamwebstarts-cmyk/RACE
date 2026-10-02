@@ -100,51 +100,57 @@ function SplashScreen({ onGetStarted, onLogin }: SplashScreenProps) {
     <View style={styles.root} onLayout={onLayout}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" translucent={false} />
 
-      <Image
-        source={images.splashContent}
-        style={{ position: 'absolute', top: 0, left: 0, width: w, height: h }}
-        resizeMode="stretch"
-        resizeMethod="scale"
-        fadeDuration={0}
-      />
+      <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+        <Image
+          source={images.splashContent}
+          style={{ width: w, height: h }}
+          resizeMode="stretch"
+          resizeMethod="scale"
+          fadeDuration={0}
+        />
+      </View>
 
-      <Image
-        source={images.onboarding1}
-        style={styles.preload}
-        resizeMode="stretch"
-        resizeMethod="scale"
-        fadeDuration={0}
-      />
+      <View pointerEvents="none" style={styles.preloadContainer}>
+        <Image
+          source={images.onboarding1}
+          style={styles.preload}
+          resizeMode="stretch"
+          resizeMethod="scale"
+          fadeDuration={0}
+        />
 
-      <Image
-        source={images.onboarding2}
-        style={styles.preload}
-        resizeMode="stretch"
-        resizeMethod="scale"
-        fadeDuration={0}
-      />
+        <Image
+          source={images.onboarding2}
+          style={styles.preload}
+          resizeMode="stretch"
+          resizeMethod="scale"
+          fadeDuration={0}
+        />
 
-      <Image
-        source={images.onboarding3}
-        style={styles.preload}
-        resizeMode="stretch"
-        resizeMethod="scale"
-        fadeDuration={0}
-      />
+        <Image
+          source={images.onboarding3}
+          style={styles.preload}
+          resizeMode="stretch"
+          resizeMethod="scale"
+          fadeDuration={0}
+        />
 
-      <Image
-        source={images.onboarding4}
-        style={styles.preload}
-        resizeMode="stretch"
-        resizeMethod="scale"
-        fadeDuration={0}
-      />
+        <Image
+          source={images.onboarding4}
+          style={styles.preload}
+          resizeMode="stretch"
+          resizeMethod="scale"
+          fadeDuration={0}
+        />
+      </View>
 
       <TouchableOpacity
-        activeOpacity={1}
+        activeOpacity={0.7}
+        hitSlop={{ top: 15, bottom: 15, left: 20, right: 20 }}
         style={{
           position: 'absolute',
-          zIndex: 10,
+          zIndex: 999,
+          elevation: 10,
           bottom: btn1Bottom,
           left: btnLeft,
           width: btnW,
@@ -154,10 +160,12 @@ function SplashScreen({ onGetStarted, onLogin }: SplashScreenProps) {
       />
 
       <TouchableOpacity
-        activeOpacity={1}
+        activeOpacity={0.7}
+        hitSlop={{ top: 15, bottom: 15, left: 20, right: 20 }}
         style={{
           position: 'absolute',
-          zIndex: 10,
+          zIndex: 999,
+          elevation: 10,
           bottom: btn2Bottom,
           left: btnLeft,
           width: btnW,
@@ -174,12 +182,18 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
+  preloadContainer: {
+    position: 'absolute',
+    top: 0,
+    left: -9999,
+    width: 1,
+    height: 1,
+  },
   preload: {
     position: 'absolute',
     width: 1,
     height: 1,
     opacity: 0,
-    left: -9999,
   },
 });
 
