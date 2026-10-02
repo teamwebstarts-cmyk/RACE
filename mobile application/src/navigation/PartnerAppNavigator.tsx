@@ -65,26 +65,28 @@ export default function PartnerAppNavigator() {
     : `partner-auth-${authSessionVersion}`;
 
   return (
-    <NavigationContainer theme={navigationTheme}>
+    <NavigationContainer key={navigatorKey} theme={navigationTheme}>
       <PartnerSelectSheet />
-      <RootStack.Navigator
-        key={navigatorKey}
-        initialRouteName={enterMain ? 'PartnerMain' : 'PartnerBootstrap'}
-        screenOptions={{ headerShown: false }}>
-        <RootStack.Screen name="PartnerBootstrap" component={PartnerAuthNavigator} />
-        <RootStack.Screen name="PartnerRegistration" component={PartnerRegistrationNavigator} />
-        <RootStack.Screen name="PartnerMain">
-          {() => (
-            <Suspense
-              fallback={
-                <View style={styles.loader}>
-                  <ActivityIndicator size="large" color={colors.primary} />
-                </View>
-              }>
-              <PartnerNavigator />
-            </Suspense>
-          )}
-        </RootStack.Screen>
+      <RootStack.Navigator screenOptions={{ headerShown: false }}>
+        {enterMain ? (
+          <RootStack.Screen name="PartnerMain">
+            {() => (
+              <Suspense
+                fallback={
+                  <View style={styles.loader}>
+                    <ActivityIndicator size="large" color={colors.primary} />
+                  </View>
+                }>
+                <PartnerNavigator />
+              </Suspense>
+            )}
+          </RootStack.Screen>
+        ) : (
+          <>
+            <RootStack.Screen name="PartnerBootstrap" component={PartnerAuthNavigator} />
+            <RootStack.Screen name="PartnerRegistration" component={PartnerRegistrationNavigator} />
+          </>
+        )}
       </RootStack.Navigator>
     </NavigationContainer>
   );

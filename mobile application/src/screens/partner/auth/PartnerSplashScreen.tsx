@@ -56,10 +56,15 @@ export default function PartnerSplashScreen() {
 
     fadeIn.start();
 
+    const timer = setTimeout(() => {
+      handleContinue();
+    }, 1500);
+
     return () => {
+      clearTimeout(timer);
       fadeAnim.stopAnimation();
     };
-  }, [fadeAnim]);
+  }, [fadeAnim, handleContinue]);
 
   return (
     <View style={styles.root}>

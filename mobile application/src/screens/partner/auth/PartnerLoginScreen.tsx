@@ -30,6 +30,7 @@ import { images } from '../../../assets';
 import AuthToast, { AuthLoadingOverlay } from '../../../components/auth/AuthToast';
 import { useAppDispatch, useAppSelector } from '../../../redux/hooks';
 import { completeOnboarding } from '../../../redux/auth/authSlice';
+import { setSignupPath } from '../../../redux/onboarding/onboardingSlice';
 import {
   getApiErrorMessage,
   useSendOtpMutation,
@@ -91,23 +92,31 @@ export default function PartnerLoginScreen({ navigation, route }: Props) {
   const verifyOtpMutation = useVerifyOtpMutation();
   const isValid = useMemo(() => MOBILE_REGEX.test(mobileNumber), [mobileNumber]);
 
-  useEffect(() => {
-    if (route.params?.role) {
-      setSelectedRole(route.params.role);
-    }
-  }, [route.params?.role, setSelectedRole]);
-
-  // Fallback to 'driver' if user navigated straight to Login without going through Role Selection
-  const partnerRole: PartnerRole =
+  // Track active role with local state so user can toggle directly on this screen
+  const [partnerRole, setPartnerRole] = useState<PartnerRole>(
     route.params?.role ??
     (signupAccountType === 'vendor' || signupAccountType === 'driver'
       ? signupAccountType
       : null) ??
     selectedRole ??
-    'driver';
+    'driver',
+  );
 
-  const roleLabel =
-    partnerRole === 'vendor' ? 'Vendor' : partnerRole === 'driver' ? 'Driver' : 'Driver';
+  useEffect(() => {
+    if (route.params?.role) {
+      setPartnerRole(route.params.role);
+      setSelectedRole(route.params.role);
+    }
+  }, [route.params?.role, setSelectedRole]);
+
+  const handleSelectRole = (newRole: PartnerRole) => {
+    setPartnerRole(newRole);
+    setSelectedRole(newRole);
+    dispatch(setSignupPath({ accountType: newRole, vendorType: null }));
+    if (error) setError('');
+  };
+
+  const roleLabel = partnerRole === 'vendor' ? 'Vendor' : 'Driver';
 
   const goToPartnerMain = () => {
     const rootNavigation =
@@ -183,6 +192,17 @@ export default function PartnerLoginScreen({ navigation, route }: Props) {
         otpMessage: result.message,
       });
     } catch (err) {
+      const errMsg = getApiErrorMessage(err, '');
+      if (errMsg.toLowerCase().includes('registered as a vendor')) {
+        handleSelectRole('vendor');
+        setError('Detected Vendor account! Switched to Vendor mode — tap Continue.');
+        return;
+      }
+      if (errMsg.toLowerCase().includes('registered as a driver')) {
+        handleSelectRole('driver');
+        setError('Detected Driver account! Switched to Driver mode — tap Continue.');
+        return;
+      }
       if (isRoleMismatchError(err)) {
         setError(
           getRoleMismatchMessage(
@@ -192,7 +212,7 @@ export default function PartnerLoginScreen({ navigation, route }: Props) {
         );
         return;
       }
-      setError(getApiErrorMessage(err, SKIP_OTP_AUTH ? 'Unable to sign in' : 'Unable to send OTP'));
+      setError(errMsg || (SKIP_OTP_AUTH ? 'Unable to sign in' : 'Unable to send OTP'));
     }
   };
 
@@ -303,7 +323,40 @@ export default function PartnerLoginScreen({ navigation, route }: Props) {
                   : "We'll send a 6-digit OTP to verify your partner account."}
               </Text>
 
-              <Text style={[styles.fieldLabel, { fontSize: px(13), marginTop: px(22) }]}>
+              <View style={[styles.roleSelectorRow, { marginTop: px(14), marginBottom: px(4) }]}>
+                <Pressable
+                  onPress={() => handleSelectRole('driver')}
+                  hitSlop={6}
+                  style={[
+                    styles.roleSelectorBtn,
+                    partnerRole === 'driver' && styles.roleSelectorBtnActive,
+                  ]}>
+                  <Text
+                    style={[
+                      styles.roleSelectorText,
+                      partnerRole === 'driver' && styles.roleSelectorTextActive,
+                    ]}>
+                    🚗 Driver
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => handleSelectRole('vendor')}
+                  hitSlop={6}
+                  style={[
+                    styles.roleSelectorBtn,
+                    partnerRole === 'vendor' && styles.roleSelectorBtnActive,
+                  ]}>
+                  <Text
+                    style={[
+                      styles.roleSelectorText,
+                      partnerRole === 'vendor' && styles.roleSelectorTextActive,
+                    ]}>
+                    🏢 Vendor / Fleet
+                  </Text>
+                </Pressable>
+              </View>
+
+              <Text style={[styles.fieldLabel, { fontSize: px(13), marginTop: px(18) }]}>
                 Mobile number
               </Text>
 
@@ -607,5 +660,33 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   encryptionText: { color: colors.grey },
+  roleSelectorRow: {
+    flexDirection: 'row',
+    backgroundColor: '#EEEEEE',
+    borderRadius: radius.pill,
+    padding: 3,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  roleSelectorBtn: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.pill,
+  },
+  roleSelectorBtnActive: {
+    backgroundColor: colors.background,
+    ...shadows.card,
+  },
+  roleSelectorText: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
+    color: colors.grey,
+  },
+  roleSelectorTextActive: {
+    color: colors.dark,
+    fontWeight: typography.weights.bold,
+  },
   pressed: { opacity: 0.9 },
 });

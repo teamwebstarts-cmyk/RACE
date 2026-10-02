@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -10,6 +10,7 @@ import DocumentStatusChip from '../../components/vendor/DocumentStatusChip';
 import { getVendorConfig } from '../../data/vendorWizardConfig';
 import { useAuthActions } from '../../hooks/useAuth';
 import { useAppSelector } from '../../redux/hooks';
+import { usePartnerOnboardingStore } from '../../store/partnerOnboardingStore';
 import { useVendorStatusQuery } from '../../services/vendor/useVendorMutations';
 import type { PartnerAccountStackParamList } from '../../types/partnerNavigation';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
@@ -18,21 +19,33 @@ type Props = NativeStackScreenProps<PartnerAccountStackParamList, 'PartnerAccoun
 
 export default function PartnerAccountScreen({ navigation }: Props) {
   const { logout } = useAuthActions();
+  const [loggingOut, setLoggingOut] = useState(false);
   const user = useAppSelector(state => state.auth.user);
   const isVendor = user?.role === 'vendor';
   const isDriver = user?.role === 'driver';
   const { data: vendor } = useVendorStatusQuery(isVendor);
   const config = vendor ? getVendorConfig(vendor.vendorType) : undefined;
 
+  const performLogout = async () => {
+    try {
+      setLoggingOut(true);
+      usePartnerOnboardingStore.getState().clearSelectedRole();
+      await logout();
+    } catch {
+      Alert.alert('Logout failed', 'Please try again.');
+    } finally {
+      setLoggingOut(false);
+    }
+  };
+
   const handleLogout = () => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
-      { text: 'No', style: 'cancel' },
+      { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Yes',
+        text: 'Yes, Log out',
+        style: 'destructive',
         onPress: () => {
-          void logout().catch(() => {
-            Alert.alert('Logout failed', 'Please try again.');
-          });
+          void performLogout();
         },
       },
     ]);
@@ -95,7 +108,11 @@ export default function PartnerAccountScreen({ navigation }: Props) {
             onPress={() => navigation.navigate('VendorVerificationStatus')}
           />
         ) : null}
-        <PrimaryButton label="Log out" onPress={handleLogout} />
+        <PrimaryButton
+          label={loggingOut ? 'Logging out...' : 'Log out'}
+          disabled={loggingOut}
+          onPress={handleLogout}
+        />
       </View>
     </AppScreenLayout>
   );

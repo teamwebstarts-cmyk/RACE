@@ -12,9 +12,13 @@ export default function WrongAppRoleScreen() {
   const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
 
-  const handleLogout = () => {
-    dispatch(logout());
-    void useAuthStore.getState().logout();
+  const handleLogout = async () => {
+    try {
+      await useAuthStore.getState().logout();
+      dispatch(logout());
+    } catch {
+      // Non-fatal
+    }
   };
 
   return (
@@ -35,7 +39,13 @@ export default function WrongAppRoleScreen() {
         Install <Text style={styles.bold}>RACE Customer</Text>, or sign out and continue partner
         signup with a different number.
       </Text>
-      <Pressable onPress={handleLogout} style={styles.button}>
+      <Pressable
+        onPress={() => void handleLogout()}
+        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        style={({ pressed }) => [
+          styles.button,
+          pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] },
+        ]}>
         <Text style={styles.buttonLabel}>Sign out</Text>
       </Pressable>
     </View>
