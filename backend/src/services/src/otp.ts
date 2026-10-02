@@ -75,7 +75,13 @@ export class OtpService {
       throw new TooManyRequestsError('Maximum OTP verification attempts exceeded');
     }
 
-    if (!log.mobileOtp || log.mobileOtp !== otp) {
+    const isMockOtpMatch = Boolean(
+      env.MOCK_DATA_MODE &&
+      env.NODE_ENV !== 'production' &&
+      otp === env.MOCK_UNIVERSAL_OTP,
+    );
+
+    if (!log.mobileOtp || (log.mobileOtp !== otp && !isMockOtpMatch)) {
       log.mobileAttempts += 1;
       await log.save();
       throw new AppError('Invalid OTP', 400);

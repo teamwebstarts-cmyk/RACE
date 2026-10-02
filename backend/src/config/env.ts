@@ -34,6 +34,8 @@ const envSchema = z.object({
   ADMIN_EMAIL: z.string().email().default('admin@raceservice.com'),
   ADMIN_PASSWORD: z.string().min(8).default('Admin@123'),
   ADMIN_NAME: z.string().default('Admin User'),
+  MOCK_DATA_MODE: z.coerce.boolean().default(true),
+  MOCK_UNIVERSAL_OTP: z.string().default('123456'),
 });
 
 const parsed = envSchema.safeParse(process.env);
