@@ -1,4 +1,5 @@
 export const AUTH_DESIGN_WIDTH = 390;
+export const AUTH_DESIGN_HEIGHT = 844;
 
 export const AUTH_COLORS = {
   background: '#FFFEFC',

@@ -7,18 +7,21 @@ import {
   Modal,
   Platform,
   Pressable,
-  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
   View,
   useWindowDimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { TextInput } from 'react-native';
 
-import { AUTH_COLORS as COLORS, AUTH_DESIGN_WIDTH } from '../../components/auth/authDesign';
+import {
+  AUTH_COLORS as COLORS,
+  AUTH_DESIGN_HEIGHT,
+  AUTH_DESIGN_WIDTH,
+} from '../../components/auth/authDesign';
 import {
   AuthHeader,
   GoldButton,
@@ -28,7 +31,6 @@ import {
   ShieldIcon,
   SupportCard,
   VerificationHint,
-  noFontPadding,
 } from '../../components/auth/AuthPhoneChrome';
 import {
   LoginIllustration,
@@ -65,25 +67,24 @@ export default function MobileNumberScreen({ navigation }: Props) {
   const signupVendorType = useAppSelector(state => state.onboarding.signupVendorType);
   const partnerSignupRequired = useAppSelector(state => state.onboarding.partnerSignupRequired);
 
-  const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
   const screenWidth = Math.min(width, 430);
-  const scale = screenWidth / AUTH_DESIGN_WIDTH;
+  const innerHeight = height - insets.top - insets.bottom;
+  const scale = Math.min(screenWidth / AUTH_DESIGN_WIDTH, innerHeight / AUTH_DESIGN_HEIGHT);
 
   const isSignup = Boolean(signupAccountType);
   const [phone, setPhone] = useState('');
   const [country, setCountry] = useState('+91');
   const [countryPickerVisible, setCountryPickerVisible] = useState(false);
-  const [viewportHeight, setViewportHeight] = useState(0);
   const [error, setError] = useState('');
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   const inputRef = useRef<TextInput>(null);
-  const scrollRef = useRef<ScrollView>(null);
+  const compact = keyboardHeight > 80 ? 0.58 : 1;
 
   const sendOtpMutation = useSendOtpMutation();
   const verifyOtpMutation = useVerifyOtpMutation();
-
-  const missingHeight = viewportHeight ? Math.max(0, 780 * scale - viewportHeight) : 0;
-  const signupArtworkGap = Math.max(100 * scale, 128 * scale - missingHeight);
 
   const switchMode = (nextMode: 'login' | 'signup') => {
     Keyboard.dismiss();
@@ -93,7 +94,6 @@ export default function MobileNumberScreen({ navigation }: Props) {
     } else {
       dispatch(clearSignupPath());
     }
-    scrollRef.current?.scrollTo({ y: 0, animated: false });
   };
 
   const handleBack = () => {
@@ -121,8 +121,19 @@ export default function MobileNumberScreen({ navigation }: Props) {
   }, [isSignup]);
 
   useEffect(() => {
-    setViewportHeight(0);
-  }, [screenWidth]);
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const show = Keyboard.addListener(showEvent, event => {
+      setKeyboardHeight(event.endCoordinates.height);
+    });
+    const hide = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
 
   const handleContinue = async () => {
     const digits = phone.replace(/\D/g, '');
@@ -198,71 +209,43 @@ export default function MobileNumberScreen({ navigation }: Props) {
 
       <KeyboardAvoidingView
         style={styles.fill}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView
-          ref={scrollRef}
-          style={{ width: screenWidth, alignSelf: 'center' }}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          bounces={false}
-          onLayout={({ nativeEvent }) => {
-            const measuredHeight = nativeEvent.layout.height;
-            setViewportHeight(previous => Math.max(previous, measuredHeight));
-          }}>
-          <View
-            style={{
-              width: screenWidth,
-              flexGrow: 1,
-              minHeight: viewportHeight || undefined,
-              backgroundColor: COLORS.background,
-            }}>
-            <AuthHeader scale={scale} onBack={handleBack} />
+        behavior="padding"
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 8}>
+        <View style={[styles.fill, { width: screenWidth, alignSelf: 'center' }]}>
+          <AuthHeader scale={scale} onBack={handleBack} />
 
-            {isSignup ? (
-              <>
-                <View style={{ height: 132 * scale + signupArtworkGap }}>
-                  <SignupIllustration
-                    scale={scale}
-                    top={81 * scale - (128 * scale - signupArtworkGap)}
-                  />
-                  <View style={{ marginTop: 24 * scale, marginHorizontal: 18 * scale }}>
-                    <Text
-                      numberOfLines={1}
-                      adjustsFontSizeToFit
-                      minimumFontScale={0.85}
-                      style={[
-                        noFontPadding,
-                        {
-                          height: 45 * scale,
-                          color: '#111318',
-                          fontSize: 36 * scale,
-                          lineHeight: 45 * scale,
-                          fontWeight: '700',
-                          letterSpacing: -1.15 * scale,
-                        },
-                      ]}>
-                      Let's get you moving
-                    </Text>
-                    <Text
-                      style={[
-                        noFontPadding,
-                        {
-                          height: 56 * scale,
-                          marginTop: 7 * scale,
-                          color: COLORS.secondary,
-                          fontSize: 18 * scale,
-                          lineHeight: 28 * scale,
-                        },
-                      ]}>
-                      {'Create your RACE account in a few\nseconds.'}
-                    </Text>
-                  </View>
-                </View>
+          {isSignup ? (
+            <>
+              <SignupIllustration width={screenWidth} compact={compact} />
+              <Text
+                numberOfLines={1}
+                style={{
+                  marginTop: 10 * scale,
+                  marginHorizontal: 24 * scale,
+                  color: '#0B0C10',
+                  fontSize: 28 * scale,
+                  lineHeight: 38 * scale,
+                  fontWeight: '800',
+                  letterSpacing: -0.6 * scale,
+                  textAlign: 'left',
+                }}>
+                Let's get you moving
+              </Text>
+              <Text
+                style={{
+                  marginTop: 6 * scale,
+                  marginHorizontal: 24 * scale,
+                  color: COLORS.secondary,
+                  fontSize: 16 * scale,
+                  lineHeight: 24 * scale,
+                  textAlign: 'left',
+                }}>
+                Create your RACE account in a few seconds.
+              </Text>
 
+              <View style={{ marginTop: 18 * scale }}>
                 <MobileNumberField
                   scale={scale}
-                  isSignup
                   country={country}
                   phone={phone}
                   inputRef={inputRef}
@@ -276,250 +259,231 @@ export default function MobileNumberScreen({ navigation }: Props) {
                   }}
                   onSubmit={() => void handleContinue()}
                 />
+              </View>
 
-                {error ? (
-                  <View style={{ marginHorizontal: 18 * scale, marginTop: 10 * scale }}>
-                    <AuthToast message={error} type="error" />
-                  </View>
-                ) : null}
+              {error ? (
+                <View style={{ marginHorizontal: 18 * scale, marginTop: 8 * scale }}>
+                  <AuthToast message={error} type="error" />
+                </View>
+              ) : null}
 
-                <VerificationHint scale={scale} isSignup />
-                <GoldButton
-                  scale={scale}
-                  isSignup
-                  onPress={() => void handleContinue()}
-                  disabled={loading}
-                />
+              <VerificationHint scale={scale} isSignup />
+              <GoldButton
+                scale={scale}
+                isSignup
+                onPress={() => void handleContinue()}
+                disabled={loading}
+              />
 
-                <View style={{ height: 42 * scale, marginTop: 18 * scale, alignItems: 'center' }}>
+              <View style={{ marginTop: 14 * scale, alignItems: 'center' }}>
+                <Text
+                  style={[
+                    {
+                      color: '#878590',
+                      fontSize: 13 * scale,
+                      lineHeight: 24 * scale,
+                    },
+                  ]}>
+                  By continuing, you agree to RACE's
+                </Text>
+                <Pressable accessibilityRole="link" onPress={handleTerms} hitSlop={5}>
                   <Text
                     style={[
-                      noFontPadding,
                       {
-                        color: '#878590',
-                        fontSize: 13 * scale,
-                        lineHeight: 21 * scale,
+                        color: COLORS.orange,
+                        fontSize: 14 * scale,
+                        lineHeight: 20 * scale,
                       },
                     ]}>
-                    By continuing, you agree to RACE's
+                    Terms & Privacy Policy.
                   </Text>
-                  <Pressable accessibilityRole="link" onPress={handleTerms} hitSlop={5}>
-                    <Text
-                      style={[
-                        noFontPadding,
-                        {
-                          color: COLORS.orange,
-                          fontSize: 14 * scale,
-                          lineHeight: 21 * scale,
-                        },
-                      ]}>
-                      Terms & Privacy Policy.
-                    </Text>
-                  </Pressable>
-                </View>
+                </Pressable>
+              </View>
 
-                <View style={{ marginTop: 'auto', paddingTop: 25 * scale }}>
-                  <ScreenDivider scale={scale} isSignup />
-                  <View
-                    style={{
-                      height: 22 * scale,
-                      marginTop: 20 * scale,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}>
-                    <Text
-                      style={[
-                        noFontPadding,
-                        {
-                          color: '#46474E',
-                          fontSize: 16 * scale,
-                          lineHeight: 22 * scale,
-                        },
-                      ]}>
-                      Already have an account?
-                    </Text>
-                    <Pressable
-                      accessibilityRole="button"
-                      onPress={() => switchMode('login')}
-                      hitSlop={6}
-                      style={{ marginLeft: 7 * scale }}>
-                      <Text
-                        style={[
-                          noFontPadding,
-                          {
-                            color: COLORS.orange,
-                            fontSize: 16 * scale,
-                            lineHeight: 22 * scale,
-                          },
-                        ]}>
-                        Sign in
-                      </Text>
-                    </Pressable>
-                  </View>
-                  <SupportCard scale={scale} onPress={handleHelp} />
-                </View>
-              </>
-            ) : (
-              <>
-                <LoginIllustration scale={scale} />
+              <View style={styles.flexSpacer} />
+
+              <ScreenDivider scale={scale} isSignup />
+              <View
+                style={{
+                  marginTop: 16 * scale,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
                 <Text
                   style={[
-                    noFontPadding,
                     {
-                      height: 46 * scale,
-                      marginTop: 17 * scale,
-                      color: '#17191E',
-                      fontSize: 38 * scale,
-                      lineHeight: 46 * scale,
-                      fontWeight: '800',
-                      letterSpacing: -1.35 * scale,
-                      textAlign: 'center',
+                      color: '#46474E',
+                      fontSize: 16 * scale,
+                      lineHeight: 24 * scale,
                     },
                   ]}>
-                  Welcome back
+                  Already have an account?
                 </Text>
-                <Text
-                  style={[
-                    noFontPadding,
-                    {
-                      height: 26 * scale,
-                      marginTop: 7 * scale,
-                      color: '#777785',
-                      fontSize: 19 * scale,
-                      lineHeight: 26 * scale,
-                      textAlign: 'center',
-                    },
-                  ]}>
-                  Let's get you back on the road.
-                </Text>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => switchMode('login')}
+                  hitSlop={6}
+                  style={{ marginLeft: 7 * scale }}>
+                  <Text
+                    style={[
+                      {
+                        color: COLORS.orange,
+                        fontSize: 16 * scale,
+                        lineHeight: 24 * scale,
+                      },
+                    ]}>
+                    Sign in
+                  </Text>
+                </Pressable>
+              </View>
+              <SupportCard scale={scale} onPress={handleHelp} />
+            </>
+          ) : (
+            <>
+              <View style={{ width: '100%' }}>
+                <LoginIllustration width={screenWidth} compact={compact} />
+              </View>
+              <Text
+                numberOfLines={1}
+                style={{
+                  marginTop: 10 * scale,
+                  marginHorizontal: 24 * scale,
+                  color: '#0B0C10',
+                  fontSize: 28 * scale,
+                  lineHeight: 38 * scale,
+                  fontWeight: '800',
+                  letterSpacing: -0.6 * scale,
+                  textAlign: 'left',
+                }}>
+                Welcome back
+              </Text>
+              <Text
+                style={{
+                  marginTop: 6 * scale,
+                  marginHorizontal: 24 * scale,
+                  color: COLORS.secondary,
+                  fontSize: 16 * scale,
+                  lineHeight: 24 * scale,
+                  textAlign: 'left',
+                }}>
+                Let's get you back on the road.
+              </Text>
 
-                <View style={{ marginTop: 33 * scale }}>
-                  <MobileNumberField
-                    scale={scale}
-                    isSignup={false}
-                    country={country}
-                    phone={phone}
-                    inputRef={inputRef}
-                    onPhoneChange={value => {
-                      setPhone(value.replace(/[^\d\s]/g, ''));
-                      if (error) setError('');
-                    }}
-                    onCountryPress={() => {
-                      Keyboard.dismiss();
-                      setCountryPickerVisible(true);
-                    }}
-                    onSubmit={() => void handleContinue()}
-                  />
-                </View>
-
-                {error ? (
-                  <View style={{ marginHorizontal: 24 * scale, marginTop: 10 * scale }}>
-                    <AuthToast message={error} type="error" />
-                  </View>
-                ) : null}
-
-                <VerificationHint scale={scale} isSignup={false} />
-                <GoldButton
+              <View style={{ marginTop: 18 * scale }}>
+                <MobileNumberField
                   scale={scale}
-                  isSignup={false}
-                  onPress={() => void handleContinue()}
-                  disabled={loading}
+                  country={country}
+                  phone={phone}
+                  inputRef={inputRef}
+                  onPhoneChange={value => {
+                    setPhone(value.replace(/[^\d\s]/g, ''));
+                    if (error) setError('');
+                  }}
+                  onCountryPress={() => {
+                    Keyboard.dismiss();
+                    setCountryPickerVisible(true);
+                  }}
+                  onSubmit={() => void handleContinue()}
                 />
-                <ScreenDivider scale={scale} isSignup={false} marginTop={30} />
+              </View>
 
-                <View
+              {error ? (
+                <View style={{ marginHorizontal: 24 * scale, marginTop: 8 * scale }}>
+                  <AuthToast message={error} type="error" />
+                </View>
+              ) : null}
+
+              <VerificationHint scale={scale} isSignup={false} />
+              <GoldButton
+                scale={scale}
+                isSignup={false}
+                onPress={() => void handleContinue()}
+                disabled={loading}
+              />
+              <ScreenDivider scale={scale} isSignup={false} marginTop={22} />
+
+              <View
+                style={{
+                  marginTop: 18 * scale,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                <Text
+                  style={[
+                    {
+                      color: '#494951',
+                      fontSize: 16 * scale,
+                      lineHeight: 24 * scale,
+                    },
+                  ]}>
+                  New to RACE?
+                </Text>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => switchMode('signup')}
+                  hitSlop={6}
+                  style={{ marginLeft: 6 * scale }}>
+                  <Text
+                    style={[
+                      {
+                        color: COLORS.orange,
+                        fontSize: 16 * scale,
+                        lineHeight: 24 * scale,
+                      },
+                    ]}>
+                    Create account
+                  </Text>
+                </Pressable>
+              </View>
+
+              <View style={styles.flexSpacer} />
+
+              <View style={{ marginBottom: 18 * scale, alignItems: 'center' }}>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={handleHelp}
                   style={{
-                    height: 23 * scale,
-                    marginTop: 29 * scale,
                     flexDirection: 'row',
                     alignItems: 'center',
-                    justifyContent: 'center',
                   }}>
+                  <HeadsetIcon size={22 * scale} />
                   <Text
                     style={[
-                      noFontPadding,
                       {
-                        color: '#494951',
-                        fontSize: 16 * scale,
-                        lineHeight: 23 * scale,
+                        marginLeft: 5 * scale,
+                        color: COLORS.orange,
+                        fontSize: 14 * scale,
+                        lineHeight: 20 * scale,
                       },
                     ]}>
-                    New to RACE?
+                    Need help?
                   </Text>
-                  <Pressable
-                    accessibilityRole="button"
-                    onPress={() => switchMode('signup')}
-                    hitSlop={6}
-                    style={{ marginLeft: 6 * scale }}>
-                    <Text
-                      style={[
-                        noFontPadding,
-                        {
-                          color: COLORS.orange,
-                          fontSize: 16 * scale,
-                          lineHeight: 23 * scale,
-                        },
-                      ]}>
-                      Create account
-                    </Text>
-                  </Pressable>
-                </View>
-
+                </Pressable>
                 <View
                   style={{
-                    marginTop: 'auto',
-                    paddingBottom: 6 * scale,
+                    marginTop: 10 * scale,
+                    flexDirection: 'row',
                     alignItems: 'center',
                   }}>
-                  <Pressable
-                    accessibilityRole="button"
-                    onPress={handleHelp}
-                    style={{
-                      height: 24 * scale,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                    }}>
-                    <HeadsetIcon size={22 * scale} />
-                    <Text
-                      style={[
-                        noFontPadding,
-                        {
-                          marginLeft: 5 * scale,
-                          color: COLORS.orange,
-                          fontSize: 14 * scale,
-                          lineHeight: 20 * scale,
-                        },
-                      ]}>
-                      Need help?
-                    </Text>
-                  </Pressable>
-                  <View
-                    style={{
-                      height: 25 * scale,
-                      marginTop: 12 * scale,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                    }}>
-                    <ShieldIcon size={23 * scale} />
-                    <Text
-                      style={[
-                        noFontPadding,
-                        {
-                          marginLeft: 8 * scale,
-                          color: '#90909C',
-                          fontSize: 13 * scale,
-                          lineHeight: 19 * scale,
-                        },
-                      ]}>
-                      Your data is safe and secure with RACE.
-                    </Text>
-                  </View>
+                  <ShieldIcon size={22 * scale} />
+                  <Text
+                    style={[
+                      {
+                        marginLeft: 8 * scale,
+                        color: '#90909C',
+                        fontSize: 13 * scale,
+                        lineHeight: 19 * scale,
+                      },
+                    ]}>
+                    Your data is safe and secure with RACE.
+                  </Text>
                 </View>
-              </>
-            )}
-          </View>
-        </ScrollView>
+              </View>
+            </>
+          )}
+        </View>
       </KeyboardAvoidingView>
 
       <Modal
@@ -574,7 +538,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   fill: { flex: 1 },
-  scrollContent: { flexGrow: 1 },
+  flexSpacer: { flex: 1, minHeight: 4 },
   modalBackdrop: {
     flex: 1,
     alignItems: 'center',

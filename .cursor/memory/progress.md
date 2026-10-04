@@ -2,6 +2,7 @@
 
 ## Done (customer UI polish — 2026-10-04)
 
+- [x] Login/signup pixel layout from latest App.js; OTP screen matched to same cream/gold language
 - [x] Login + Create account UI on `MobileNumberScreen` from supplied cream/road design (OTP flow unchanged)
 - [x] Onboarding leftover bottom gap: content `space-between` + fuller 2-line subtitles on all 4 slides
 - [x] Deep UI/UX review logged: `docs/reviews/customer-app-ui-ux-review.md`

@@ -4,7 +4,7 @@ Updated: 2026-10-04
 
 ## Current focus
 
-Customer splash: highway photo fills the real layout (no bottom seam); logo uses a transparent PNG; sky fog wash behind copy instead of a white halo.
+Customer login + signup aligned: SVG on top, heading below, shared field/header.
 
 ## Branch
 
@@ -12,13 +12,14 @@ Customer splash: highway photo fills the real layout (no bottom seam); logo uses
 
 ## Last done
 
-- Replaced MobileNumber login/signup UI with the supplied layout (RACE SERVICE header, SVG road scene, phone field, Continue / Create account).
-- Auth logic unchanged: OTP send/verify, `SKIP_OTP_AUTH = true`, signup path toggle.
-- Illustrations live in `components/auth/AuthSceneIllustrations.tsx`.
+- Create account uses the new tow-truck SVG on top; heading sits under it like Welcome back.
+- Header is one line: RACE SERVICE.
+- Inputs slightly smaller and the same on both screens; keyboard shrinks the hero.
+- Title/button type is heavier; descenders (g) no longer clipped by tight line-height.
 
 ## Next (when the user asks)
 
-Reload: onboarding → create account, then Sign in → welcome back. Polish spacing if needed.
+Reload both auth modes and type in the field with the keyboard open.
 
 ## Do not
 
@@ -26,4 +27,3 @@ Reload: onboarding → create account, then Sign in → welcome back. Polish spa
 - Recreate `customerweb/`, `partnerweb/`.
 - Delete unused-looking screens without an import graph.
 - Commit `.env` or dump secrets into memory.
-- Touch splash while another pass is using `Golden Sunrise`.

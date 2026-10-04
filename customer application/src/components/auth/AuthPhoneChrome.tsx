@@ -136,33 +136,33 @@ export function ShieldIcon({ size, color = '#A2A5B2' }: { size: number; color?: 
 
 export function AuthHeader({ scale, onBack }: { scale: number; onBack: () => void }) {
   return (
-    <View style={{ height: 62 * scale, alignItems: 'center' }}>
-      <View style={{ alignItems: 'center', marginTop: 4 * scale }}>
+    <View style={{ height: 52 * scale, justifyContent: 'center' }}>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingHorizontal: 56 * scale,
+        }}>
         <Text
-          style={[
-            noFontPadding,
-            {
-              color: COLORS.ink,
-              fontSize: 22 * scale,
-              lineHeight: 26 * scale,
-              fontWeight: '800',
-              letterSpacing: -0.65 * scale,
-            },
-          ]}>
+          style={{
+            color: COLORS.ink,
+            fontSize: 18 * scale,
+            lineHeight: 26 * scale,
+            fontWeight: '800',
+            letterSpacing: 0.4 * scale,
+          }}>
           RACE
         </Text>
         <Text
-          style={[
-            noFontPadding,
-            {
-              marginTop: 1 * scale,
-              color: COLORS.orange,
-              fontSize: 11 * scale,
-              lineHeight: 14 * scale,
-              fontWeight: '700',
-              letterSpacing: 1.85 * scale,
-            },
-          ]}>
+          style={{
+            marginLeft: 7 * scale,
+            color: COLORS.orange,
+            fontSize: 13 * scale,
+            lineHeight: 26 * scale,
+            fontWeight: '800',
+            letterSpacing: 1.4 * scale,
+          }}>
           SERVICE
         </Text>
       </View>
@@ -189,7 +189,6 @@ export function AuthHeader({ scale, onBack }: { scale: number; onBack: () => voi
 
 export function MobileNumberField({
   scale,
-  isSignup,
   country,
   phone,
   inputRef,
@@ -198,7 +197,6 @@ export function MobileNumberField({
   onSubmit,
 }: {
   scale: number;
-  isSignup: boolean;
   country: string;
   phone: string;
   inputRef: React.RefObject<TextInputType | null>;
@@ -206,42 +204,36 @@ export function MobileNumberField({
   onCountryPress: () => void;
   onSubmit: () => void;
 }) {
-  const horizontal = (isSignup ? 18 : 24) * scale;
-
   return (
-    <View style={{ marginHorizontal: horizontal }}>
+    <View style={{ marginHorizontal: 24 * scale }}>
       <Text
-        style={[
-          noFontPadding,
-          {
-            height: (isSignup ? 21 : 20) * scale,
-            color: '#24252B',
-            fontSize: 16 * scale,
-            lineHeight: (isSignup ? 21 : 20) * scale,
-            fontWeight: '400',
-          },
-        ]}>
+        style={{
+          color: '#24252B',
+          fontSize: 14 * scale,
+          lineHeight: 20 * scale,
+          fontWeight: '500',
+        }}>
         Mobile number
       </Text>
 
       <View
         style={{
-          marginTop: (isSignup ? 7 : 6) * scale,
-          height: 62 * scale,
+          marginTop: 6 * scale,
+          height: 50 * scale,
           flexDirection: 'row',
           alignItems: 'center',
           overflow: 'hidden',
           backgroundColor: '#FFFFFF',
           borderWidth: 1,
           borderColor: COLORS.border,
-          borderRadius: 11 * scale,
+          borderRadius: 12 * scale,
         }}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`Country calling code ${country}`}
           onPress={onCountryPress}
           style={{
-            width: 86 * scale,
+            width: 78 * scale,
             height: '100%',
             flexDirection: 'row',
             alignItems: 'center',
@@ -249,41 +241,35 @@ export function MobileNumberField({
             backgroundColor: '#FAFAFA',
           }}>
           <Text
-            style={[
-              noFontPadding,
-              {
-                fontSize: 16 * scale,
-                lineHeight: 21 * scale,
-                fontWeight: '500',
-                color: '#25262C',
-              },
-            ]}>
+            style={{
+              fontSize: 15 * scale,
+              lineHeight: 21 * scale,
+              fontWeight: '600',
+              color: '#25262C',
+            }}>
             {country}
           </Text>
-          <View style={{ marginLeft: 8 * scale }}>
-            <DownIcon size={14 * scale} />
+          <View style={{ marginLeft: 6 * scale }}>
+            <DownIcon size={13 * scale} />
           </View>
         </Pressable>
 
-        <View style={{ width: 1, height: 29 * scale, backgroundColor: '#E7E7E8' }} />
+        <View style={{ width: 1, height: 22 * scale, backgroundColor: '#E7E7E8' }} />
 
         <TextInput
           ref={inputRef}
           accessibilityLabel="Mobile number"
-          style={[
-            noFontPadding,
-            {
-              flex: 1,
-              height: '100%',
-              paddingLeft: 20 * scale,
-              paddingRight: 10 * scale,
-              paddingVertical: 0,
-              fontSize: 17 * scale,
-              lineHeight: 23 * scale,
-              color: COLORS.ink,
-              textAlignVertical: 'center',
-            },
-          ]}
+          style={{
+            flex: 1,
+            height: '100%',
+            paddingLeft: 14 * scale,
+            paddingRight: 10 * scale,
+            paddingVertical: 0,
+            fontSize: 16 * scale,
+            lineHeight: 22 * scale,
+            color: COLORS.ink,
+            textAlignVertical: 'center',
+          }}
           value={phone}
           onChangeText={onPhoneChange}
           placeholder="98765 43210"
@@ -306,9 +292,9 @@ export function VerificationHint({ scale, isSignup }: { scale: number; isSignup:
   return (
     <View
       style={{
-        marginTop: 15 * scale,
-        marginHorizontal: (isSignup ? 18 : 24) * scale,
-        height: (isSignup ? 36 : 20) * scale,
+        marginTop: 12 * scale,
+        marginHorizontal: 24 * scale,
+        minHeight: (isSignup ? 36 : 20) * scale,
         flexDirection: 'row',
         alignItems: 'flex-start',
         paddingLeft: (isSignup ? 1 : 4) * scale,
@@ -324,7 +310,7 @@ export function VerificationHint({ scale, isSignup }: { scale: number; isSignup:
             marginLeft: 9 * scale,
             color: '#82838E',
             fontSize: 14 * scale,
-            lineHeight: 18 * scale,
+            lineHeight: 20 * scale,
           },
         ]}>
         {isSignup
@@ -342,6 +328,7 @@ export function GoldButton({
   onPress,
   disabled,
   gradientId = 'buttonGold',
+  marginTop,
 }: {
   scale: number;
   isSignup: boolean;
@@ -358,9 +345,9 @@ export function GoldButton({
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => ({
-        height: 58 * scale,
-        marginTop: (marginTop ?? (isSignup ? 31 : 40)) * scale,
-        marginHorizontal: (isSignup ? 16 : 24) * scale,
+        height: 52 * scale,
+        marginTop: (marginTop ?? 22) * scale,
+        marginHorizontal: 24 * scale,
         borderRadius: 14 * scale,
         overflow: 'hidden',
         alignItems: 'center',
@@ -392,10 +379,10 @@ export function GoldButton({
         style={[
           noFontPadding,
           {
-            color: '#171918',
-            fontSize: 20 * scale,
-            lineHeight: 25 * scale,
-            fontWeight: '600',
+            color: '#0B0C10',
+            fontSize: 17 * scale,
+            lineHeight: 24 * scale,
+            fontWeight: '800',
             letterSpacing: -0.2 * scale,
           },
         ]}>
@@ -422,7 +409,7 @@ export function ScreenDivider({
       style={{
         height: 1,
         marginTop: marginTop * scale,
-        marginHorizontal: (isSignup ? 18 : 24) * scale,
+        marginHorizontal: 24 * scale,
         backgroundColor: COLORS.divider,
       }}
     />
@@ -460,27 +447,21 @@ export function SupportCard({ scale, onPress }: { scale: number; onPress: () => 
       </View>
       <View style={{ flex: 1, marginLeft: 16 * scale }}>
         <Text
-          style={[
-            noFontPadding,
-            {
-              color: '#24252B',
-              fontSize: 16 * scale,
-              lineHeight: 21 * scale,
-              fontWeight: '600',
-            },
-          ]}>
+          style={{
+            color: '#24252B',
+            fontSize: 16 * scale,
+            lineHeight: 24 * scale,
+            fontWeight: '700',
+          }}>
           24/7 roadside support
         </Text>
         <Text
-          style={[
-            noFontPadding,
-            {
-              marginTop: 1 * scale,
-              color: '#92919B',
-              fontSize: 13 * scale,
-              lineHeight: 18 * scale,
-            },
-          ]}>
+          style={{
+            marginTop: 1 * scale,
+            color: '#92919B',
+            fontSize: 13 * scale,
+            lineHeight: 20 * scale,
+          }}>
           We're here whenever you need us.
         </Text>
       </View>

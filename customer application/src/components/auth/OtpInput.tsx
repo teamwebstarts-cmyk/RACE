@@ -1,8 +1,6 @@
 import React, { useRef } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
 
-import { colors } from '../../theme';
-
 type Props = {
   digits: string[];
   activeIndex: number;
