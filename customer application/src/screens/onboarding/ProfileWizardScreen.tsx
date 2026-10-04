@@ -1,8 +1,11 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Asset } from 'expo-asset';
 import {
   BackHandler,
+  Image,
   Keyboard,
-  Pressable,
+  Platform,
+  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
@@ -35,9 +38,9 @@ import {
 } from '../../components/onboarding/ProfileSetupChrome';
 import {
   AboutYouHero,
-  AllSetHero,
   EmergencyHero,
-  PROFILE_HERO_RATIO,
+  HERO_VIEWBOX_H,
+  HERO_VIEWBOX_W,
   VehicleHero,
 } from '../../components/onboarding/ProfileSetupHeroes';
 import { dismissOpenProfileDropdown } from '../../components/onboarding/profileDropdownDismiss';
@@ -53,20 +56,26 @@ type SetupStep = 1 | 2 | 3 | 4;
 
 const RELATIONSHIPS = ['Parent', 'Spouse', 'Sibling', 'Friend', 'Other'];
 const CUSTOM_OPTION = 'Other';
-const MAKES = ['Maruti Suzuki', 'Hyundai', 'Tata', 'Honda', 'Mahindra', CUSTOM_OPTION];
+const MAKES = ['Maruti Suzuki', 'Hyundai', 'Honda', 'Tata', CUSTOM_OPTION];
 const MODELS_BY_MAKE: Record<string, string[]> = {
-  'Maruti Suzuki': ['Swift', 'Baleno', 'WagonR', CUSTOM_OPTION],
-  Hyundai: ['Creta', 'Venue', 'i20', CUSTOM_OPTION],
-  Tata: ['Nexon', 'Punch', 'Harrier', CUSTOM_OPTION],
-  Honda: ['City', 'Amaze', 'Activa', CUSTOM_OPTION],
-  Mahindra: ['Scorpio', 'Thar', 'XUV700', CUSTOM_OPTION],
+  'Maruti Suzuki': ['Swift', 'Baleno', CUSTOM_OPTION],
+  Hyundai: ['Creta', 'i20', CUSTOM_OPTION],
+  Honda: ['City', 'Amaze', CUSTOM_OPTION],
+  Tata: ['Nexon', 'Punch', CUSTOM_OPTION],
   [CUSTOM_OPTION]: [CUSTOM_OPTION],
 };
-/** Same on steps 1–3: title block + hero + card overlap */
-const WIZARD_COPY_BLOCK_HEIGHT = 108;
-const WIZARD_CARD_OVERLAP = 44;
-const WIZARD_HERO_LIFT = 32;
-const VEHICLE_TYPES = ['car', 'bike', 'auto', 'truck', 'other'] as const;
+const DONE_ROADSIDE_ART = require('../../assets/images/done-roadside-journey.jpg');
+const DONE_ROADSIDE_ASPECT = 825 / 1905;
+
+/** Fixed space under the stepper before the card. Same number on steps 1–3. */
+const WIZARD_HERO_SLOT = 152;
+/** Card covers this much of the hero's bottom edge. */
+const WIZARD_CARD_OVERLAP = 22;
+/** Top offset for full-width hero art (steps 1–3). */
+const WIZARD_HERO_TOP = 86;
+/** Extra gap between hero block and white form card. */
+const WIZARD_CARD_GAP = 10;
+const VEHICLE_TYPES = ['car', 'bike', 'truck', 'other'] as const;
 
 export default function ProfileWizardScreen({ navigation }: Props) {
   const dispatch = useAppDispatch();
@@ -90,10 +99,43 @@ export default function ProfileWizardScreen({ navigation }: Props) {
   const [model, setModel] = useState('Swift');
   const [customMake, setCustomMake] = useState('');
   const [customModel, setCustomModel] = useState('');
-  const layoutWidth = width;
-  const heroBleed = (layoutWidth - screenWidth) / 2;
-  const heroHeight = layoutWidth * PROFILE_HERO_RATIO;
-  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const scrollRef = useRef<ScrollView>(null);
+  const heroWidth = width;
+  const heroBleed = (heroWidth - screenWidth) / 2;
+  const heroHeight = heroWidth * (HERO_VIEWBOX_H / HERO_VIEWBOX_W);
+  const cardOverlap = WIZARD_CARD_OVERLAP * scale;
+  const heroSlot = WIZARD_HERO_SLOT * scale;
+  const keyboardOpen = keyboardHeight > 0;
+  const [, setDropdownOpen] = useState(false);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSub = Keyboard.addListener(showEvent, event => {
+      setKeyboardHeight(event.endCoordinates.height);
+      requestAnimationFrame(() => {
+        scrollRef.current?.scrollTo({ y: 0, animated: true });
+      });
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => setKeyboardHeight(0));
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (step >= 3) {
+      void Asset.fromModule(DONE_ROADSIDE_ART).downloadAsync();
+    }
+  }, [step]);
+
+  const revealFocusedField = useCallback(() => {
+    setTimeout(() => {
+      scrollRef.current?.scrollToEnd({ animated: true });
+    }, 220);
+  }, []);
 
   const showStep = useCallback((next: SetupStep) => {
     Keyboard.dismiss();
@@ -177,33 +219,46 @@ export default function ProfileWizardScreen({ navigation }: Props) {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFF8EE" translucent={false} />
-      <KeyboardFormView style={styles.fill} contentContainerStyle={{ flexGrow: 1, paddingBottom: 28 * scale }}>
-        <View style={[styles.fill, { width: screenWidth, alignSelf: 'center' }]}>
-          {dropdownOpen ? (
-            <Pressable
-              accessibilityLabel="Close menu"
-              onPress={() => {
-                dismissOpenProfileDropdown();
-                setDropdownOpen(false);
-              }}
-              style={[StyleSheet.absoluteFill, { zIndex: 4 }]}
-            />
-          ) : null}
+      <View style={[styles.fill, { width: screenWidth, alignSelf: 'center' }]}>
+        <AuthHeader scale={scale} onBack={goBack} />
+        {step < 4 ? <ProfileStepper scale={scale} step={stepperStep} /> : null}
 
-          <AuthHeader scale={scale} onBack={goBack} />
-          {step < 4 ? <ProfileStepper scale={scale} step={stepperStep} /> : null}
-
-          {step === 4 ? (
+        {step === 4 ? (
+          <KeyboardFormView style={styles.fill} contentContainerStyle={{ flexGrow: 1, paddingBottom: 28 * scale }}>
             <SuccessView scale={scale} screenWidth={screenWidth} onContinue={finishToHome} />
-          ) : (
-            <>
+          </KeyboardFormView>
+        ) : (
+          <ScrollView
+            ref={scrollRef}
+            style={styles.fill}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 28 * scale + (keyboardOpen ? keyboardHeight : 0) }}>
+            {keyboardOpen ? null : (
+            <View style={{ height: heroSlot, overflow: 'hidden' }}>
+                <View
+                  pointerEvents="none"
+                  style={{
+                    position: 'absolute',
+                    left: -heroBleed,
+                    top: WIZARD_HERO_TOP * scale,
+                    width: heroWidth,
+                    height: heroHeight,
+                  }}>
+                  {step === 1 ? (
+                    <AboutYouHero width={heroWidth} height={heroHeight} />
+                  ) : step === 2 ? (
+                    <EmergencyHero width={heroWidth} height={heroHeight} />
+                  ) : (
+                    <VehicleHero width={heroWidth} height={heroHeight} />
+                  )}
+                </View>
               <View
                 style={{
                   paddingHorizontal: 24 * scale,
-                  paddingTop: 18 * scale,
-                  height: WIZARD_COPY_BLOCK_HEIGHT * scale,
-                  zIndex: 2,
-                  justifyContent: 'flex-end',
+                  paddingTop: 12 * scale,
+                  backgroundColor: 'transparent',
                 }}>
                 <Text
                   numberOfLines={1}
@@ -222,58 +277,44 @@ export default function ProfileWizardScreen({ navigation }: Props) {
                       ? 'Add an emergency contact'
                       : 'Set up your vehicle'}
                 </Text>
-                <Text
-                  numberOfLines={2}
-                  style={{
-                    marginTop: 6 * scale,
-                    minHeight: 44 * scale,
-                    color: COLORS.secondary,
-                    fontSize: 15 * scale,
-                    lineHeight: 22 * scale,
-                  }}>
-                  {step === 1
-                    ? 'A few details help us personalize your RACE experience.'
-                    : step === 2
-                      ? "We'll use this only when you need help on the road."
-                      : 'Save your vehicle once and make future assistance faster.'}
-                </Text>
+                  <Text
+                    numberOfLines={2}
+                    style={{
+                      marginTop: 6 * scale,
+                      color: COLORS.secondary,
+                      fontSize: 15 * scale,
+                      lineHeight: 22 * scale,
+                    }}>
+                    {step === 1
+                      ? 'A few details help us personalize your RACE experience.'
+                      : step === 2
+                        ? "We'll use this only when you need help on the road."
+                        : 'Save your vehicle once and make future assistance faster.'}
+                  </Text>
               </View>
+            </View>
+            )}
 
-              <View
-                style={{
-                  width: layoutWidth,
-                  marginLeft: -heroBleed,
-                  marginTop: -WIZARD_HERO_LIFT * scale,
-                  height: heroHeight,
-                  overflow: 'hidden',
-                }}
-                pointerEvents="none">
-                {step === 1 ? (
-                  <AboutYouHero width={layoutWidth} />
-                ) : step === 2 ? (
-                  <EmergencyHero width={layoutWidth} />
-                ) : (
-                  <VehicleHero width={layoutWidth} />
-                )}
-              </View>
-
-              <View
-                style={{
-                  marginHorizontal: 16 * scale,
-                  marginTop: -WIZARD_CARD_OVERLAP * scale,
-                  padding: 18 * scale,
-                  borderRadius: 20 * scale,
-                  backgroundColor: '#FFFFFF',
-                  borderWidth: 1,
-                  borderColor: '#F2EEE6',
-                  zIndex: 10,
-                }}>
+            <View
+              style={{
+                marginHorizontal: 16 * scale,
+                marginTop: keyboardOpen
+                  ? 8 * scale
+                  : -(cardOverlap - WIZARD_CARD_GAP * scale),
+                padding: 18 * scale,
+                borderRadius: 20 * scale,
+                backgroundColor: '#FFFFFF',
+                borderWidth: 1,
+                borderColor: '#F2EEE6',
+                zIndex: 10,
+              }}>
                 {error ? <AuthToast message={error} type="error" /> : null}
 
                 {step === 1 ? (
                   <>
                     <ProfileField
                       scale={scale}
+                      onFocus={revealFocusedField}
                       label="Full name"
                       required
                       icon="user"
@@ -287,6 +328,7 @@ export default function ProfileWizardScreen({ navigation }: Props) {
                     />
                     <ProfileField
                       scale={scale}
+                      onFocus={revealFocusedField}
                       label="Email (optional)"
                       icon="mail"
                       value={email}
@@ -304,6 +346,7 @@ export default function ProfileWizardScreen({ navigation }: Props) {
                   <>
                     <ProfileField
                       scale={scale}
+                      onFocus={revealFocusedField}
                       label="Contact name"
                       required
                       icon="user"
@@ -317,6 +360,7 @@ export default function ProfileWizardScreen({ navigation }: Props) {
                     />
                     <ProfileMobileField
                       scale={scale}
+                      onFocus={revealFocusedField}
                       label="Mobile number"
                       required
                       value={emergencyMobile}
@@ -346,6 +390,7 @@ export default function ProfileWizardScreen({ navigation }: Props) {
                   <>
                     <ProfileField
                       scale={scale}
+                      onFocus={revealFocusedField}
                       label="Registration number"
                       required
                       icon="plate"
@@ -358,7 +403,7 @@ export default function ProfileWizardScreen({ navigation }: Props) {
                       }}
                     />
                     <VehicleTypeChips scale={scale} value={vehicleType} onChange={value => setVehicleType(value as (typeof VEHICLE_TYPES)[number])} />
-                    <View style={{ flexDirection: 'row', gap: 10 * scale, zIndex: 12 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 * scale, zIndex: 12 }}>
                       <View style={{ flex: 1 }}>
                         <ProfileDropdown
                           scale={scale}
@@ -395,6 +440,7 @@ export default function ProfileWizardScreen({ navigation }: Props) {
                     {make === CUSTOM_OPTION ? (
                       <ProfileField
                         scale={scale}
+                        onFocus={revealFocusedField}
                         label="Custom make"
                         icon="plate"
                         value={customMake}
@@ -406,6 +452,7 @@ export default function ProfileWizardScreen({ navigation }: Props) {
                     {make === CUSTOM_OPTION || model === CUSTOM_OPTION ? (
                       <ProfileField
                         scale={scale}
+                        onFocus={revealFocusedField}
                         label="Custom model"
                         icon="plate"
                         value={customModel}
@@ -427,11 +474,10 @@ export default function ProfileWizardScreen({ navigation }: Props) {
                     </Text>
                   </>
                 ) : null}
-              </View>
-            </>
-          )}
-        </View>
-      </KeyboardFormView>
+            </View>
+          </ScrollView>
+        )}
+      </View>
     </SafeAreaView>
   );
 }
@@ -445,13 +491,19 @@ function SuccessView({
   screenWidth: number;
   onContinue: () => void;
 }) {
-  const [heroHeight, setHeroHeight] = useState(screenWidth * 0.58);
   const chips: Array<{ title: string; caption: string; icon: 'bolt' | 'shield' | 'pin' }> = [
     { title: '24/7', caption: 'Assistance', icon: 'bolt' },
     { title: 'Verified', caption: 'Professionals', icon: 'shield' },
     { title: 'Quick', caption: 'Response', icon: 'pin' },
   ];
   const checkSize = 104 * scale;
+  const artWidth = screenWidth;
+  const artHeight = artWidth * DONE_ROADSIDE_ASPECT;
+
+  useEffect(() => {
+    void Asset.fromModule(DONE_ROADSIDE_ART).downloadAsync();
+  }, []);
+
   return (
     <View style={styles.fill}>
       <View style={{ paddingHorizontal: 24 * scale, paddingTop: 8 * scale }}>
@@ -530,49 +582,57 @@ function SuccessView({
           }}>
           RACE is ready when you need us.
         </Text>
-
-        <View
-          style={{
-            marginTop: 22 * scale,
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            gap: 8 * scale,
-          }}>
-          {chips.map(item => (
-            <View
-              key={item.title}
-              style={{
-                flex: 1,
-                paddingVertical: 16 * scale,
-                borderRadius: 16 * scale,
-                backgroundColor: '#F3EFE4',
-                alignItems: 'center',
-              }}>
-              <SuccessChipIcon type={item.icon} size={36 * scale} />
-              <Text
-                style={{
-                  marginTop: 8 * scale,
-                  color: '#0B0C10',
-                  fontSize: 13 * scale,
-                  fontWeight: '800',
-                }}>
-                {item.title}
-              </Text>
-              <Text style={{ marginTop: 3 * scale, color: '#8A8678', fontSize: 11 * scale }}>{item.caption}</Text>
-            </View>
-          ))}
-        </View>
       </View>
 
-      <View
-        style={{ flex: 1, marginTop: 8 * scale }}
-        onLayout={event => {
-          const next = event.nativeEvent.layout.height;
-          if (next > 80 && Math.abs(next - heroHeight) > 2) {
-            setHeroHeight(next);
-          }
-        }}>
-        <AllSetHero width={screenWidth} height={heroHeight} />
+      <View style={{ flex: 1, marginTop: 10 * scale, justifyContent: 'flex-end', alignItems: 'center' }}>
+        <View style={{ width: artWidth, height: artHeight, position: 'relative' }}>
+          <Image
+            accessibilityLabel="RACE roadside assistance on the highway"
+            source={DONE_ROADSIDE_ART}
+            resizeMode="cover"
+            style={{ width: artWidth, height: artHeight }}
+            fadeDuration={0}
+          />
+          <View
+            style={{
+              position: 'absolute',
+              left: 14 * scale,
+              right: 14 * scale,
+              top: 10 * scale,
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              gap: 6 * scale,
+            }}>
+            {chips.map(item => (
+              <View
+                key={item.title}
+                style={{
+                  flex: 1,
+                  paddingVertical: 8 * scale,
+                  paddingHorizontal: 4 * scale,
+                  borderRadius: 12 * scale,
+                  backgroundColor: 'rgba(255, 252, 245, 0.94)',
+                  alignItems: 'center',
+                  borderWidth: StyleSheet.hairlineWidth,
+                  borderColor: 'rgba(196, 161, 90, 0.22)',
+                }}>
+                <SuccessChipIcon type={item.icon} size={17 * scale} />
+                <Text
+                  style={{
+                    marginTop: 5 * scale,
+                    color: '#0B0C10',
+                    fontSize: 11 * scale,
+                    fontWeight: '800',
+                  }}>
+                  {item.title}
+                </Text>
+                <Text style={{ marginTop: 2 * scale, color: '#8A8678', fontSize: 9.5 * scale }}>
+                  {item.caption}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </View>
       </View>
 
       <View style={{ paddingHorizontal: 16 * scale, paddingTop: 8 * scale, paddingBottom: 10 * scale }}>
@@ -583,14 +643,14 @@ function SuccessView({
 }
 
 function SuccessChipIcon({ type, size }: { type: 'bolt' | 'shield' | 'pin'; size: number }) {
-  const color = '#D4A017';
+  const color = '#C4A15A';
   if (type === 'bolt') {
-    return <Zap size={size} color={color} fill={color} strokeWidth={1.6} />;
+    return <Zap size={size} color={color} fill="none" strokeWidth={2} />;
   }
   if (type === 'shield') {
-    return <ShieldCheck size={size} color={color} strokeWidth={2} />;
+    return <ShieldCheck size={size} color={color} fill="none" strokeWidth={2} />;
   }
-  return <MapPin size={size} color={color} strokeWidth={2} />;
+  return <MapPin size={size} color={color} fill="none" strokeWidth={2} />;
 }
 
 const styles = StyleSheet.create({

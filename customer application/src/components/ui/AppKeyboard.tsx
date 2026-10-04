@@ -21,23 +21,29 @@ export function KeyboardFormView({
   children,
   style,
   contentContainerStyle,
+  variant = 'default',
 }: {
   children: React.ReactNode;
   style?: ScrollViewProps['style'];
   contentContainerStyle?: ScrollViewProps['contentContainerStyle'];
+  /** Wizard: header/stepper stay fixed; only hero + card scroll with keyboard. */
+  variant?: 'default' | 'wizard';
 }) {
   const Aware = KeyboardModule?.KeyboardAwareScrollView;
+  const isWizard = variant === 'wizard';
   if (Aware) {
     return (
       <Aware
         style={style}
         contentContainerStyle={contentContainerStyle}
         keyboardShouldPersistTaps="handled"
-        bottomOffset={36}
-        extraKeyboardSpace={20}
+        bottomOffset={isWizard ? 72 : 100}
+        extraKeyboardSpace={isWizard ? 36 : 48}
+        mode={isWizard ? 'insets' : 'layout'}
         keyboardDismissMode="interactive"
         showsVerticalScrollIndicator={false}
-        bounces={false}>
+        bounces={false}
+        automaticallyAdjustContentInsets={isWizard ? false : undefined}>
         {children}
       </Aware>
     );

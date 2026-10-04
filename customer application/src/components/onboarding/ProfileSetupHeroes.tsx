@@ -14,20 +14,24 @@ import Svg, {
   Text as SvgText,
 } from 'react-native-svg';
 
-export const PROFILE_HERO_RATIO = 0.5;
+export const PROFILE_HERO_RATIO = 300 / 960;
+export const HERO_VIEWBOX_W = 960;
+export const HERO_VIEWBOX_H = 300;
 
 function SceneFrame({
   width,
-  compact,
+  height: heightProp,
+  compact = 1,
   children,
 }: {
   width: number;
-  compact: number;
+  height?: number;
+  compact?: number;
   children: React.ReactNode;
 }) {
-  const height = width * PROFILE_HERO_RATIO * compact;
+  const height = heightProp ?? width * PROFILE_HERO_RATIO * compact;
   return (
-    <Svg pointerEvents="none" width={width} height={height} viewBox="0 0 960 300" preserveAspectRatio="xMidYMid slice">
+    <Svg pointerEvents="none" width={width} height={height} viewBox="0 0 960 300" preserveAspectRatio="xMidYMid meet">
       {children}
     </Svg>
   );
@@ -67,9 +71,17 @@ function SharedScenePaint({ prefix }: { prefix: string }) {
   );
 }
 
-export function AboutYouHero({ width, compact = 1 }: { width: number; compact?: number }) {
+export function AboutYouHero({
+  width,
+  height,
+  compact = 1,
+}: {
+  width: number;
+  height?: number;
+  compact?: number;
+}) {
   return (
-    <SceneFrame width={width} compact={compact}>
+    <SceneFrame width={width} height={height} compact={compact}>
       <SharedScenePaint prefix="ay" />
       <Defs>
         <LinearGradient id="ayPin" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -204,9 +216,17 @@ export function AboutYouHero({ width, compact = 1 }: { width: number; compact?: 
   );
 }
 
-export function EmergencyHero({ width, compact = 1 }: { width: number; compact?: number }) {
+export function EmergencyHero({
+  width,
+  height,
+  compact = 1,
+}: {
+  width: number;
+  height?: number;
+  compact?: number;
+}) {
   return (
-    <SceneFrame width={width} compact={compact}>
+    <SceneFrame width={width} height={height} compact={compact}>
       <SharedScenePaint prefix="em" />
       <Defs>
         <LinearGradient id="emShieldGold" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -264,9 +284,17 @@ export function EmergencyHero({ width, compact = 1 }: { width: number; compact?:
   );
 }
 
-export function VehicleHero({ width, compact = 1 }: { width: number; compact?: number }) {
+export function VehicleHero({
+  width,
+  height,
+  compact = 1,
+}: {
+  width: number;
+  height?: number;
+  compact?: number;
+}) {
   return (
-    <SceneFrame width={width} compact={compact}>
+    <SceneFrame width={width} height={height} compact={compact}>
       <SharedScenePaint prefix="vh" />
       <Defs>
         <LinearGradient id="vhSuv" x1="0%" y1="0%" x2="0%" y2="100%">

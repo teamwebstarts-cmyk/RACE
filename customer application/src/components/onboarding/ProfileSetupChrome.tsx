@@ -1,9 +1,8 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import {
   Bike,
   Car,
-  CarTaxiFront,
   ChevronDown,
   CircleEllipsis,
   Heart,
@@ -130,6 +129,7 @@ export function ProfileField({
   onChangeText,
   keyboardType,
   autoCapitalize,
+  onFocus,
 }: {
   scale: number;
   label: string;
@@ -140,6 +140,7 @@ export function ProfileField({
   onChangeText: (value: string) => void;
   keyboardType?: 'default' | 'email-address' | 'phone-pad' | 'number-pad';
   autoCapitalize?: 'none' | 'words' | 'characters';
+  onFocus?: () => void;
 }) {
   const Icon = ICONS[icon];
   return (
@@ -170,6 +171,7 @@ export function ProfileField({
         <TextInput
           value={value}
           onChangeText={onChangeText}
+          onFocus={onFocus}
           placeholder={placeholder}
           placeholderTextColor="#B0B1B8"
           keyboardType={keyboardType}
@@ -195,6 +197,7 @@ export function ProfileMobileField({
   value,
   placeholder,
   onChangeText,
+  onFocus,
 }: {
   scale: number;
   label: string;
@@ -202,6 +205,7 @@ export function ProfileMobileField({
   value: string;
   placeholder: string;
   onChangeText: (value: string) => void;
+  onFocus?: () => void;
 }) {
   return (
     <View style={{ marginBottom: 16 * scale }}>
@@ -243,6 +247,7 @@ export function ProfileMobileField({
         <TextInput
           value={value}
           onChangeText={onChangeText}
+          onFocus={onFocus}
           placeholder={placeholder}
           placeholderTextColor="#B0B1B8"
           keyboardType="phone-pad"
@@ -281,6 +286,8 @@ export function ProfileDropdown({
   onOpenChange?: (open: boolean) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [anchor, setAnchor] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const fieldRef = useRef<View>(null);
   const Icon = icon ? ICONS[icon] : null;
   const close = useCallback(() => setOpen(false), []);
 
@@ -293,6 +300,19 @@ export function ProfileDropdown({
     unregisterProfileDropdownCloser(close);
     return undefined;
   }, [close, onOpenChange, open]);
+
+  const toggle = () => {
+    if (open) {
+      setOpen(false);
+      return;
+    }
+    fieldRef.current?.measureInWindow((x, y, width, height) => {
+      setAnchor({ x, y, width, height });
+      setOpen(true);
+    });
+  };
+
+  const menuTop = anchor ? anchor.y + anchor.height + 6 : 0;
 
   return (
     <View style={{ marginBottom: 16 * scale, zIndex: open ? 40 : 1 }}>
@@ -307,47 +327,50 @@ export function ProfileDropdown({
         {label}
         {required ? <Text style={{ color: '#E23B3B' }}> *</Text> : null}
       </Text>
-      <Pressable
-        android_ripple={{ color: 'transparent' }}
-        onPress={() => setOpen(value => !value)}
-        style={{
-          height: 50 * scale,
-          flexDirection: 'row',
-          alignItems: 'center',
-          paddingHorizontal: 14 * scale,
-          borderWidth: 1,
-          borderColor: open ? COLORS.orange : COLORS.border,
-          borderRadius: 12 * scale,
-          backgroundColor: '#FFFFFF',
-        }}>
-        {Icon ? <Icon size={18 * scale} /> : null}
-        <Text
+      <View ref={fieldRef} collapsable={false}>
+        <Pressable
+          android_ripple={{ color: 'transparent' }}
+          onPress={toggle}
           style={{
-            flex: 1,
-            marginLeft: Icon ? 10 * scale : 0,
-            fontSize: 15 * scale,
-            color: value ? COLORS.ink : '#B0B1B8',
-          }}>
-          {value || placeholder}
-        </Text>
-        <ChevronIcon size={18 * scale} open={open} />
-      </Pressable>
-      {open ? (
-        <View
-          style={{
-            position: 'absolute',
-            top: 78 * scale,
-            left: 0,
-            right: 0,
-            maxHeight: 220 * scale,
-            borderRadius: 12 * scale,
+            height: 50 * scale,
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingHorizontal: 14 * scale,
             borderWidth: 1,
-            borderColor: COLORS.border,
-            backgroundColor: '#FFFEFC',
-            overflow: 'hidden',
-            zIndex: 30,
+            borderColor: open ? COLORS.orange : COLORS.border,
+            borderRadius: 12 * scale,
+            backgroundColor: '#FFFFFF',
           }}>
-          <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled">
+          {Icon ? <Icon size={18 * scale} /> : null}
+          <Text
+            style={{
+              flex: 1,
+              marginLeft: Icon ? 10 * scale : 0,
+              fontSize: 15 * scale,
+              color: value ? COLORS.ink : '#B0B1B8',
+            }}>
+            {value || placeholder}
+          </Text>
+          <ChevronIcon size={18 * scale} open={open} />
+        </Pressable>
+      </View>
+      <Modal visible={open} transparent animationType="fade" statusBarTranslucent onRequestClose={close}>
+        <Pressable accessibilityLabel="Close menu" style={StyleSheet.absoluteFill} onPress={close} />
+        {anchor ? (
+          <View
+            style={{
+              position: 'absolute',
+              top: menuTop,
+              left: anchor.x,
+              width: anchor.width,
+              borderRadius: 12 * scale,
+              borderWidth: 1,
+              borderColor: COLORS.border,
+              backgroundColor: '#FFFEFC',
+              overflow: 'hidden',
+              elevation: 16,
+              zIndex: 2,
+            }}>
             {options.map((option, index) => (
               <Pressable
                 key={option}
@@ -367,9 +390,9 @@ export function ProfileDropdown({
                 <Text style={{ color: COLORS.ink, fontSize: 15 * scale }}>{option}</Text>
               </Pressable>
             ))}
-          </ScrollView>
-        </View>
-      ) : null}
+          </View>
+        ) : null}
+      </Modal>
     </View>
   );
 }
@@ -502,7 +525,6 @@ const VEHICLE_TYPE_CHIPS: Array<{
 }> = [
   { id: 'car', label: 'Car', Icon: Car },
   { id: 'bike', label: 'Bike', Icon: Bike },
-  { id: 'auto', label: 'Auto', Icon: CarTaxiFront },
   { id: 'truck', label: 'Truck', Icon: Truck },
   { id: 'other', label: 'Other', Icon: CircleEllipsis },
 ];
