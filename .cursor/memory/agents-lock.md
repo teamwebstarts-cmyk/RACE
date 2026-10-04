@@ -8,7 +8,6 @@ True isolation (optional, user must ask): git worktrees — one branch/worktree 
 
 | Claimed | Surface | Task | Session note |
 |---------|---------|------|----------------|
-| — | — | none | idle |
 
 Surfaces: `customer` | `partner` | `admin` | `backend` | `docs` | `memory`
 

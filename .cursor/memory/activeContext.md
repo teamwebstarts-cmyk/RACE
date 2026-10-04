@@ -4,7 +4,7 @@ Updated: 2026-10-04
 
 ## Current focus
 
-Customer login + signup aligned: SVG on top, heading below, shared field/header.
+Auth screens: descenders (`g`/`y`) not clipped; SVG fades into page on top + right.
 
 ## Branch
 
@@ -12,14 +12,12 @@ Customer login + signup aligned: SVG on top, heading below, shared field/header.
 
 ## Last done
 
-- Create account uses the new tow-truck SVG on top; heading sits under it like Welcome back.
-- Header is one line: RACE SERVICE.
-- Inputs slightly smaller and the same on both screens; keyboard shrinks the hero.
-- Title/button type is heavier; descenders (g) no longer clipped by tight line-height.
+- Removed tight `height === lineHeight` + `includeFontPadding: false` on titles, paragraphs, hint, terms, switcher.
+- Both heroes overlay a page-color fade on the top and right so the illustration blends into `#FFFEFC`.
 
 ## Next (when the user asks)
 
-Reload both auth modes and type in the field with the keyboard open.
+Reload both modes and check `moving` / `get` / `agree` tails and SVG edges.
 
 ## Do not
 

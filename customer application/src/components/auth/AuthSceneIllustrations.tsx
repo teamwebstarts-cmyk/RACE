@@ -12,8 +12,31 @@ import Svg, {
   Stop,
 } from 'react-native-svg';
 
+import { AUTH_COLORS as COLORS, AUTH_HERO_RATIO } from './authDesign';
+
+function HeroEdgeFades({ idPrefix }: { idPrefix: string }) {
+  return (
+    <>
+      <Defs>
+        <LinearGradient id={`${idPrefix}FadeTop`} x1="0%" y1="0%" x2="0%" y2="100%">
+          <Stop offset="0%" stopColor={COLORS.background} stopOpacity={1} />
+          <Stop offset="42%" stopColor={COLORS.background} stopOpacity={0.45} />
+          <Stop offset="100%" stopColor={COLORS.background} stopOpacity={0} />
+        </LinearGradient>
+        <LinearGradient id={`${idPrefix}FadeRight`} x1="0%" y1="0%" x2="100%" y2="0%">
+          <Stop offset="0%" stopColor={COLORS.background} stopOpacity={0} />
+          <Stop offset="40%" stopColor={COLORS.background} stopOpacity={0.22} />
+          <Stop offset="100%" stopColor={COLORS.background} stopOpacity={1} />
+        </LinearGradient>
+      </Defs>
+      <Rect x="0" y="0" width="1000" height="96" fill={`url(#${idPrefix}FadeTop)`} />
+      <Rect x="748" y="0" width="252" height="400" fill={`url(#${idPrefix}FadeRight)`} />
+    </>
+  );
+}
+
 export function LoginIllustration({ width, compact = 1 }: { width: number; compact?: number }) {
-  const height = width * 0.4 * compact;
+  const height = width * AUTH_HERO_RATIO * compact;
   return (
     <Svg
       pointerEvents="none"
@@ -217,18 +240,19 @@ export function LoginIllustration({ width, compact = 1 }: { width: number; compa
       <Circle cx="358" cy="288" r="11" fill="#2A3038" />
       <Circle cx="358" cy="288" r="5.4" fill="#ECEFF3" />
       <Circle cx="358" cy="288" r="2" fill="#2A3038" />
+      <HeroEdgeFades idPrefix="wb" />
     </Svg>
   );
 }
 
 export function SignupIllustration({ width, compact = 1 }: { width: number; compact?: number }) {
-  const height = width * 0.36 * compact;
+  const height = width * AUTH_HERO_RATIO * compact;
   return (
     <Svg
       pointerEvents="none"
       width={width}
       height={height}
-      viewBox="0 0 1000 360"
+      viewBox="0 0 1000 400"
       preserveAspectRatio="xMidYMid meet">
       <Defs>
         <LinearGradient id="suBgCanvas" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -273,11 +297,11 @@ export function SignupIllustration({ width, compact = 1 }: { width: number; comp
         </LinearGradient>
       </Defs>
 
-      <Rect x="0" y="0" width="1000" height="360" fill="url(#suBgCanvas)" />
-      <Path d="M 0,165 C 140,110 260,115 380,160 L 380,360 L 0,360 Z" fill="url(#suHillsFar)" />
-      <Path d="M 450,180 C 620,95 760,65 1000,90 L 1000,360 L 450,360 Z" fill="url(#suHillRight)" />
+      <Rect x="0" y="0" width="1000" height="400" fill="url(#suBgCanvas)" />
+      <Path d="M 0,165 C 140,110 260,115 380,160 L 380,400 L 0,400 Z" fill="url(#suHillsFar)" />
+      <Path d="M 450,180 C 620,95 760,65 1000,90 L 1000,400 L 450,400 Z" fill="url(#suHillRight)" />
       <Path
-        d="M 0,260 C 220,260 330,170 520,165 C 690,160 840,205 1000,230 L 1000,360 L 0,360 Z"
+        d="M 0,260 C 220,260 330,170 520,165 C 690,160 840,205 1000,230 L 1000,400 L 0,400 Z"
         fill="#FFFEFB"
         opacity={0.94}
       />
@@ -321,7 +345,7 @@ export function SignupIllustration({ width, compact = 1 }: { width: number; comp
         strokeLinecap="round"
         opacity={0.75}
       />
-      <Path d="M 0,335 C 160,335 320,330 450,324 L 450,360 L 0,360 Z" fill="#FFFDF9" opacity={0.9} />
+      <Path d="M 0,335 C 160,335 320,330 450,324 L 450,400 L 0,400 Z" fill="#FFFDF9" opacity={0.9} />
 
       <Ellipse cx="426" cy="163" rx="10" ry="3.5" fill="none" stroke="#F6AE1B" />
       <Ellipse cx="426" cy="163" rx="9" ry="3.2" fill="#8C6615" opacity={0.28} />
@@ -459,6 +483,7 @@ export function SignupIllustration({ width, compact = 1 }: { width: number; comp
       <Circle cx="875.2" cy="265" r="0.8" fill="#FFFFFF" />
       <Circle cx="872" cy="268.2" r="0.8" fill="#FFFFFF" />
       <Circle cx="868.8" cy="265" r="0.8" fill="#FFFFFF" />
+      <HeroEdgeFades idPrefix="su" />
     </Svg>
   );
 }

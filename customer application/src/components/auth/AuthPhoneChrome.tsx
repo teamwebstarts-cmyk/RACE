@@ -288,34 +288,105 @@ export function MobileNumberField({
   );
 }
 
-export function VerificationHint({ scale, isSignup }: { scale: number; isSignup: boolean }) {
+export function VerificationHint({ scale }: { scale: number }) {
   return (
     <View
       style={{
         marginTop: 12 * scale,
         marginHorizontal: 24 * scale,
-        minHeight: (isSignup ? 36 : 20) * scale,
+        minHeight: 28 * scale,
         flexDirection: 'row',
-        alignItems: 'flex-start',
-        paddingLeft: (isSignup ? 1 : 4) * scale,
+        alignItems: 'center',
       }}>
-      <View style={{ marginTop: 1 * scale }}>
-        <PhoneIcon size={19 * scale} />
-      </View>
+      <PhoneIcon size={18 * scale} />
       <Text
-        style={[
-          noFontPadding,
-          {
-            flex: 1,
-            marginLeft: 9 * scale,
-            color: '#82838E',
-            fontSize: 14 * scale,
-            lineHeight: 20 * scale,
-          },
-        ]}>
-        {isSignup
-          ? "We'll send you a verification code to create\nyour account."
-          : "We'll text you a verification code."}
+        numberOfLines={1}
+        style={{
+          flex: 1,
+          marginLeft: 8 * scale,
+          color: '#82838E',
+          fontSize: 13 * scale,
+          lineHeight: 22 * scale,
+          paddingBottom: 2 * scale,
+          includeFontPadding: true,
+        }}>
+        We'll text you a verification code.
+      </Text>
+    </View>
+  );
+}
+
+function CheckMark({ size }: { size: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 16 16">
+      <Path
+        d="M3.2 8.2 L6.4 11.2 L12.8 4.6"
+        fill="none"
+        stroke="#FFFFFF"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+export function TermsAgreeRow({
+  scale,
+  accepted,
+  onToggle,
+  onPressTerms,
+}: {
+  scale: number;
+  accepted: boolean;
+  onToggle: () => void;
+  onPressTerms: () => void;
+}) {
+  const box = 20 * scale;
+  return (
+    <View
+      style={{
+        marginTop: 12 * scale,
+        marginHorizontal: 24 * scale,
+        minHeight: 32 * scale,
+        flexDirection: 'row',
+        alignItems: 'center',
+      }}>
+      <Pressable
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked: accepted }}
+        accessibilityLabel="Agree to Terms and Privacy Policy"
+        onPress={onToggle}
+        hitSlop={8}
+        style={{
+          width: box,
+          height: box,
+          borderRadius: 5 * scale,
+          borderWidth: 1.6,
+          borderColor: accepted ? COLORS.orange : '#C5C6CE',
+          backgroundColor: accepted ? COLORS.orange : '#FFFFFF',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+        {accepted ? <CheckMark size={14 * scale} /> : null}
+      </Pressable>
+      <Text
+        numberOfLines={1}
+        style={{
+          flex: 1,
+          marginLeft: 10 * scale,
+          color: '#878590',
+          fontSize: 13 * scale,
+          lineHeight: 22 * scale,
+          paddingBottom: 2 * scale,
+          includeFontPadding: true,
+        }}>
+        I agree to{' '}
+        <Text
+          onPress={onPressTerms}
+          style={{ color: COLORS.orange, fontWeight: '600' }}>
+          Terms & Privacy
+        </Text>
       </Text>
     </View>
   );
@@ -376,16 +447,15 @@ export function GoldButton({
         <Rect x="0" y="0" width="344" height="58" rx="14" fill={`url(#${gradientId})`} />
       </Svg>
       <Text
-        style={[
-          noFontPadding,
-          {
+        style={{
             color: '#0B0C10',
             fontSize: 17 * scale,
-            lineHeight: 24 * scale,
+            lineHeight: 26 * scale,
+            paddingBottom: 2 * scale,
             fontWeight: '800',
             letterSpacing: -0.2 * scale,
-          },
-        ]}>
+            includeFontPadding: true,
+          }}>
         {label ?? (isSignup ? 'Create account' : 'Continue')}
       </Text>
       <View style={{ position: 'absolute', right: 25 * scale }}>
@@ -423,7 +493,7 @@ export function SupportCard({ scale, onPress }: { scale: number; onPress: () => 
       accessibilityLabel="24/7 roadside support"
       onPress={onPress}
       style={({ pressed }) => ({
-        height: 80 * scale,
+        height: 84 * scale,
         marginTop: 20 * scale,
         marginHorizontal: 16 * scale,
         paddingLeft: 17 * scale,
@@ -450,8 +520,9 @@ export function SupportCard({ scale, onPress }: { scale: number; onPress: () => 
           style={{
             color: '#24252B',
             fontSize: 16 * scale,
-            lineHeight: 24 * scale,
+            lineHeight: 26 * scale,
             fontWeight: '700',
+            includeFontPadding: true,
           }}>
           24/7 roadside support
         </Text>
@@ -460,7 +531,9 @@ export function SupportCard({ scale, onPress }: { scale: number; onPress: () => 
             marginTop: 1 * scale,
             color: '#92919B',
             fontSize: 13 * scale,
-            lineHeight: 20 * scale,
+            lineHeight: 22 * scale,
+            paddingBottom: 2 * scale,
+            includeFontPadding: true,
           }}>
           We're here whenever you need us.
         </Text>

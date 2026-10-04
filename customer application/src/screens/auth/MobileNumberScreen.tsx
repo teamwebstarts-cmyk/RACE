@@ -21,6 +21,7 @@ import {
   AUTH_COLORS as COLORS,
   AUTH_DESIGN_HEIGHT,
   AUTH_DESIGN_WIDTH,
+  AUTH_HERO_RATIO,
 } from '../../components/auth/authDesign';
 import {
   AuthHeader,
@@ -30,6 +31,7 @@ import {
   ScreenDivider,
   ShieldIcon,
   SupportCard,
+  TermsAgreeRow,
   VerificationHint,
 } from '../../components/auth/AuthPhoneChrome';
 import {
@@ -79,9 +81,11 @@ export default function MobileNumberScreen({ navigation }: Props) {
   const [countryPickerVisible, setCountryPickerVisible] = useState(false);
   const [error, setError] = useState('');
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [termsAccepted, setTermsAccepted] = useState(!isSignup);
 
   const inputRef = useRef<TextInput>(null);
   const compact = keyboardHeight > 80 ? 0.58 : 1;
+  const heroHeight = screenWidth * AUTH_HERO_RATIO * compact;
 
   const sendOtpMutation = useSendOtpMutation();
   const verifyOtpMutation = useVerifyOtpMutation();
@@ -89,6 +93,7 @@ export default function MobileNumberScreen({ navigation }: Props) {
   const switchMode = (nextMode: 'login' | 'signup') => {
     Keyboard.dismiss();
     setError('');
+    setTermsAccepted(nextMode === 'login');
     if (nextMode === 'signup') {
       dispatch(setSignupPath({ accountType: 'customer', vendorType: null }));
     } else {
@@ -142,6 +147,11 @@ export default function MobileNumberScreen({ navigation }: Props) {
     if (!MOBILE_REGEX.test(digits)) {
       inputRef.current?.focus();
       setError('Enter a valid 10-digit mobile number');
+      return;
+    }
+
+    if (!termsAccepted) {
+      setError('Please accept Terms & Privacy to continue');
       return;
     }
 
@@ -214,230 +224,128 @@ export default function MobileNumberScreen({ navigation }: Props) {
         <View style={[styles.fill, { width: screenWidth, alignSelf: 'center' }]}>
           <AuthHeader scale={scale} onBack={handleBack} />
 
+          <View style={{ width: screenWidth, height: heroHeight, overflow: 'visible' }}>
+            {isSignup ? (
+              <SignupIllustration width={screenWidth} compact={compact} />
+            ) : (
+              <LoginIllustration width={screenWidth} compact={compact} />
+            )}
+          </View>
+
+          <Text
+            numberOfLines={1}
+            style={{
+              marginTop: 10 * scale,
+              marginHorizontal: 24 * scale,
+              color: '#0B0C10',
+              fontSize: 28 * scale,
+              lineHeight: 40 * scale,
+              fontWeight: '800',
+              letterSpacing: -0.6 * scale,
+              textAlign: 'left',
+              includeFontPadding: true,
+            }}>
+            {isSignup ? "Let's get you moving" : 'Welcome back'}
+          </Text>
+          <Text
+            numberOfLines={1}
+            style={{
+              marginTop: 4 * scale,
+              marginHorizontal: 24 * scale,
+              color: COLORS.secondary,
+              fontSize: 16 * scale,
+              lineHeight: 26 * scale,
+              paddingBottom: 3 * scale,
+              textAlign: 'left',
+              includeFontPadding: true,
+            }}>
+            {isSignup ? 'Create your account in seconds.' : "Let's get you back on the road."}
+          </Text>
+
+          <View style={{ marginTop: 18 * scale }}>
+            <MobileNumberField
+              scale={scale}
+              country={country}
+              phone={phone}
+              inputRef={inputRef}
+              onPhoneChange={value => {
+                setPhone(value.replace(/[^\d\s]/g, ''));
+                if (error) setError('');
+              }}
+              onCountryPress={() => {
+                Keyboard.dismiss();
+                setCountryPickerVisible(true);
+              }}
+              onSubmit={() => void handleContinue()}
+            />
+          </View>
+
+          {error ? (
+            <View style={{ marginHorizontal: 24 * scale, marginTop: 8 * scale }}>
+              <AuthToast message={error} type="error" />
+            </View>
+          ) : null}
+
+          <VerificationHint scale={scale} />
+          <TermsAgreeRow
+            scale={scale}
+            accepted={termsAccepted}
+            onToggle={() => {
+              setTermsAccepted(value => !value);
+              if (error) setError('');
+            }}
+            onPressTerms={handleTerms}
+          />
+          <GoldButton
+            scale={scale}
+            isSignup={isSignup}
+            onPress={() => void handleContinue()}
+            disabled={loading}
+          />
+
+          <ScreenDivider scale={scale} isSignup={isSignup} marginTop={22} />
+          <View
+            style={{
+              marginTop: 18 * scale,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+            <Text
+              style={{
+                color: '#494951',
+                fontSize: 16 * scale,
+                lineHeight: 26 * scale,
+                includeFontPadding: true,
+                paddingBottom: 2 * scale,
+              }}>
+              {isSignup ? 'Already have an account?' : 'New to RACE?'}
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => switchMode(isSignup ? 'login' : 'signup')}
+              hitSlop={6}
+              style={{ marginLeft: 6 * scale }}>
+              <Text
+                style={{
+                  color: COLORS.orange,
+                  fontSize: 16 * scale,
+                  lineHeight: 26 * scale,
+                  includeFontPadding: true,
+                  paddingBottom: 2 * scale,
+                }}>
+                {isSignup ? 'Sign in' : 'Create account'}
+              </Text>
+            </Pressable>
+          </View>
+
           {isSignup ? (
             <>
-              <SignupIllustration width={screenWidth} compact={compact} />
-              <Text
-                numberOfLines={1}
-                style={{
-                  marginTop: 10 * scale,
-                  marginHorizontal: 24 * scale,
-                  color: '#0B0C10',
-                  fontSize: 28 * scale,
-                  lineHeight: 38 * scale,
-                  fontWeight: '800',
-                  letterSpacing: -0.6 * scale,
-                  textAlign: 'left',
-                }}>
-                Let's get you moving
-              </Text>
-              <Text
-                style={{
-                  marginTop: 6 * scale,
-                  marginHorizontal: 24 * scale,
-                  color: COLORS.secondary,
-                  fontSize: 16 * scale,
-                  lineHeight: 24 * scale,
-                  textAlign: 'left',
-                }}>
-                Create your RACE account in a few seconds.
-              </Text>
-
-              <View style={{ marginTop: 18 * scale }}>
-                <MobileNumberField
-                  scale={scale}
-                  country={country}
-                  phone={phone}
-                  inputRef={inputRef}
-                  onPhoneChange={value => {
-                    setPhone(value.replace(/[^\d\s]/g, ''));
-                    if (error) setError('');
-                  }}
-                  onCountryPress={() => {
-                    Keyboard.dismiss();
-                    setCountryPickerVisible(true);
-                  }}
-                  onSubmit={() => void handleContinue()}
-                />
-              </View>
-
-              {error ? (
-                <View style={{ marginHorizontal: 18 * scale, marginTop: 8 * scale }}>
-                  <AuthToast message={error} type="error" />
-                </View>
-              ) : null}
-
-              <VerificationHint scale={scale} isSignup />
-              <GoldButton
-                scale={scale}
-                isSignup
-                onPress={() => void handleContinue()}
-                disabled={loading}
-              />
-
-              <View style={{ marginTop: 14 * scale, alignItems: 'center' }}>
-                <Text
-                  style={[
-                    {
-                      color: '#878590',
-                      fontSize: 13 * scale,
-                      lineHeight: 24 * scale,
-                    },
-                  ]}>
-                  By continuing, you agree to RACE's
-                </Text>
-                <Pressable accessibilityRole="link" onPress={handleTerms} hitSlop={5}>
-                  <Text
-                    style={[
-                      {
-                        color: COLORS.orange,
-                        fontSize: 14 * scale,
-                        lineHeight: 20 * scale,
-                      },
-                    ]}>
-                    Terms & Privacy Policy.
-                  </Text>
-                </Pressable>
-              </View>
-
               <View style={styles.flexSpacer} />
-
-              <ScreenDivider scale={scale} isSignup />
-              <View
-                style={{
-                  marginTop: 16 * scale,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}>
-                <Text
-                  style={[
-                    {
-                      color: '#46474E',
-                      fontSize: 16 * scale,
-                      lineHeight: 24 * scale,
-                    },
-                  ]}>
-                  Already have an account?
-                </Text>
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={() => switchMode('login')}
-                  hitSlop={6}
-                  style={{ marginLeft: 7 * scale }}>
-                  <Text
-                    style={[
-                      {
-                        color: COLORS.orange,
-                        fontSize: 16 * scale,
-                        lineHeight: 24 * scale,
-                      },
-                    ]}>
-                    Sign in
-                  </Text>
-                </Pressable>
-              </View>
               <SupportCard scale={scale} onPress={handleHelp} />
             </>
           ) : (
             <>
-              <View style={{ width: '100%' }}>
-                <LoginIllustration width={screenWidth} compact={compact} />
-              </View>
-              <Text
-                numberOfLines={1}
-                style={{
-                  marginTop: 10 * scale,
-                  marginHorizontal: 24 * scale,
-                  color: '#0B0C10',
-                  fontSize: 28 * scale,
-                  lineHeight: 38 * scale,
-                  fontWeight: '800',
-                  letterSpacing: -0.6 * scale,
-                  textAlign: 'left',
-                }}>
-                Welcome back
-              </Text>
-              <Text
-                style={{
-                  marginTop: 6 * scale,
-                  marginHorizontal: 24 * scale,
-                  color: COLORS.secondary,
-                  fontSize: 16 * scale,
-                  lineHeight: 24 * scale,
-                  textAlign: 'left',
-                }}>
-                Let's get you back on the road.
-              </Text>
-
-              <View style={{ marginTop: 18 * scale }}>
-                <MobileNumberField
-                  scale={scale}
-                  country={country}
-                  phone={phone}
-                  inputRef={inputRef}
-                  onPhoneChange={value => {
-                    setPhone(value.replace(/[^\d\s]/g, ''));
-                    if (error) setError('');
-                  }}
-                  onCountryPress={() => {
-                    Keyboard.dismiss();
-                    setCountryPickerVisible(true);
-                  }}
-                  onSubmit={() => void handleContinue()}
-                />
-              </View>
-
-              {error ? (
-                <View style={{ marginHorizontal: 24 * scale, marginTop: 8 * scale }}>
-                  <AuthToast message={error} type="error" />
-                </View>
-              ) : null}
-
-              <VerificationHint scale={scale} isSignup={false} />
-              <GoldButton
-                scale={scale}
-                isSignup={false}
-                onPress={() => void handleContinue()}
-                disabled={loading}
-              />
-              <ScreenDivider scale={scale} isSignup={false} marginTop={22} />
-
-              <View
-                style={{
-                  marginTop: 18 * scale,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}>
-                <Text
-                  style={[
-                    {
-                      color: '#494951',
-                      fontSize: 16 * scale,
-                      lineHeight: 24 * scale,
-                    },
-                  ]}>
-                  New to RACE?
-                </Text>
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={() => switchMode('signup')}
-                  hitSlop={6}
-                  style={{ marginLeft: 6 * scale }}>
-                  <Text
-                    style={[
-                      {
-                        color: COLORS.orange,
-                        fontSize: 16 * scale,
-                        lineHeight: 24 * scale,
-                      },
-                    ]}>
-                    Create account
-                  </Text>
-                </Pressable>
-              </View>
-
               <View style={styles.flexSpacer} />
 
               <View style={{ marginBottom: 18 * scale, alignItems: 'center' }}>
@@ -450,14 +358,14 @@ export default function MobileNumberScreen({ navigation }: Props) {
                   }}>
                   <HeadsetIcon size={22 * scale} />
                   <Text
-                    style={[
-                      {
-                        marginLeft: 5 * scale,
-                        color: COLORS.orange,
-                        fontSize: 14 * scale,
-                        lineHeight: 20 * scale,
-                      },
-                    ]}>
+                    style={{
+                      marginLeft: 5 * scale,
+                      color: COLORS.orange,
+                      fontSize: 14 * scale,
+                      lineHeight: 22 * scale,
+                      paddingBottom: 2 * scale,
+                      includeFontPadding: true,
+                    }}>
                     Need help?
                   </Text>
                 </Pressable>
@@ -469,14 +377,14 @@ export default function MobileNumberScreen({ navigation }: Props) {
                   }}>
                   <ShieldIcon size={22 * scale} />
                   <Text
-                    style={[
-                      {
-                        marginLeft: 8 * scale,
-                        color: '#90909C',
-                        fontSize: 13 * scale,
-                        lineHeight: 19 * scale,
-                      },
-                    ]}>
+                    style={{
+                      marginLeft: 8 * scale,
+                      color: '#90909C',
+                      fontSize: 13 * scale,
+                      lineHeight: 22 * scale,
+                      paddingBottom: 2 * scale,
+                      includeFontPadding: true,
+                    }}>
                     Your data is safe and secure with RACE.
                   </Text>
                 </View>
