@@ -45,10 +45,13 @@ import {
 } from '../../components/onboarding/ProfileSetupHeroes';
 import { dismissOpenProfileDropdown } from '../../components/onboarding/profileDropdownDismiss';
 import { KeyboardFormView } from '../../components/ui/AppKeyboard';
+import { ensurePreviewAuthSession } from '../../config/uiPreviewAuth';
 import { UI_PREVIEW_AUTH_FLOW } from '../../config/uiPreviewMode';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import { completeOnboarding } from '../../redux/auth/authSlice';
 import { finishVehicleOnboarding } from '../../redux/onboarding/onboardingSlice';
+import { markCustomerOnboardingComplete } from '../../store/customerOnboarding';
+import { useAuthStore } from '../../store/authStore';
 import type { AuthStackParamList } from '../../types/navigation';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'ProfileWizard'>;
@@ -200,16 +203,25 @@ export default function ProfileWizardScreen({ navigation }: Props) {
     showStep(4);
   };
 
-  const finishToHome = () => {
+  const finishToHome = async () => {
     dispatch(finishVehicleOnboarding());
+
+    if (UI_PREVIEW_AUTH_FLOW) {
+      ensurePreviewAuthSession(dispatch, true);
+    }
+
+    await markCustomerOnboardingComplete();
+    useAuthStore.getState().setCustomerOnboardingStep('done');
+
+    const baseUser = user ?? useAuthStore.getState().user;
     dispatch(
       completeOnboarding(
-        user
+        baseUser
           ? {
-              ...user,
+              ...baseUser,
               isProfileCompleted: true,
-              fullName: fullName.trim() || user.fullName || 'Preview User',
-              email: email.trim() || user.email,
+              fullName: fullName.trim() || baseUser.fullName || 'Preview User',
+              email: email.trim() || baseUser.email,
             }
           : undefined,
       ),
