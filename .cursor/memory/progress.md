@@ -1,5 +1,18 @@
 # Progress
 
+## Done (wizard hero lift + stepper gap — 2026-10-04)
+
+- [x] Lifted step 1–3 heroes further above the overlapping card
+- [x] Added gap between 1-2-3 stepper and title/subtitle on all three pages
+
+## Done (profile wizard design match — 2026-10-04)
+
+- [x] Blend hero SVGs into `#FFFEFC` behind RACE SERVICE / 1-2-3; no hard top line
+- [x] Larger heroes, card moved down, more field gap
+- [x] Removed Android elevation + opacity flash on Continue
+- [x] Emergency `+91` prefix; vehicle type chips with icons in 3+1 layout
+- [x] Gold CTA no longer uses unsupported SVG `%` height
+
 ## Done (customer UI polish — 2026-10-04)
 
 - [x] Login/signup pixel layout from latest App.js; OTP screen matched to same cream/gold language

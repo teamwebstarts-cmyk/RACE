@@ -1,10 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
+  Animated,
   BackHandler,
+  Easing,
   Keyboard,
-  KeyboardAvoidingView,
-  Modal,
   Platform,
   Pressable,
   StatusBar,
@@ -16,6 +16,8 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { TextInput } from 'react-native';
+
+import { KeyboardScreen } from '../../components/ui/AppKeyboard';
 
 import {
   AUTH_COLORS as COLORS,
@@ -46,6 +48,8 @@ import {
   useSendOtpMutation,
   useVerifyOtpMutation,
 } from '../../services/auth/useAuthMutations';
+import { previewAdvanceFromMobileNumber } from '../../config/uiPreviewAuth';
+import { UI_PREVIEW_AUTH_FLOW } from '../../config/uiPreviewMode';
 import { getRoleMismatchMessage, isRoleMismatchError } from '../../utils/roleMismatch';
 import type { AuthStackParamList } from '../../types/navigation';
 
@@ -55,6 +59,26 @@ const MOBILE_REGEX = /^[6-9]\d{9}$/;
 
 /** TEMP: skip OTP UI — auto-verify with backend dev OTP. Re-enable OTP by flipping this off. */
 const SKIP_OTP_AUTH = true;
+
+function friendlyAuthError(raw: string): string {
+  const text = raw.toLowerCase();
+  if (text.includes('network') || text.includes('cannot reach')) {
+    return 'No connection to RACE. Check Wi‑Fi, then try Continue again.';
+  }
+  if (text.includes('partner') || text.includes('role')) {
+    return 'This number is on the RACE Partner app. Use a different number here.';
+  }
+  if (text.includes('invalid indian') || text.includes('invalid mobile')) {
+    return 'Use a 10-digit Indian mobile that starts with 6, 7, 8, or 9.';
+  }
+  if (text.includes('otp') && text.includes('limit')) {
+    return 'Too many codes sent. Wait a bit, then try again.';
+  }
+  if (text.includes('dev otp')) {
+    return 'Could not sign you in automatically. Try again in a moment.';
+  }
+  return raw;
+}
 
 function extractOtpFromMessage(message?: string): string | null {
   if (!message) return null;
@@ -78,14 +102,24 @@ export default function MobileNumberScreen({ navigation }: Props) {
   const isSignup = Boolean(signupAccountType);
   const [phone, setPhone] = useState('');
   const [country, setCountry] = useState('+91');
-  const [countryPickerVisible, setCountryPickerVisible] = useState(false);
+  const [countryMenuOpen, setCountryMenuOpen] = useState(false);
   const [error, setError] = useState('');
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [termsAccepted, setTermsAccepted] = useState(!isSignup);
 
   const inputRef = useRef<TextInput>(null);
-  const compact = keyboardHeight > 80 ? 0.58 : 1;
-  const heroHeight = screenWidth * AUTH_HERO_RATIO * compact;
+  const heroFactor = useRef(new Animated.Value(1)).current;
+  const chromeOpacity = useRef(new Animated.Value(1)).current;
+  const fullHeroHeight = screenWidth * AUTH_HERO_RATIO;
+  const heroHeight = useMemo(
+    () =>
+      heroFactor.interpolate({
+        inputRange: [0.48, 1],
+        outputRange: [fullHeroHeight * 0.48, fullHeroHeight],
+      }),
+    [fullHeroHeight, heroFactor],
+  );
+  const keyboardOpen = keyboardHeight > 80;
 
   const sendOtpMutation = useSendOtpMutation();
   const verifyOtpMutation = useVerifyOtpMutation();
@@ -93,6 +127,7 @@ export default function MobileNumberScreen({ navigation }: Props) {
   const switchMode = (nextMode: 'login' | 'signup') => {
     Keyboard.dismiss();
     setError('');
+    setCountryMenuOpen(false);
     setTermsAccepted(nextMode === 'login');
     if (nextMode === 'signup') {
       dispatch(setSignupPath({ accountType: 'customer', vendorType: null }));
@@ -128,30 +163,67 @@ export default function MobileNumberScreen({ navigation }: Props) {
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const animate = (open: boolean, duration: number) => {
+      Animated.parallel([
+        Animated.timing(heroFactor, {
+          toValue: open ? (Platform.OS === 'ios' ? 0.58 : 0.48) : 1,
+          duration,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: false,
+        }),
+        Animated.timing(chromeOpacity, {
+          toValue: open ? 0 : 1,
+          duration: Math.max(180, duration - 40),
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]).start();
+    };
+
     const show = Keyboard.addListener(showEvent, event => {
+      setCountryMenuOpen(false);
       setKeyboardHeight(event.endCoordinates.height);
+      animate(true, event.duration && event.duration > 0 ? event.duration : 280);
     });
-    const hide = Keyboard.addListener(hideEvent, () => {
+    const hide = Keyboard.addListener(hideEvent, event => {
       setKeyboardHeight(0);
+      animate(false, event.duration && event.duration > 0 ? event.duration : 240);
     });
     return () => {
       show.remove();
       hide.remove();
     };
-  }, []);
+  }, [chromeOpacity, heroFactor]);
 
   const handleContinue = async () => {
+    if (UI_PREVIEW_AUTH_FLOW) {
+      Keyboard.dismiss();
+      setError('');
+      previewAdvanceFromMobileNumber(navigation, dispatch, isSignup);
+      return;
+    }
+
     const digits = phone.replace(/\D/g, '');
     setError('');
 
     if (!MOBILE_REGEX.test(digits)) {
       inputRef.current?.focus();
-      setError('Enter a valid 10-digit mobile number');
+      setError(
+        digits.length === 0
+          ? 'Enter your 10-digit mobile number to continue.'
+          : 'That number looks short or invalid. Use 10 digits starting with 6, 7, 8, or 9.',
+      );
+      return;
+    }
+
+    if (country !== '+91') {
+      setError('RACE currently signs in with Indian numbers only (+91).');
       return;
     }
 
     if (!termsAccepted) {
-      setError('Please accept Terms & Privacy to continue');
+      setError('Tick “I agree to Terms & Privacy” before you continue.');
       return;
     }
 
@@ -167,7 +239,7 @@ export default function MobileNumberScreen({ navigation }: Props) {
       if (SKIP_OTP_AUTH) {
         const otp = result.devOtp ?? extractOtpFromMessage(result.message);
         if (!otp) {
-          setError('Dev OTP unavailable. Turn off SKIP_OTP_AUTH or use a non-production API.');
+          setError('Could not sign you in automatically. Try Continue again.');
           return;
         }
         const verifyResult = await verifyOtpMutation.mutateAsync({ mobileNumber: digits, otp });
@@ -201,7 +273,11 @@ export default function MobileNumberScreen({ navigation }: Props) {
         );
         return;
       }
-      setError(getApiErrorMessage(err, SKIP_OTP_AUTH ? 'Unable to sign in' : 'Unable to send OTP'));
+      setError(
+        friendlyAuthError(
+          getApiErrorMessage(err, SKIP_OTP_AUTH ? 'Unable to sign in' : 'Unable to send OTP'),
+        ),
+      );
     }
   };
 
@@ -217,20 +293,25 @@ export default function MobileNumberScreen({ navigation }: Props) {
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} translucent={false} />
 
-      <KeyboardAvoidingView
-        style={styles.fill}
-        behavior="padding"
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 8}>
+      <KeyboardScreen>
         <View style={[styles.fill, { width: screenWidth, alignSelf: 'center' }]}>
+          {countryMenuOpen ? (
+            <Pressable
+              accessibilityLabel="Close country list"
+              onPress={() => setCountryMenuOpen(false)}
+              style={[StyleSheet.absoluteFill, { zIndex: 12 }]}
+            />
+          ) : null}
+
           <AuthHeader scale={scale} onBack={handleBack} />
 
-          <View style={{ width: screenWidth, height: heroHeight, overflow: 'visible' }}>
+          <Animated.View style={{ width: screenWidth, height: heroHeight, overflow: 'hidden' }}>
             {isSignup ? (
-              <SignupIllustration width={screenWidth} compact={compact} />
+              <SignupIllustration width={screenWidth} compact={1} />
             ) : (
-              <LoginIllustration width={screenWidth} compact={compact} />
+              <LoginIllustration width={screenWidth} compact={1} />
             )}
-          </View>
+          </Animated.View>
 
           <Text
             numberOfLines={1}
@@ -247,20 +328,28 @@ export default function MobileNumberScreen({ navigation }: Props) {
             }}>
             {isSignup ? "Let's get you moving" : 'Welcome back'}
           </Text>
-          <Text
-            numberOfLines={1}
+          <Animated.View
+            pointerEvents={keyboardOpen ? 'none' : 'auto'}
             style={{
-              marginTop: 4 * scale,
-              marginHorizontal: 24 * scale,
-              color: COLORS.secondary,
-              fontSize: 16 * scale,
-              lineHeight: 26 * scale,
-              paddingBottom: 3 * scale,
-              textAlign: 'left',
-              includeFontPadding: true,
+              opacity: chromeOpacity,
+              maxHeight: keyboardOpen ? 0 : 40 * scale,
+              overflow: 'hidden',
             }}>
-            {isSignup ? 'Create your account in seconds.' : "Let's get you back on the road."}
-          </Text>
+            <Text
+              numberOfLines={1}
+              style={{
+                marginTop: 4 * scale,
+                marginHorizontal: 24 * scale,
+                color: COLORS.secondary,
+                fontSize: 16 * scale,
+                lineHeight: 26 * scale,
+                paddingBottom: 3 * scale,
+                textAlign: 'left',
+                includeFontPadding: true,
+              }}>
+              {isSignup ? 'Create your account in seconds.' : "Let's get you back on the road."}
+            </Text>
+          </Animated.View>
 
           <View style={{ marginTop: 18 * scale }}>
             <MobileNumberField
@@ -268,13 +357,18 @@ export default function MobileNumberScreen({ navigation }: Props) {
               country={country}
               phone={phone}
               inputRef={inputRef}
+              menuOpen={countryMenuOpen}
               onPhoneChange={value => {
                 setPhone(value.replace(/[^\d\s]/g, ''));
                 if (error) setError('');
               }}
-              onCountryPress={() => {
+              onToggleCountryMenu={() => {
                 Keyboard.dismiss();
-                setCountryPickerVisible(true);
+                setCountryMenuOpen(open => !open);
+              }}
+              onSelectCountry={code => {
+                setCountry(code);
+                setCountryMenuOpen(false);
               }}
               onSubmit={() => void handleContinue()}
             />
@@ -299,9 +393,19 @@ export default function MobileNumberScreen({ navigation }: Props) {
           <GoldButton
             scale={scale}
             isSignup={isSignup}
+            marginTop={keyboardOpen ? 12 : 22}
             onPress={() => void handleContinue()}
             disabled={loading}
           />
+
+          <Animated.View
+            pointerEvents={keyboardOpen ? 'none' : 'auto'}
+            style={{
+              flexGrow: keyboardOpen ? 0 : 1,
+              height: keyboardOpen ? 0 : undefined,
+              opacity: chromeOpacity,
+              overflow: 'hidden',
+            }}>
 
           <ScreenDivider scale={scale} isSignup={isSignup} marginTop={22} />
           <View
@@ -391,49 +495,18 @@ export default function MobileNumberScreen({ navigation }: Props) {
               </View>
             </>
           )}
+          </Animated.View>
         </View>
-      </KeyboardAvoidingView>
-
-      <Modal
-        visible={countryPickerVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setCountryPickerVisible(false)}>
-        <View style={styles.modalBackdrop}>
-          <Pressable
-            onPress={() => setCountryPickerVisible(false)}
-            style={StyleSheet.absoluteFill}
-          />
-          <View style={[styles.countrySheet, { width: Math.min(width - 48, 350) }]}>
-            <Text style={styles.countryHeading}>Select country code</Text>
-            {[
-              { name: 'India', code: '+91' },
-              { name: 'United States', code: '+1' },
-              { name: 'United Kingdom', code: '+44' },
-            ].map(item => (
-              <Pressable
-                key={item.code}
-                onPress={() => {
-                  setCountry(item.code);
-                  setCountryPickerVisible(false);
-                }}
-                style={styles.countryRow}>
-                <Text style={styles.countryName}>{item.name}</Text>
-                <Text style={styles.countryCode}>{item.code}</Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
-      </Modal>
+      </KeyboardScreen>
 
       <AuthLoadingOverlay
         visible={loading}
         label={
           SKIP_OTP_AUTH
             ? isSignup
-              ? 'Creating account...'
-              : 'Signing in...'
-            : 'Sending OTP...'
+              ? 'Creating your account…'
+              : 'Signing you in…'
+            : 'Sending your code…'
         }
       />
     </SafeAreaView>
@@ -447,49 +520,4 @@ const styles = StyleSheet.create({
   },
   fill: { flex: 1 },
   flexSpacer: { flex: 1, minHeight: 4 },
-  modalBackdrop: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(19, 20, 25, 0.36)',
-  },
-  countrySheet: {
-    paddingHorizontal: 22,
-    paddingTop: 23,
-    paddingBottom: 12,
-    borderRadius: 20,
-    backgroundColor: '#FFFEFC',
-    shadowColor: '#000000',
-    shadowOpacity: 0.13,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 12,
-  },
-  countryHeading: {
-    marginBottom: 13,
-    color: COLORS.ink,
-    fontSize: 19,
-    lineHeight: 26,
-    fontWeight: '700',
-    includeFontPadding: false,
-  },
-  countryRow: {
-    minHeight: 52,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: COLORS.divider,
-  },
-  countryName: {
-    color: '#33343B',
-    fontSize: 16,
-    includeFontPadding: false,
-  },
-  countryCode: {
-    color: COLORS.orange,
-    fontSize: 16,
-    fontWeight: '600',
-    includeFontPadding: false,
-  },
 });

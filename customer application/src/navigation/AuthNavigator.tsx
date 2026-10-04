@@ -25,9 +25,10 @@ const softEntryOptions = {
   contentStyle: { backgroundColor: 'transparent' as const },
 };
 
-/** Form steps — horizontal push (modern apps); not Android scale-from-center. */
+/** Form steps — short fade-up (native stack). Soft and quick, not a long slide. */
 const formStepOptions = {
-  animation: 'slide_from_right' as const,
+  animation: 'fade_from_bottom' as const,
+  animationDuration: 260,
 };
 
 export default function AuthNavigator() {

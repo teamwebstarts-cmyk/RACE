@@ -7,6 +7,7 @@ import { Provider as ReduxProvider } from 'react-redux';
 import { images } from './src/assets';
 import RootNavigator from './src/navigation/RootNavigator';
 import { getCoverBackgroundFrame } from './src/screens/auth/splashBackground';
+import { AppKeyboardProvider } from './src/components/ui/AppKeyboard';
 import { SosDetailsProvider } from './src/context/SosDetailsContext';
 import { queryClient } from './src/services/queryClient';
 import { store } from './src/redux/store';
@@ -64,9 +65,11 @@ export default function App() {
     <ReduxProvider store={store}>
       <QueryClientProvider client={queryClient}>
         <SafeAreaProvider>
-          <SosDetailsProvider>
-            <AppRoot />
-          </SosDetailsProvider>
+          <AppKeyboardProvider>
+            <SosDetailsProvider>
+              <AppRoot />
+            </SosDetailsProvider>
+          </AppKeyboardProvider>
         </SafeAreaProvider>
       </QueryClientProvider>
     </ReduxProvider>

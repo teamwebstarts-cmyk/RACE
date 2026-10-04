@@ -1,9 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
-  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
@@ -14,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { AUTH_COLORS as COLORS, AUTH_DESIGN_WIDTH } from '../../components/auth/authDesign';
+import { KeyboardFormView } from '../../components/ui/AppKeyboard';
 import {
   AuthHeader,
   GoldButton,
@@ -29,6 +27,8 @@ import {
   useSendOtpMutation,
   useVerifyOtpMutation,
 } from '../../services/auth/useAuthMutations';
+import { previewAdvanceFromOtp } from '../../config/uiPreviewAuth';
+import { UI_PREVIEW_AUTH_FLOW } from '../../config/uiPreviewMode';
 import { getRoleMismatchMessage, isRoleMismatchError } from '../../utils/roleMismatch';
 import type { AuthStackParamList } from '../../types/navigation';
 
@@ -102,6 +102,11 @@ export default function OtpVerificationScreen({ navigation, route }: Props) {
 
   const handleVerify = useCallback(
     async (codeOverride?: string) => {
+      if (UI_PREVIEW_AUTH_FLOW) {
+        previewAdvanceFromOtp(navigation, dispatch, isExistingUser);
+        return;
+      }
+
       const code = (codeOverride ?? otp).replace(/\D/g, '').slice(0, 6);
       if (verified || loading || verifyLockRef.current || code.length !== 6) {
         return;
@@ -200,15 +205,7 @@ export default function OtpVerificationScreen({ navigation, route }: Props) {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} translucent={false} />
-      <KeyboardAvoidingView
-        style={styles.fill}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView
-          style={{ width: screenWidth, alignSelf: 'center' }}
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          bounces={false}
-          showsVerticalScrollIndicator={false}>
+      <KeyboardFormView style={styles.fill} contentContainerStyle={styles.scrollContent}>
           <AuthHeader scale={scale} onBack={() => navigation.goBack()} />
 
           <Text
@@ -301,15 +298,17 @@ export default function OtpVerificationScreen({ navigation, route }: Props) {
             gradientId="otpButtonGold"
             marginTop={28}
             label={
-              loading && otp.length === 6
-                ? 'Verifying...'
-                : verified
-                  ? 'Verified'
-                  : isExistingUser
-                    ? 'Verify & Login'
-                    : 'Verify & Continue'
+              UI_PREVIEW_AUTH_FLOW
+                ? 'Continue'
+                : loading && otp.length === 6
+                  ? 'Verifying...'
+                  : verified
+                    ? 'Verified'
+                    : isExistingUser
+                      ? 'Verify & Login'
+                      : 'Verify & Continue'
             }
-            disabled={otp.length !== 6 || loading || verified}
+            disabled={UI_PREVIEW_AUTH_FLOW ? false : otp.length !== 6 || loading || verified}
             onPress={() => void handleVerify()}
           />
 
@@ -362,8 +361,7 @@ export default function OtpVerificationScreen({ navigation, route }: Props) {
               </Text>
             </View>
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardFormView>
       <AuthLoadingOverlay visible={loading} label="Verifying OTP..." />
     </SafeAreaView>
   );

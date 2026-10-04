@@ -7,9 +7,9 @@ import {
   View,
   type TextInput as TextInputType,
 } from 'react-native';
-import Svg, { Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
+import Svg, { Path, Rect } from 'react-native-svg';
 
-import { AUTH_COLORS as COLORS } from './authDesign';
+import { AUTH_COLORS as COLORS, AUTH_COUNTRY_CODES } from './authDesign';
 
 export const noFontPadding = { includeFontPadding: false as const };
 
@@ -140,7 +140,7 @@ export function AuthHeader({ scale, onBack }: { scale: number; onBack: () => voi
       <View
         style={{
           flexDirection: 'row',
-          alignItems: 'center',
+          alignItems: 'baseline',
           justifyContent: 'center',
           paddingHorizontal: 56 * scale,
         }}>
@@ -148,9 +148,10 @@ export function AuthHeader({ scale, onBack }: { scale: number; onBack: () => voi
           style={{
             color: COLORS.ink,
             fontSize: 18 * scale,
-            lineHeight: 26 * scale,
+            lineHeight: 22 * scale,
             fontWeight: '800',
             letterSpacing: 0.4 * scale,
+            ...noFontPadding,
           }}>
           RACE
         </Text>
@@ -159,9 +160,10 @@ export function AuthHeader({ scale, onBack }: { scale: number; onBack: () => voi
             marginLeft: 7 * scale,
             color: COLORS.orange,
             fontSize: 13 * scale,
-            lineHeight: 26 * scale,
+            lineHeight: 16 * scale,
             fontWeight: '800',
             letterSpacing: 1.4 * scale,
+            ...noFontPadding,
           }}>
           SERVICE
         </Text>
@@ -192,20 +194,24 @@ export function MobileNumberField({
   country,
   phone,
   inputRef,
+  menuOpen,
   onPhoneChange,
-  onCountryPress,
+  onToggleCountryMenu,
+  onSelectCountry,
   onSubmit,
 }: {
   scale: number;
   country: string;
   phone: string;
   inputRef: React.RefObject<TextInputType | null>;
+  menuOpen: boolean;
   onPhoneChange: (value: string) => void;
-  onCountryPress: () => void;
+  onToggleCountryMenu: () => void;
+  onSelectCountry: (code: string) => void;
   onSubmit: () => void;
 }) {
   return (
-    <View style={{ marginHorizontal: 24 * scale }}>
+    <View style={{ marginHorizontal: 24 * scale, zIndex: 20 }}>
       <Text
         style={{
           color: '#24252B',
@@ -225,15 +231,17 @@ export function MobileNumberField({
           overflow: 'hidden',
           backgroundColor: '#FFFFFF',
           borderWidth: 1,
-          borderColor: COLORS.border,
+          borderColor: menuOpen ? COLORS.orange : COLORS.border,
           borderRadius: 12 * scale,
         }}>
         <Pressable
           accessibilityRole="button"
+          accessibilityState={{ expanded: menuOpen }}
           accessibilityLabel={`Country calling code ${country}`}
-          onPress={onCountryPress}
+          onPress={onToggleCountryMenu}
           style={{
-            width: 78 * scale,
+            minWidth: 86 * scale,
+            paddingHorizontal: 10 * scale,
             height: '100%',
             flexDirection: 'row',
             alignItems: 'center',
@@ -249,7 +257,7 @@ export function MobileNumberField({
             }}>
             {country}
           </Text>
-          <View style={{ marginLeft: 6 * scale }}>
+          <View style={{ marginLeft: 6 * scale, transform: [{ rotate: menuOpen ? '180deg' : '0deg' }] }}>
             <DownIcon size={13 * scale} />
           </View>
         </Pressable>
@@ -278,12 +286,77 @@ export function MobileNumberField({
           textContentType="telephoneNumber"
           autoComplete="tel"
           autoCorrect={false}
-          maxLength={18}
+          maxLength={12}
           returnKeyType="done"
           selectionColor={COLORS.orange}
           onSubmitEditing={onSubmit}
         />
       </View>
+
+      {menuOpen ? (
+        <View
+          style={{
+            position: 'absolute',
+            top: 78 * scale,
+            left: 0,
+            width: 248 * scale,
+            borderRadius: 14 * scale,
+            borderWidth: 1,
+            borderColor: COLORS.border,
+            backgroundColor: '#FFFEFC',
+            shadowColor: '#000000',
+            shadowOpacity: 0.12,
+            shadowRadius: 16,
+            shadowOffset: { width: 0, height: 8 },
+            elevation: 14,
+            overflow: 'hidden',
+            zIndex: 30,
+          }}>
+          {AUTH_COUNTRY_CODES.map((item, index) => {
+            const selected = item.code === country;
+            return (
+              <Pressable
+                key={item.code}
+                disabled={!item.supported}
+                onPress={() => onSelectCountry(item.code)}
+                style={({ pressed }) => ({
+                  minHeight: 48 * scale,
+                  paddingHorizontal: 14 * scale,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: selected ? '#FFF8E8' : pressed && item.supported ? '#FAFAF7' : '#FFFEFC',
+                  opacity: item.supported ? 1 : 0.55,
+                  borderTopWidth: index === 0 ? 0 : StyleSheet.hairlineWidth,
+                  borderTopColor: COLORS.divider,
+                })}>
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={{
+                      color: '#24252B',
+                      fontSize: 15 * scale,
+                      lineHeight: 22 * scale,
+                      fontWeight: selected ? '700' : '500',
+                      includeFontPadding: true,
+                    }}>
+                    {item.name}
+                  </Text>
+                  <Text
+                    style={{
+                      color: item.supported ? COLORS.orange : COLORS.muted,
+                      fontSize: 12 * scale,
+                      lineHeight: 18 * scale,
+                    }}>
+                    {item.supported ? item.code : `${item.code}  ·  Soon`}
+                  </Text>
+                </View>
+                {selected ? (
+                  <Text style={{ color: COLORS.orange, fontSize: 16 * scale, fontWeight: '700' }}>✓</Text>
+                ) : null}
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -420,32 +493,11 @@ export function GoldButton({
         marginTop: (marginTop ?? 22) * scale,
         marginHorizontal: 24 * scale,
         borderRadius: 14 * scale,
-        overflow: 'hidden',
         alignItems: 'center',
         justifyContent: 'center',
-        opacity: disabled ? 0.55 : pressed ? 0.84 : 1,
+        backgroundColor: pressed || disabled ? '#F6BA3A' : '#FFC74C',
+        opacity: disabled ? 0.55 : 1,
       })}>
-      <Svg
-        pointerEvents="none"
-        style={StyleSheet.absoluteFill}
-        width="100%"
-        height="100%"
-        viewBox="0 0 344 58"
-        preserveAspectRatio="none">
-        <Defs>
-          <LinearGradient
-            id={gradientId}
-            x1="0"
-            y1="0"
-            x2="344"
-            y2="0"
-            gradientUnits="userSpaceOnUse">
-            <Stop offset="0%" stopColor="#FFD061" />
-            <Stop offset="100%" stopColor="#FFC74C" />
-          </LinearGradient>
-        </Defs>
-        <Rect x="0" y="0" width="344" height="58" rx="14" fill={`url(#${gradientId})`} />
-      </Svg>
       <Text
         style={{
             color: '#0B0C10',
