@@ -62,8 +62,8 @@ export default function OtpInput({
                 height: px(52),
                 borderRadius: px(12),
                 borderWidth: isActive ? 2 : 1,
-                borderColor: isActive ? colors.primary : colors.border,
-                backgroundColor: colors.background,
+                borderColor: isActive ? '#F3A200' : '#E7E7E9',
+                backgroundColor: '#FFFFFF',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}>
@@ -83,7 +83,7 @@ export default function OtpInput({
                   textAlign: 'center',
                   fontSize: px(20),
                   fontWeight: '700',
-                  color: colors.dark,
+                  color: '#17191E',
                 }}
               />
             </View>

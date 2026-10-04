@@ -1,5 +1,15 @@
 # Progress
 
+## Done (customer UI polish — 2026-10-04)
+
+- [x] Login + Create account UI on `MobileNumberScreen` from supplied cream/road design (OTP flow unchanged)
+- [x] Onboarding leftover bottom gap: content `space-between` + fuller 2-line subtitles on all 4 slides
+- [x] Deep UI/UX review logged: `docs/reviews/customer-app-ui-ux-review.md`
+- [x] Living polish checklist: `docs/reviews/customer-ui-polish-log.md`
+- [x] Splash ↔ Auth soft fade; Onboarding paged slides (forward/back)
+- [x] Login/signup path recheck: AccountType + MobileNumber fade + back → Splash
+- [x] Fixed Onboarding leave: Auth stack back before popping Splash
+
 ## Done (v2.0.1-cleanup)
 
 - [x] Map the inherited repo and freeze old branches
@@ -27,6 +37,7 @@
 - [ ] Customer-app leftover navigators/screens (kept on purpose)
 - [ ] `SKIP_OTP_AUTH = true` on both Expo login screens
 - [ ] Live map tracking still a scaffold
+- [x] Customer auth sign-in/sign-up visual refresh implemented from supplied reference; typecheck + Android export pass
 
 ## Blocked
 

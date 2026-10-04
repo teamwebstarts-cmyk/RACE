@@ -1,0 +1,490 @@
+import React from 'react';
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  type TextInput as TextInputType,
+} from 'react-native';
+import Svg, { Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
+
+import { AUTH_COLORS as COLORS } from './authDesign';
+
+export const noFontPadding = { includeFontPadding: false as const };
+
+function BackIcon({ size }: { size: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Path
+        d="M19 12 H5 M11 6 L5 12 L11 18"
+        fill="none"
+        stroke={COLORS.ink}
+        strokeWidth="1.9"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function ArrowIcon({ size, color = '#17191E' }: { size: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Path
+        d="M4 12 H19 M13 6 L19 12 L13 18"
+        fill="none"
+        stroke={color}
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function DownIcon({ size }: { size: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 16 16">
+      <Path
+        d="M4 6 L8 10 L12 6"
+        fill="none"
+        stroke="#34383D"
+        strokeWidth="1.55"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+export function ChevronRightIcon({ size }: { size: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 20 20">
+      <Path
+        d="M7 4 L13 10 L7 16"
+        fill="none"
+        stroke="#9597A0"
+        strokeWidth="1.55"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function PhoneIcon({ size }: { size: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Path
+        d="M7.1 3.5 C6.6 2.9 5.7 2.8 5.1 3.2 L3.5 4.4 C2.7 5 2.4 6 2.6 7 C3.8 13.7 10.3 20.2 17 21.4 C18 21.6 19 21.3 19.6 20.5 L20.8 18.9 C21.2 18.3 21.1 17.4 20.5 16.9 L17.5 14.4 C17 14 16.3 14 15.8 14.3 L13.8 15.5 C11.5 14.5 9.5 12.5 8.5 10.2 L9.7 8.2 C10 7.7 10 7 9.6 6.5 Z"
+        fill="none"
+        stroke="#777B85"
+        strokeWidth="1.55"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+export function HeadsetIcon({ size }: { size: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Path
+        d="M4.4 12 V10.6 C4.4 6.2 7.7 3 12 3 C16.3 3 19.6 6.2 19.6 10.6 V15.1"
+        fill="none"
+        stroke={COLORS.orange}
+        strokeWidth="1.9"
+        strokeLinecap="round"
+      />
+      <Rect x="3.4" y="11" width="3.5" height="6.4" rx="1.7" fill="#FFB31B" />
+      <Rect x="17.1" y="11" width="3.5" height="6.4" rx="1.7" fill="#FFB31B" />
+      <Path
+        d="M19.2 16.7 C18.9 19 17.2 20.2 14 20.2 H12.9"
+        fill="none"
+        stroke={COLORS.orange}
+        strokeWidth="1.7"
+        strokeLinecap="round"
+      />
+      <Rect x="10.7" y="18.8" width="3.2" height="2.1" rx="1" fill="#FFB31B" />
+    </Svg>
+  );
+}
+
+export function ShieldIcon({ size, color = '#A2A5B2' }: { size: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Path
+        d="M12 2.6 L20 5.8 V11.2 C20 16.2 16.7 20.2 12 22 C7.3 20.2 4 16.2 4 11.2 V5.8 Z"
+        fill="none"
+        stroke={color}
+        strokeWidth="1.55"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M8.4 12.1 L10.9 14.6 L15.7 9.8"
+        fill="none"
+        stroke={color}
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+export function AuthHeader({ scale, onBack }: { scale: number; onBack: () => void }) {
+  return (
+    <View style={{ height: 62 * scale, alignItems: 'center' }}>
+      <View style={{ alignItems: 'center', marginTop: 4 * scale }}>
+        <Text
+          style={[
+            noFontPadding,
+            {
+              color: COLORS.ink,
+              fontSize: 22 * scale,
+              lineHeight: 26 * scale,
+              fontWeight: '800',
+              letterSpacing: -0.65 * scale,
+            },
+          ]}>
+          RACE
+        </Text>
+        <Text
+          style={[
+            noFontPadding,
+            {
+              marginTop: 1 * scale,
+              color: COLORS.orange,
+              fontSize: 11 * scale,
+              lineHeight: 14 * scale,
+              fontWeight: '700',
+              letterSpacing: 1.85 * scale,
+            },
+          ]}>
+          SERVICE
+        </Text>
+      </View>
+
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Go back"
+        onPress={onBack}
+        hitSlop={8}
+        style={{
+          position: 'absolute',
+          left: 8 * scale,
+          top: 4 * scale,
+          width: 44 * scale,
+          height: 44 * scale,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+        <BackIcon size={24 * scale} />
+      </Pressable>
+    </View>
+  );
+}
+
+export function MobileNumberField({
+  scale,
+  isSignup,
+  country,
+  phone,
+  inputRef,
+  onPhoneChange,
+  onCountryPress,
+  onSubmit,
+}: {
+  scale: number;
+  isSignup: boolean;
+  country: string;
+  phone: string;
+  inputRef: React.RefObject<TextInputType | null>;
+  onPhoneChange: (value: string) => void;
+  onCountryPress: () => void;
+  onSubmit: () => void;
+}) {
+  const horizontal = (isSignup ? 18 : 24) * scale;
+
+  return (
+    <View style={{ marginHorizontal: horizontal }}>
+      <Text
+        style={[
+          noFontPadding,
+          {
+            height: (isSignup ? 21 : 20) * scale,
+            color: '#24252B',
+            fontSize: 16 * scale,
+            lineHeight: (isSignup ? 21 : 20) * scale,
+            fontWeight: '400',
+          },
+        ]}>
+        Mobile number
+      </Text>
+
+      <View
+        style={{
+          marginTop: (isSignup ? 7 : 6) * scale,
+          height: 62 * scale,
+          flexDirection: 'row',
+          alignItems: 'center',
+          overflow: 'hidden',
+          backgroundColor: '#FFFFFF',
+          borderWidth: 1,
+          borderColor: COLORS.border,
+          borderRadius: 11 * scale,
+        }}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Country calling code ${country}`}
+          onPress={onCountryPress}
+          style={{
+            width: 86 * scale,
+            height: '100%',
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: '#FAFAFA',
+          }}>
+          <Text
+            style={[
+              noFontPadding,
+              {
+                fontSize: 16 * scale,
+                lineHeight: 21 * scale,
+                fontWeight: '500',
+                color: '#25262C',
+              },
+            ]}>
+            {country}
+          </Text>
+          <View style={{ marginLeft: 8 * scale }}>
+            <DownIcon size={14 * scale} />
+          </View>
+        </Pressable>
+
+        <View style={{ width: 1, height: 29 * scale, backgroundColor: '#E7E7E8' }} />
+
+        <TextInput
+          ref={inputRef}
+          accessibilityLabel="Mobile number"
+          style={[
+            noFontPadding,
+            {
+              flex: 1,
+              height: '100%',
+              paddingLeft: 20 * scale,
+              paddingRight: 10 * scale,
+              paddingVertical: 0,
+              fontSize: 17 * scale,
+              lineHeight: 23 * scale,
+              color: COLORS.ink,
+              textAlignVertical: 'center',
+            },
+          ]}
+          value={phone}
+          onChangeText={onPhoneChange}
+          placeholder="98765 43210"
+          placeholderTextColor="#858592"
+          keyboardType="phone-pad"
+          textContentType="telephoneNumber"
+          autoComplete="tel"
+          autoCorrect={false}
+          maxLength={18}
+          returnKeyType="done"
+          selectionColor={COLORS.orange}
+          onSubmitEditing={onSubmit}
+        />
+      </View>
+    </View>
+  );
+}
+
+export function VerificationHint({ scale, isSignup }: { scale: number; isSignup: boolean }) {
+  return (
+    <View
+      style={{
+        marginTop: 15 * scale,
+        marginHorizontal: (isSignup ? 18 : 24) * scale,
+        height: (isSignup ? 36 : 20) * scale,
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        paddingLeft: (isSignup ? 1 : 4) * scale,
+      }}>
+      <View style={{ marginTop: 1 * scale }}>
+        <PhoneIcon size={19 * scale} />
+      </View>
+      <Text
+        style={[
+          noFontPadding,
+          {
+            flex: 1,
+            marginLeft: 9 * scale,
+            color: '#82838E',
+            fontSize: 14 * scale,
+            lineHeight: 18 * scale,
+          },
+        ]}>
+        {isSignup
+          ? "We'll send you a verification code to create\nyour account."
+          : "We'll text you a verification code."}
+      </Text>
+    </View>
+  );
+}
+
+export function GoldButton({
+  scale,
+  isSignup,
+  label,
+  onPress,
+  disabled,
+  gradientId = 'buttonGold',
+}: {
+  scale: number;
+  isSignup: boolean;
+  label?: string;
+  onPress: () => void;
+  disabled?: boolean;
+  gradientId?: string;
+  marginTop?: number;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label ?? (isSignup ? 'Create account' : 'Continue')}
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => ({
+        height: 58 * scale,
+        marginTop: (marginTop ?? (isSignup ? 31 : 40)) * scale,
+        marginHorizontal: (isSignup ? 16 : 24) * scale,
+        borderRadius: 14 * scale,
+        overflow: 'hidden',
+        alignItems: 'center',
+        justifyContent: 'center',
+        opacity: disabled ? 0.55 : pressed ? 0.84 : 1,
+      })}>
+      <Svg
+        pointerEvents="none"
+        style={StyleSheet.absoluteFill}
+        width="100%"
+        height="100%"
+        viewBox="0 0 344 58"
+        preserveAspectRatio="none">
+        <Defs>
+          <LinearGradient
+            id={gradientId}
+            x1="0"
+            y1="0"
+            x2="344"
+            y2="0"
+            gradientUnits="userSpaceOnUse">
+            <Stop offset="0%" stopColor="#FFD061" />
+            <Stop offset="100%" stopColor="#FFC74C" />
+          </LinearGradient>
+        </Defs>
+        <Rect x="0" y="0" width="344" height="58" rx="14" fill={`url(#${gradientId})`} />
+      </Svg>
+      <Text
+        style={[
+          noFontPadding,
+          {
+            color: '#171918',
+            fontSize: 20 * scale,
+            lineHeight: 25 * scale,
+            fontWeight: '600',
+            letterSpacing: -0.2 * scale,
+          },
+        ]}>
+        {label ?? (isSignup ? 'Create account' : 'Continue')}
+      </Text>
+      <View style={{ position: 'absolute', right: 25 * scale }}>
+        <ArrowIcon size={23 * scale} />
+      </View>
+    </Pressable>
+  );
+}
+
+export function ScreenDivider({
+  scale,
+  isSignup,
+  marginTop = 0,
+}: {
+  scale: number;
+  isSignup: boolean;
+  marginTop?: number;
+}) {
+  return (
+    <View
+      style={{
+        height: 1,
+        marginTop: marginTop * scale,
+        marginHorizontal: (isSignup ? 18 : 24) * scale,
+        backgroundColor: COLORS.divider,
+      }}
+    />
+  );
+}
+
+export function SupportCard({ scale, onPress }: { scale: number; onPress: () => void }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="24/7 roadside support"
+      onPress={onPress}
+      style={({ pressed }) => ({
+        height: 80 * scale,
+        marginTop: 20 * scale,
+        marginHorizontal: 16 * scale,
+        paddingLeft: 17 * scale,
+        paddingRight: 14 * scale,
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderRadius: 17 * scale,
+        backgroundColor: '#FFFBF1',
+        opacity: pressed ? 0.75 : 1,
+      })}>
+      <View
+        style={{
+          width: 40 * scale,
+          height: 40 * scale,
+          borderRadius: 20 * scale,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#FFF1D2',
+        }}>
+        <ShieldIcon size={21 * scale} color="#F2A300" />
+      </View>
+      <View style={{ flex: 1, marginLeft: 16 * scale }}>
+        <Text
+          style={[
+            noFontPadding,
+            {
+              color: '#24252B',
+              fontSize: 16 * scale,
+              lineHeight: 21 * scale,
+              fontWeight: '600',
+            },
+          ]}>
+          24/7 roadside support
+        </Text>
+        <Text
+          style={[
+            noFontPadding,
+            {
+              marginTop: 1 * scale,
+              color: '#92919B',
+              fontSize: 13 * scale,
+              lineHeight: 18 * scale,
+            },
+          ]}>
+          We're here whenever you need us.
+        </Text>
+      </View>
+      <ChevronRightIcon size={19 * scale} />
+    </Pressable>
+  );
+}

@@ -19,6 +19,17 @@ import { colors, typography } from '../theme';
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
 
+/** Marketing / entry screens — SoftScreenFade handles opacity; keep stack clear for crossfade. */
+const softEntryOptions = {
+  animation: 'none' as const,
+  contentStyle: { backgroundColor: 'transparent' as const },
+};
+
+/** Form steps — horizontal push (modern apps); not Android scale-from-center. */
+const formStepOptions = {
+  animation: 'slide_from_right' as const,
+};
+
 export default function AuthNavigator() {
   const onboardingRequired = useAppSelector((state) => state.auth.onboardingRequired);
   const vehicleOnboardingRequired = useAppSelector(
@@ -41,7 +52,7 @@ export default function AuthNavigator() {
     if (accessToken && onboardingRequired && !user?.isProfileCompleted) {
       return 'ProfileWizard';
     }
-    return 'AccountType';
+    return 'Onboarding';
   })();
 
   return (
@@ -50,9 +61,11 @@ export default function AuthNavigator() {
       screenOptions={{
         headerShown: false,
         contentStyle: { backgroundColor: colors.pageBg },
+        ...formStepOptions,
+        statusBarAnimation: 'fade',
       }}>
-      <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-      <Stack.Screen name="AccountType" component={AccountTypeScreen} />
+      <Stack.Screen name="Onboarding" component={OnboardingScreen} options={softEntryOptions} />
+      <Stack.Screen name="AccountType" component={AccountTypeScreen} options={softEntryOptions} />
       <Stack.Screen name="SignupVendorType" component={SignupVendorTypeScreen} />
       <Stack.Screen name="MobileNumber" component={MobileNumberScreen} />
       <Stack.Screen name="OtpVerification" component={OtpVerificationScreen} />

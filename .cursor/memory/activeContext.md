@@ -1,27 +1,24 @@
 # Active context
 
-Updated: 2026-10-02
+Updated: 2026-10-04
 
 ## Current focus
 
-Context engineering infrastructure: `.agents/` layered context architecture added this session.
-New preferred state file: `.agents/state/ACTIVE.md` (more detail there).
+Customer splash: highway photo fills the real layout (no bottom seam); logo uses a transparent PNG; sky fog wash behind copy instead of a white halo.
 
 ## Branch
 
-`v2.5.2-development` (current HEAD) — replaces old `v2.0.1-cleanup` references in older docs.
+`v2.5.2-development` (tracks origin)
 
 ## Last done
 
-- Added `.agents/` layered context architecture (AGENTS.md, state/, decisions/, rules/, skills/, scripts/).
-- Updated root `AGENTS.md` to be compact and layered (~2k tokens).
-- Created 9 ADR files, 7 rules, 6 focused skills, 5 maintenance scripts.
-- Context index: run `.agents/scripts/context-index.sh` to generate.
+- Replaced MobileNumber login/signup UI with the supplied layout (RACE SERVICE header, SVG road scene, phone field, Continue / Create account).
+- Auth logic unchanged: OTP send/verify, `SKIP_OTP_AUTH = true`, signup path toggle.
+- Illustrations live in `components/auth/AuthSceneIllustrations.tsx`.
 
 ## Next (when the user asks)
 
-Product work queue from gap report (`docs/RACE_REMAINING_WORK_AND_GAPS.md`):
-OTP enable, driver KYC, booking model fields, QR scan, payments.
+Reload: onboarding → create account, then Sign in → welcome back. Polish spacing if needed.
 
 ## Do not
 
@@ -29,3 +26,4 @@ OTP enable, driver KYC, booking model fields, QR scan, payments.
 - Recreate `customerweb/`, `partnerweb/`.
 - Delete unused-looking screens without an import graph.
 - Commit `.env` or dump secrets into memory.
+- Touch splash while another pass is using `Golden Sunrise`.
