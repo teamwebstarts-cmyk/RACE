@@ -66,15 +66,17 @@ const MODELS_BY_MAKE: Record<string, string[]> = {
 };
 const DONE_ROADSIDE_ART = require('../../assets/images/done-roadside-journey.jpg');
 const DONE_ROADSIDE_ASPECT = 825 / 1905;
+/** Vertical gap under “RACE is ready…” before chips (and mirrored above hero art). */
+const SUCCESS_CHIP_GAP = 36;
 
 /** Fixed space under the stepper before the card. Same number on steps 1–3. */
-const WIZARD_HERO_SLOT = 152;
-/** Card covers this much of the hero's bottom edge. */
-const WIZARD_CARD_OVERLAP = 22;
-/** Top offset for full-width hero art (steps 1–3). */
-const WIZARD_HERO_TOP = 86;
-/** Extra gap between hero block and white form card. */
-const WIZARD_CARD_GAP = 10;
+const WIZARD_HERO_SLOT = 156;
+/** How far the white card pulls up over the hero (smaller = card sits lower). */
+const WIZARD_CARD_OVERLAP = 12;
+/** Top offset for hero SVG — smaller moves art up, larger moves art down. */
+const WIZARD_HERO_TOP = 74;
+/** Space below hero before the card (larger = card lower; cancels overlap). */
+const WIZARD_CARD_GAP = 22;
 const VEHICLE_TYPES = ['car', 'bike', 'truck', 'other'] as const;
 
 export default function ProfileWizardScreen({ navigation }: Props) {
@@ -234,9 +236,12 @@ export default function ProfileWizardScreen({ navigation }: Props) {
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="interactive"
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 28 * scale + (keyboardOpen ? keyboardHeight : 0) }}>
+            contentContainerStyle={{
+              paddingBottom: 28 * scale + (keyboardOpen ? keyboardHeight : 0),
+              overflow: 'visible',
+            }}>
             {keyboardOpen ? null : (
-            <View style={{ height: heroSlot, overflow: 'hidden' }}>
+            <View style={{ height: heroSlot, overflow: 'visible', zIndex: 1 }}>
                 <View
                   pointerEvents="none"
                   style={{
@@ -245,6 +250,7 @@ export default function ProfileWizardScreen({ navigation }: Props) {
                     top: WIZARD_HERO_TOP * scale,
                     width: heroWidth,
                     height: heroHeight,
+                    zIndex: 0,
                   }}>
                   {step === 1 ? (
                     <AboutYouHero width={heroWidth} height={heroHeight} />
@@ -259,6 +265,7 @@ export default function ProfileWizardScreen({ navigation }: Props) {
                   paddingHorizontal: 24 * scale,
                   paddingTop: 12 * scale,
                   backgroundColor: 'transparent',
+                  zIndex: 2,
                 }}>
                 <Text
                   numberOfLines={1}
@@ -307,6 +314,7 @@ export default function ProfileWizardScreen({ navigation }: Props) {
                 borderWidth: 1,
                 borderColor: '#F2EEE6',
                 zIndex: 10,
+                elevation: 8,
               }}>
                 {error ? <AuthToast message={error} type="error" /> : null}
 
@@ -582,62 +590,64 @@ function SuccessView({
           }}>
           RACE is ready when you need us.
         </Text>
-      </View>
 
-      <View style={{ flex: 1, marginTop: 10 * scale, justifyContent: 'flex-end', alignItems: 'center' }}>
-        <View style={{ width: artWidth, height: artHeight, position: 'relative' }}>
-          <Image
-            accessibilityLabel="RACE roadside assistance on the highway"
-            source={DONE_ROADSIDE_ART}
-            resizeMode="cover"
-            style={{ width: artWidth, height: artHeight }}
-            fadeDuration={0}
-          />
-          <View
-            style={{
-              position: 'absolute',
-              left: 14 * scale,
-              right: 14 * scale,
-              top: 10 * scale,
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              gap: 6 * scale,
-            }}>
-            {chips.map(item => (
-              <View
-                key={item.title}
+        <View
+          style={{
+            marginTop: SUCCESS_CHIP_GAP * scale,
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            gap: 6 * scale,
+          }}>
+          {chips.map(item => (
+            <View
+              key={item.title}
+              style={{
+                flex: 1,
+                paddingVertical: 8 * scale,
+                paddingHorizontal: 4 * scale,
+                borderRadius: 12 * scale,
+                backgroundColor: '#F3EFE4',
+                alignItems: 'center',
+                borderWidth: StyleSheet.hairlineWidth,
+                borderColor: 'rgba(196, 161, 90, 0.22)',
+              }}>
+              <SuccessChipIcon type={item.icon} size={22 * scale} />
+              <Text
                 style={{
-                  flex: 1,
-                  paddingVertical: 8 * scale,
-                  paddingHorizontal: 4 * scale,
-                  borderRadius: 12 * scale,
-                  backgroundColor: 'rgba(255, 252, 245, 0.94)',
-                  alignItems: 'center',
-                  borderWidth: StyleSheet.hairlineWidth,
-                  borderColor: 'rgba(196, 161, 90, 0.22)',
+                  marginTop: 5 * scale,
+                  color: '#0B0C10',
+                  fontSize: 11 * scale,
+                  fontWeight: '800',
                 }}>
-                <SuccessChipIcon type={item.icon} size={17 * scale} />
-                <Text
-                  style={{
-                    marginTop: 5 * scale,
-                    color: '#0B0C10',
-                    fontSize: 11 * scale,
-                    fontWeight: '800',
-                  }}>
-                  {item.title}
-                </Text>
-                <Text style={{ marginTop: 2 * scale, color: '#8A8678', fontSize: 9.5 * scale }}>
-                  {item.caption}
-                </Text>
-              </View>
-            ))}
-          </View>
+                {item.title}
+              </Text>
+              <Text style={{ marginTop: 2 * scale, color: '#8A8678', fontSize: 9.5 * scale }}>
+                {item.caption}
+              </Text>
+            </View>
+          ))}
         </View>
       </View>
 
-      <View style={{ paddingHorizontal: 16 * scale, paddingTop: 8 * scale, paddingBottom: 10 * scale }}>
+      <Image
+        accessibilityLabel="RACE roadside assistance on the highway"
+        source={DONE_ROADSIDE_ART}
+        resizeMode="cover"
+        style={{
+          width: artWidth,
+          height: artHeight,
+          marginTop: 32 * scale,
+          marginBottom: 16 * scale,
+          alignSelf: 'center',
+        }}
+        fadeDuration={0}
+      />
+
+      <View style={{ paddingHorizontal: 16 * scale, paddingTop: 10 * scale, paddingBottom: 6 * scale }}>
         <GoldCta scale={scale} label="Continue to RACE" onPress={onContinue} />
       </View>
+
+      <View style={{ flex: 1 }} />
     </View>
   );
 }
