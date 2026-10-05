@@ -22,7 +22,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # enablement asks the action to turn Pages on for this repository if it is
+      # not already configured, so the first deploy works on a fresh repo.
       - uses: actions/configure-pages@v5
+        with:
+          enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: '.'
