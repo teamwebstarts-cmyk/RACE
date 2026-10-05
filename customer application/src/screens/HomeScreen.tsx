@@ -52,51 +52,47 @@ const STATIC_OUR_SERVICES = [
 const POPULAR_SERVICES = [
   {
     id: 'towing',
-    title: 'Instant Towing',
+    title: 'Send Towing',
     categoryTitle: 'Towing Service',
     price: 'From ₹499',
-    priceColor: '#B45309',
-    gradient: ['#FFF8E8', '#FDE7A9'] as const,
-    borderColor: '#FCD34D',
-    image: images.popularTowingCardTruck,
-    imageWidth: 74,
-    imageHeight: 56,
+    priceColor: '#C2410C',
+    gradient: ['#FFF9F2', '#FEEDDF'] as const,
+    image: images.popularTowing,
+    imageWidth: 76,
+    imageHeight: 50,
   },
   {
     id: 'roadside',
-    title: 'Flat Tyre',
+    title: 'Flat Tire',
     categoryTitle: 'Roadside Assistance',
     price: 'From ₹199',
-    priceColor: '#4B5563',
-    gradient: ['#FFFDF7', '#FDEFC3'] as const,
-    borderColor: '#FDE68A',
-    image: images.popularTyreCardGraphic,
-    imageWidth: 50,
-    imageHeight: 56,
+    priceColor: '#0284C7',
+    gradient: ['#F8FAFC', '#EDF2F7'] as const,
+    image: images.popularFlatTire,
+    imageWidth: 76,
+    imageHeight: 50,
   },
   {
     id: 'battery',
     title: 'Battery',
     categoryTitle: 'Roadside Assistance',
     price: 'From ₹199',
-    priceColor: '#4B5563',
-    gradient: ['#F9FAFB', '#EDF2F7'] as const,
-    borderColor: '#E2E8F0',
-    image: images.booking.roadsideBattery,
-    imageWidth: 46,
-    imageHeight: 46,
+    priceColor: '#D97706',
+    gradient: ['#FFFBF0', '#FEF3C7'] as const,
+    image: images.popularBattery,
+    imageWidth: 68,
+    imageHeight: 52,
   },
   {
     id: 'fuel',
     title: 'Fuel Delivery',
     categoryTitle: 'Roadside Assistance',
     price: 'From ₹299',
-    priceColor: '#4B5563',
-    gradient: ['#FFF9F5', '#FEEDDF'] as const,
-    borderColor: '#FED7AA',
-    image: images.booking.roadsideFuel,
-    imageWidth: 46,
-    imageHeight: 46,
+    priceColor: '#EA580C',
+    gradient: ['#FFF7ED', '#FFEDD5'] as const,
+    image: images.popularFuel,
+    imageWidth: 68,
+    imageHeight: 52,
   },
 ];
 
@@ -156,11 +152,11 @@ export default function HomeScreen({ navigation }: Props) {
   }, [displayLocation]);
 
   const cardWidth = Math.max(280, width - px(40));
-  const cardHeight = px(210);
+  const cardHeight = px(196);
   const R = px(22);
   const x1 = Math.round(cardWidth * 0.27);
   const x2 = Math.round(cardWidth * 0.38);
-  const dip = px(30);
+  const dip = px(28);
 
   const cardPath = useMemo(() => {
     return [
@@ -318,10 +314,10 @@ export default function HomeScreen({ navigation }: Props) {
           <View
             style={{
               position: 'absolute',
-              top: -px(6),
-              left: -px(20),
-              right: -px(20),
-              height: px(310),
+              top: -px(32),
+              left: -px(16),
+              right: -px(16),
+              height: px(320),
               overflow: 'hidden',
             }}>
             <Image
@@ -380,15 +376,30 @@ export default function HomeScreen({ navigation }: Props) {
           {/* Overlapping Curved 24/7 Roadside Assistance Card */}
           <View
             style={{
-              marginTop: px(46),
+              marginTop: px(58),
               width: cardWidth,
               height: cardHeight,
-              shadowColor: '#000000',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.08,
-              shadowRadius: 12,
-              elevation: 3,
+              position: 'relative',
             }}>
+            {/* Native Drop Shadow for bottom & sides */}
+            <View
+              style={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: cardHeight - dip,
+                borderBottomLeftRadius: R,
+                borderBottomRightRadius: R,
+                backgroundColor: '#FFFFFF',
+                shadowColor: '#0F172A',
+                shadowOffset: { width: 0, height: 6 },
+                shadowOpacity: 0.10,
+                shadowRadius: 12,
+                elevation: 4,
+              }}
+            />
+
             <Svg width={cardWidth} height={cardHeight} style={StyleSheet.absoluteFill}>
               <Path d={cardPath} fill="#FFFFFF" stroke="none" />
             </Svg>
@@ -427,12 +438,13 @@ export default function HomeScreen({ navigation }: Props) {
                 <Text
                   numberOfLines={2}
                   style={{
-                    marginTop: px(4),
-                    fontSize: px(12.5),
-                    color: '#6B7280',
-                    lineHeight: px(17),
+                    marginTop: px(5),
+                    fontSize: px(13),
+                    color: '#64748B',
+                    lineHeight: px(18.5),
+                    maxWidth: '82%',
                   }}>
-                  Reliable help, anytime, anywhere in {cityName}.
+                  Reliable help, anytime,{'\n'}anywhere in {cityName}.
                 </Text>
               </View>
 
@@ -442,7 +454,7 @@ export default function HomeScreen({ navigation }: Props) {
                 style={({ pressed }) => [
                   {
                     width: '100%',
-                    height: px(48),
+                    height: px(46),
                     borderRadius: px(14),
                     overflow: 'hidden',
                     shadowColor: '#F59E0B',
@@ -595,14 +607,17 @@ export default function HomeScreen({ navigation }: Props) {
                   )
                 }
                 style={({ pressed }) => [
-                  shadows.card,
                   {
                     width: '48.5%',
                     height: px(96),
                     borderRadius: px(18),
                     overflow: 'hidden',
-                    borderWidth: 1.2,
-                    borderColor: item.borderColor,
+                    backgroundColor: '#FFFFFF',
+                    shadowColor: '#000000',
+                    shadowOffset: { width: 0, height: 3 },
+                    shadowOpacity: 0.06,
+                    shadowRadius: 8,
+                    elevation: 3,
                     transform: [{ scale: pressed ? 0.97 : 1 }],
                     opacity: pressed ? 0.9 : 1,
                   },
@@ -621,11 +636,12 @@ export default function HomeScreen({ navigation }: Props) {
                   }}>
                   <View style={{ flex: 1, justifyContent: 'center', paddingRight: px(2) }}>
                     <Text
-                      numberOfLines={1}
+                      numberOfLines={2}
                       style={{
                         fontSize: px(13.5),
                         fontWeight: typography.weights.extrabold,
                         color: '#111827',
+                        lineHeight: px(16.5),
                       }}>
                       {item.title}
                     </Text>
@@ -634,16 +650,24 @@ export default function HomeScreen({ navigation }: Props) {
                         fontSize: px(12.5),
                         fontWeight: typography.weights.extrabold,
                         color: item.priceColor,
-                        marginTop: px(4),
+                        marginTop: px(3),
                       }}>
                       {item.price}
                     </Text>
                   </View>
-                  <Image
-                    source={item.image}
-                    style={{ width: px(item.imageWidth), height: px(item.imageHeight) }}
-                    resizeMode="contain"
-                  />
+                  <View
+                    style={{
+                      width: px(item.imageWidth),
+                      height: px(item.imageHeight),
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                    }}>
+                    <Image
+                      source={item.image}
+                      style={{ width: '100%', height: '100%' }}
+                      resizeMode="contain"
+                    />
+                  </View>
                 </LinearGradient>
               </Pressable>
             ))}

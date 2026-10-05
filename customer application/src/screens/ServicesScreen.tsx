@@ -12,7 +12,7 @@ import { ArrowLeft } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { images } from '../assets';
+import { SERVICE_CATEGORY_CARDS } from '../constants/serviceCategoryCards';
 import { useCatalogStore } from '../store/catalogStore';
 import type { ServicesStackParamList } from '../types/navigation';
 import { openServiceCategory } from '../utils/serviceNavigation';
@@ -22,65 +22,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 const REF_W = 390;
 
 type Props = NativeStackScreenProps<ServicesStackParamList, 'ServicesMain'>;
-
-const SERVICE_CARDS = [
-  {
-    id: 'towing',
-    title: 'Towing Service',
-    categoryTitle: 'Towing Service',
-    subtitle: 'Fast & safe towing\nanytime, anywhere.',
-    subtitleColor: '#5C4813',
-    cardBg: '#FED569',
-    fogColors: [
-      '#FED569',
-      'rgba(254, 213, 105, 0.75)',
-      'rgba(254, 213, 105, 0)',
-    ] as const,
-    image: images.serviceTowingCard,
-  },
-  {
-    id: 'driver',
-    title: 'Driver Service',
-    categoryTitle: 'Driver Service',
-    subtitle: 'Hire verified drivers\nfor your journey.',
-    subtitleColor: '#4B5563',
-    cardBg: '#FFFFFF',
-    fogColors: [
-      '#FFFFFF',
-      'rgba(255, 255, 255, 0.75)',
-      'rgba(255, 255, 255, 0)',
-    ] as const,
-    image: images.serviceDriverCard,
-  },
-  {
-    id: 'roadside',
-    title: 'Roadside Assistance',
-    categoryTitle: 'Roadside Assistance',
-    subtitle: 'Quick on-spot help for\ncommon issues.',
-    subtitleColor: '#334155',
-    cardBg: '#FFFFFF',
-    fogColors: [
-      '#FFFFFF',
-      'rgba(255, 255, 255, 0.75)',
-      'rgba(255, 255, 255, 0)',
-    ] as const,
-    image: images.serviceRoadsideCard,
-  },
-  {
-    id: 'future',
-    title: 'More Services',
-    categoryTitle: 'More Services',
-    subtitle: 'Car wash, inspection,\ninsurance and more.',
-    subtitleColor: '#57534E',
-    cardBg: '#FFFFFF',
-    fogColors: [
-      '#FFFFFF',
-      'rgba(255, 255, 255, 0.75)',
-      'rgba(255, 255, 255, 0)',
-    ] as const,
-    image: images.serviceMoreCard,
-  },
-];
 
 export default function ServicesScreen({ navigation }: Props) {
   const { width } = useWindowDimensions();
@@ -170,7 +111,7 @@ export default function ServicesScreen({ navigation }: Props) {
           gap: px(16),
         }}
         showsVerticalScrollIndicator={false}>
-        {SERVICE_CARDS.map(item => (
+        {SERVICE_CATEGORY_CARDS.map(item => (
           <Pressable
             key={item.id}
             onPress={() => openCategory(item.id, item.categoryTitle)}
@@ -182,10 +123,10 @@ export default function ServicesScreen({ navigation }: Props) {
                 overflow: 'hidden',
                 backgroundColor: item.cardBg,
                 shadowColor: '#000000',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.08,
-                shadowRadius: 10,
-                elevation: 3,
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.05,
+                shadowRadius: 6,
+                elevation: 1.5,
                 transform: [{ scale: pressed ? 0.985 : 1 }],
                 opacity: pressed ? 0.94 : 1,
               },

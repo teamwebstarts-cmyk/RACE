@@ -25,6 +25,20 @@ export const shadows = {
     },
     default: {},
   }),
+  // Extremely light card shadow. Use on service cards so they read as
+  // bordered surfaces rather than floating boxes.
+  cardSoft: Platform.select<ViewStyle>({
+    ios: {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.025,
+      shadowRadius: 3,
+    },
+    android: {
+      elevation: 0.6,
+    },
+    default: {},
+  }),
   fab: Platform.select<ViewStyle>({
     ios: {
       shadowColor: '#E53935',
