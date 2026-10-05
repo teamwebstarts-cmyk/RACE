@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+/*
+ * RACE wordmark, built to the exact slot the clone reserves: 442x65.
+ * Drawn as HTML/CSS rather than shipped as an SVG asset so it scales cleanly
+ * through the existing <img> pipeline after a single raster capture.
+ *
+ * Palette follows the researched brief: orange #F26522 as the primary, near-black
+ * for the wordmark, so it sits with the same accent the rest of the page uses.
+ */
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #ffffff;
+}
+.stage {
+  width: 442px;
+  height: 65px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  background: #ffffff;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+}
+
+/* Chevron mark: a forward-leaning arrow cut from two stacked bars. */
+.mark {
+  position: relative;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+}
+.mark .bar {
+  position: absolute;
+  left: 0;
+  height: 9px;
+  background: #f26522;
+  border-radius: 2px;
+  transform: skewX(-28deg);
+}
+.mark .bar:nth-child(1) { top: 6px;  width: 26px; }
+.mark .bar:nth-child(2) { top: 17px; width: 34px; }
+.mark .bar:nth-child(3) { top: 28px; width: 42px; }
+
+/* Wordmark. Letter-spaced caps read as a fleet/service brand at small sizes. */
+.word {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+}
+.word .name {
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: 3.5px;
+  color: #14161a;
+  line-height: 1;
+}
+.word .sub {
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 1.6px;
+  color: #8b9098;
+  text-transform: uppercase;
+  line-height: 1;
+}
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="mark">
+    <div class="bar"></div>
+    <div class="bar"></div>
+    <div class="bar"></div>
+  </div>
+  <div class="word">
+    <span class="name">RACE</span>
+    <span class="sub">Roadside &amp; Towing</span>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,21 @@
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.swp
+
+# Local scratch
+*.bak
+*.bak-*
+_shots/
+shots/
+race-img/
+_text_inventory.json
+_live_*.html
+_asset_urls.txt
+
+# Local tooling env
+.venv/
+node_modules/
+
+# Backup snapshots live outside the repo
+backup-pre-*/

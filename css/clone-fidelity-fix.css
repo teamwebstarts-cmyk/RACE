@@ -1,0 +1,36 @@
+/*
+ * Clone fidelity fix.
+ *
+ * Elementor hides animated widgets with `.elementor-invisible { visibility:hidden }`
+ * and normally reveals them from frontend.min.js. That script is present here,
+ * but it never completes its init (no warm Elementor init handshake), so every
+ * heading, paragraph and button carrying `data-settings="_animation"` stays
+ * hidden. The result is the layout you see: correct spacing and images, but
+ * blank text everywhere.
+ *
+ * Rather than reverse-engineer the missing JS handshake, force the animated
+ * widgets visible. The trade-off is that entrance animations no longer play —
+ * a fair price for a clone that renders identically at rest.
+ */
+
+.elementor-invisible {
+	visibility: visible !important;
+	opacity: 1 !important;
+}
+
+/* Motion effects also stagger widgets via transform; neutralise the offsets
+   so nothing is left shifted or clipped after the visibility reset. */
+.elementor-invisible[data-settings*="animation"] {
+	transform: none !important;
+}
+
+/* Some widgets rely on the animation classes for their final transform; make
+   sure no translateY offset remains after the reset above. */
+.elementor-animate-fadeInUp,
+.elementor-animate-fadeInLeft,
+.elementor-animate-fadeInRight,
+.elementor-animate-fadeIn {
+	opacity: 1 !important;
+	visibility: visible !important;
+	transform: none !important;
+}
