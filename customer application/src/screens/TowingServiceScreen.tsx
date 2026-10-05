@@ -24,13 +24,14 @@ import {
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { images } from '../assets';
+import { getServiceCategoryCard } from '../constants/serviceCategoryCards';
 import { useTowingBooking } from '../context/TowingBookingContext';
 import { useCatalogStore } from '../store/catalogStore';
 import { brand } from '../theme/brand';
 import type { HomeStackParamList } from '../types/navigation';
 import type { TowingServiceModeId } from '../types/towingBooking';
 import { colors, shadows, typography } from '../theme';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const REF_W = 390;
 
@@ -72,6 +73,7 @@ export default function TowingServiceScreen({ navigation }: Props) {
   const s = width / REF_W;
   const px = (n: number) => Math.round(n * s);
   const insets = useSafeAreaInsets();
+  const heroCard = getServiceCategoryCard('towing');
 
   const { updateBooking } = useTowingBooking();
   const apiBrand = useCatalogStore(state => state.brand);
@@ -128,117 +130,126 @@ export default function TowingServiceScreen({ navigation }: Props) {
           gap: px(14),
         }}
         showsVerticalScrollIndicator={false}>
-        {/* Hero Banner Card */}
-        <View
-          style={[
-            shadows.card,
-            {
-              borderRadius: px(18),
-              overflow: 'hidden',
-              height: px(165),
-              position: 'relative',
-              backgroundColor: '#1C2430',
-            },
-          ]}>
-          <Image
-            source={images.towingHeroBanner}
-            style={{ width: '100%', height: '100%' }}
-            resizeMode="cover"
-          />
-          {/* Subtle gradient overlay */}
+        {/* Hero Card — same card as the Services page */}
+        <View style={{ marginBottom: px(4) }}>
           <View
             style={[
-              StyleSheet.absoluteFill,
+              shadows.cardSoft,
               {
-                backgroundColor: 'rgba(0,0,0,0.38)',
-                padding: px(16),
-                justifyContent: 'center',
+                borderRadius: px(22),
+                overflow: 'hidden',
+                height: px(158),
+                backgroundColor: '#FFFFFF',
               },
             ]}>
-            <Text
+            <Image
+              source={heroCard.image}
+              style={StyleSheet.absoluteFill}
+              resizeMode="cover"
+            />
+            <LinearGradient
+              colors={heroCard.gradientColors}
+              locations={heroCard.gradientLocations}
+              start={{ x: 0, y: 0.5 }}
+              end={{ x: 1, y: 0.5 }}
+              style={StyleSheet.absoluteFill}
+            />
+            <View
               style={{
-                fontSize: px(22),
-                fontWeight: typography.weights.extrabold,
-                color: '#FFFFFF',
-                marginBottom: px(4),
+                flex: 1,
+                paddingHorizontal: px(18),
+                justifyContent: 'center',
+                maxWidth: '65%',
               }}>
-              Towing Service
-            </Text>
-            <Text
-              style={{
-                fontSize: px(13),
-                color: '#F0F0F0',
-                lineHeight: px(18),
-              }}>
-              Professional 24/7 towing{'\n'}across Bhubaneswar.
-            </Text>
+              <Text
+                style={{
+                  fontSize: px(20),
+                  fontWeight: typography.weights.extrabold,
+                  color: '#111827',
+                  marginBottom: px(4),
+                  letterSpacing: -0.3,
+                }}>
+                {heroCard.title}
+              </Text>
+              <Text
+                style={{
+                  fontSize: px(13),
+                  color: heroCard.subtitleColor,
+                  fontWeight: '600',
+                  lineHeight: px(18),
+                }}>
+                {heroCard.subtitle}
+              </Text>
+            </View>
           </View>
-        </View>
 
-        {/* Quick Trust Bar */}
-        <View
-          style={[
-            shadows.card,
-            {
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              backgroundColor: colors.background,
-              borderRadius: px(16),
-              paddingVertical: px(14),
-              paddingHorizontal: px(10),
-              borderWidth: 1,
-              borderColor: '#F0EFEA',
-            },
-          ]}>
-          <View style={{ flex: 1, alignItems: 'center' }}>
-            <Clock size={px(18)} color={colors.primary} strokeWidth={2.5} />
-            <Text
-              style={{
-                marginTop: px(4),
-                fontSize: px(11),
-                fontWeight: typography.weights.bold,
-                color: colors.dark,
-                textAlign: 'center',
-              }}>
-              30 min{'\n'}
-              <Text style={{ fontWeight: typography.weights.regular, color: colors.grey }}>
-                arrival
+          {/* Quick Trust Bar — attached to the bottom of the hero card */}
+          <View
+            style={[
+              shadows.cardSoft,
+              {
+                marginHorizontal: px(10),
+                marginTop: -px(26),
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                backgroundColor: colors.background,
+                borderRadius: px(16),
+                paddingVertical: px(14),
+                paddingHorizontal: px(10),
+                borderWidth: 1,
+                borderColor: '#F0EFEA',
+              },
+            ]}>
+            <View style={{ flex: 1, alignItems: 'center' }}>
+              <Clock size={px(18)} color={colors.primary} strokeWidth={2.5} />
+              <Text
+                style={{
+                  marginTop: px(4),
+                  fontSize: px(11),
+                  fontWeight: typography.weights.bold,
+                  color: colors.dark,
+                  textAlign: 'center',
+                }}>
+                30 min{'\n'}
+                <Text style={{ fontWeight: typography.weights.regular, color: colors.grey }}>
+                  arrival
+                </Text>
               </Text>
-            </Text>
-          </View>
-          <View style={{ width: 1, backgroundColor: '#EEEEEE', marginVertical: px(4) }} />
-          <View style={{ flex: 1, alignItems: 'center' }}>
-            <ShieldCheck size={px(18)} color={colors.primary} strokeWidth={2.5} />
-            <Text
-              style={{
-                marginTop: px(4),
-                fontSize: px(11),
-                fontWeight: typography.weights.bold,
-                color: colors.dark,
-                textAlign: 'center',
-              }}>
-              Verified{'\n'}
-              <Text style={{ fontWeight: typography.weights.regular, color: colors.grey }}>
-                drivers
+            </View>
+            <View style={{ width: 1, backgroundColor: '#EEEEEE', marginVertical: px(4) }} />
+            <View style={{ flex: 1, alignItems: 'center' }}>
+              <ShieldCheck size={px(18)} color={colors.primary} strokeWidth={2.5} />
+              <Text
+                style={{
+                  marginTop: px(4),
+                  fontSize: px(11),
+                  fontWeight: typography.weights.bold,
+                  color: colors.dark,
+                  textAlign: 'center',
+                }}>
+                Verified{'\n'}
+                <Text style={{ fontWeight: typography.weights.regular, color: colors.grey }}>
+                  drivers
+                </Text>
               </Text>
-            </Text>
-          </View>
-          <View style={{ width: 1, backgroundColor: '#EEEEEE', marginVertical: px(4) }} />
-          <View style={{ flex: 1, alignItems: 'center' }}>
-            <Shield size={px(18)} color={colors.primary} strokeWidth={2.5} />
-            <Text
-              style={{
-                marginTop: px(4),
-                fontSize: px(11),
-                fontWeight: typography.weights.bold,
-                color: colors.dark,
-                textAlign: 'center',
-              }}>
-              Safe &{'\n'}
-              <Text style={{ fontWeight: typography.weights.regular, color: colors.grey }}>
-                insured
+            </View>
+            <View style={{ width: 1, backgroundColor: '#EEEEEE', marginVertical: px(4) }} />
+            <View style={{ flex: 1, alignItems: 'center' }}>
+              <Shield size={px(18)} color={colors.primary} strokeWidth={2.5} />
+              <Text
+                style={{
+                  marginTop: px(4),
+                  fontSize: px(11),
+                  fontWeight: typography.weights.bold,
+                  color: colors.dark,
+                  textAlign: 'center',
+                }}>
+                Safe &{'\n'}
+                <Text style={{ fontWeight: typography.weights.regular, color: colors.grey }}>
+                  insured
+                </Text>
               </Text>
-            </Text>
+            </View>
           </View>
         </View>
 
@@ -248,7 +259,7 @@ export default function TowingServiceScreen({ navigation }: Props) {
             <View
               key={opt.id}
               style={[
-                shadows.card,
+                shadows.cardSoft,
                 {
                   flexDirection: 'row',
                   alignItems: 'center',
@@ -269,7 +280,7 @@ export default function TowingServiceScreen({ navigation }: Props) {
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}>
-                <opt.Icon size={px(20)} color={colors.primary} strokeWidth={2.2} />
+                <opt.Icon size={px(20)} color={colors.primary} strokeWidth={2.6} />
               </View>
 
               <View style={{ flex: 1 }}>
@@ -326,7 +337,7 @@ export default function TowingServiceScreen({ navigation }: Props) {
         {/* Why Choose Us? Section */}
         <View
           style={[
-            shadows.card,
+            shadows.cardSoft,
             {
               backgroundColor: colors.background,
               borderRadius: px(16),

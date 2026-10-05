@@ -144,7 +144,7 @@ const towingBookingScreens = (
     <Stack.Screen
       name="TowingService"
       component={TowingServiceScreen}
-      options={{ headerTitle: 'Towing Service' }}
+      options={towingBookingScreenOptions}
     />
     <Stack.Screen
       name="TowingChooseVehicle"
@@ -213,7 +213,7 @@ const driverBookingScreens = (
     <Stack.Screen
       name="DriverService"
       component={DriverServiceScreen}
-      options={{ headerTitle: 'Driver Service' }}
+      options={towingBookingScreenOptions}
     />
     <Stack.Screen
       name="DriverBookingVehicle"
@@ -302,7 +302,7 @@ const roadsideBookingScreens = (
     <Stack.Screen
       name="RoadsideAssistance"
       component={RoadsideAssistanceScreen}
-      options={{ headerTitle: 'Roadside Assistance' }}
+      options={towingBookingScreenOptions}
     />
     <Stack.Screen
       name="RoadsideSelectService"

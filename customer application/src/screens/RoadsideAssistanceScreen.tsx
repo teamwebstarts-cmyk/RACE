@@ -22,11 +22,12 @@ import {
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { images } from '../assets';
+import { getServiceCategoryCard } from '../constants/serviceCategoryCards';
 import { useCatalogStore } from '../store/catalogStore';
 import { brand } from '../theme/brand';
 import type { HomeStackParamList } from '../types/navigation';
 import { colors, shadows, typography } from '../theme';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const REF_W = 390;
 
@@ -71,10 +72,11 @@ export default function RoadsideAssistanceScreen({ navigation }: Props) {
   const s = width / REF_W;
   const px = (n: number) => Math.round(n * s);
   const insets = useSafeAreaInsets();
+  const heroCard = getServiceCategoryCard('roadside');
 
   const apiBrand = useCatalogStore(state => state.brand);
 
-  const bookRoadside = (serviceId?: string) => {
+  const bookRoadside = () => {
     navigation.navigate('RoadsideSelectService');
   };
 
@@ -125,54 +127,60 @@ export default function RoadsideAssistanceScreen({ navigation }: Props) {
           gap: px(14),
         }}
         showsVerticalScrollIndicator={false}>
-        {/* Hero Banner Card */}
+        {/* Hero Card — same card as the Services page */}
         <View
           style={[
-            shadows.card,
+            shadows.cardSoft,
             {
-              borderRadius: px(18),
+              borderRadius: px(22),
               overflow: 'hidden',
-              height: px(165),
-              position: 'relative',
-              backgroundColor: '#1E2530',
+              height: px(158),
+              backgroundColor: '#FFFFFF',
             },
           ]}>
           <Image
-            source={images.roadsideHeroBanner}
-            style={{ width: '100%', height: '100%' }}
+            source={heroCard.image}
+            style={StyleSheet.absoluteFill}
             resizeMode="cover"
           />
-          {/* Overlay */}
+          <LinearGradient
+            colors={heroCard.gradientColors}
+            locations={heroCard.gradientLocations}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={StyleSheet.absoluteFill}
+          />
           <View
-            style={[
-              StyleSheet.absoluteFill,
-              {
-                backgroundColor: 'rgba(0,0,0,0.36)',
-                padding: px(16),
-                justifyContent: 'space-between',
-              },
-            ]}>
+            style={{
+              flex: 1,
+              paddingHorizontal: px(18),
+              paddingVertical: px(16),
+              justifyContent: 'space-between',
+              maxWidth: '72%',
+            }}>
             <View>
               <Text
                 style={{
-                  fontSize: px(22),
+                  fontSize: px(20),
                   fontWeight: typography.weights.extrabold,
-                  color: '#FFFFFF',
+                  color: '#111827',
                   marginBottom: px(4),
+                  letterSpacing: -0.3,
                 }}>
-                Roadside{'\n'}Assistance
+                {heroCard.title}
               </Text>
               <Text
                 style={{
                   fontSize: px(13),
-                  color: '#F0F0F0',
+                  color: heroCard.subtitleColor,
+                  fontWeight: '600',
                   lineHeight: px(18),
                 }}>
-                Quick on-spot help,{'\n'}wherever you are.
+                {heroCard.subtitle}
               </Text>
             </View>
 
-            {/* Available Now - 25 min Badge */}
+            {/* Available Now Pill */}
             <View
               style={{
                 alignSelf: 'flex-start',
@@ -210,7 +218,7 @@ export default function RoadsideAssistanceScreen({ navigation }: Props) {
             <View
               key={opt.id}
               style={[
-                shadows.card,
+                shadows.cardSoft,
                 {
                   flexDirection: 'row',
                   alignItems: 'center',
@@ -231,7 +239,7 @@ export default function RoadsideAssistanceScreen({ navigation }: Props) {
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}>
-                <opt.Icon size={px(20)} color={colors.primary} strokeWidth={2.2} />
+                <opt.Icon size={px(20)} color={colors.primary} strokeWidth={2.6} />
               </View>
 
               <View style={{ flex: 1 }}>
@@ -255,7 +263,7 @@ export default function RoadsideAssistanceScreen({ navigation }: Props) {
               </View>
 
               <Pressable
-                onPress={() => bookRoadside(opt.id)}
+                onPress={() => bookRoadside()}
                 style={{
                   backgroundColor: colors.primary,
                   paddingHorizontal: px(14),
@@ -280,7 +288,7 @@ export default function RoadsideAssistanceScreen({ navigation }: Props) {
         {/* Why Choose Us? Section */}
         <View
           style={[
-            shadows.card,
+            shadows.cardSoft,
             {
               backgroundColor: colors.background,
               borderRadius: px(16),

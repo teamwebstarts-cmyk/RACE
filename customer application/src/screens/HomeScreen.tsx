@@ -35,7 +35,7 @@ import { brand } from '../theme/brand';
 import type { HomeStackParamList, RootTabParamList } from '../types/navigation';
 import { openServiceCategory } from '../utils/serviceNavigation';
 import { colors, shadows, typography } from '../theme';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Defs, LinearGradient as SvgLinearGradient, Path, Stop } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const REF_W = 390;
@@ -154,6 +154,7 @@ export default function HomeScreen({ navigation }: Props) {
   const cardWidth = Math.max(280, width - px(40));
   const cardHeight = px(196);
   const R = px(22);
+  const R_tr = px(24);
   const x1 = Math.round(cardWidth * 0.27);
   const x2 = Math.round(cardWidth * 0.38);
   const dip = px(28);
@@ -164,15 +165,15 @@ export default function HomeScreen({ navigation }: Props) {
       `Q 0 0 ${R} 0`,
       `L ${x1} 0`,
       `C ${x1 + (x2 - x1) * 0.45} 0, ${x1 + (x2 - x1) * 0.55} ${dip}, ${x2} ${dip}`,
-      `L ${cardWidth - R} ${dip}`,
-      `Q ${cardWidth} ${dip} ${cardWidth} ${dip + R}`,
+      `L ${cardWidth - R_tr} ${dip}`,
+      `Q ${cardWidth} ${dip} ${cardWidth} ${dip + R_tr}`,
       `L ${cardWidth} ${cardHeight - R}`,
       `Q ${cardWidth} ${cardHeight} ${cardWidth - R} ${cardHeight}`,
       `L ${R} ${cardHeight}`,
       `Q 0 ${cardHeight} 0 ${cardHeight - R}`,
       'Z',
     ].join(' ');
-  }, [cardWidth, cardHeight, R, x1, x2, dip]);
+  }, [cardWidth, cardHeight, R, R_tr, x1, x2, dip]);
 
   const openServicesTab = () => {
     const tabNav = navigation.getParent<BottomTabNavigationProp<RootTabParamList>>();
@@ -310,14 +311,14 @@ export default function HomeScreen({ navigation }: Props) {
         }>
         {/* Hero Section: Road Scenery Background + Highlighted Greeting + Curved 24/7 Card */}
         <View style={{ marginBottom: px(22), position: 'relative' }}>
-          {/* Atmospheric Road & Tow Truck Background Visual extending under greeting */}
+          {/* Atmospheric Road & Tow Truck Background Visual extending edge-to-edge under greeting */}
           <View
             style={{
               position: 'absolute',
-              top: -px(32),
-              left: -px(16),
-              right: -px(16),
-              height: px(320),
+              top: -px(56),
+              left: -px(20),
+              width: width,
+              height: px(360),
               overflow: 'hidden',
             }}>
             <Image
@@ -328,13 +329,12 @@ export default function HomeScreen({ navigation }: Props) {
             {/* Melted Gradient Overlay into White */}
             <LinearGradient
               colors={[
-                '#FFFFFF',
-                'rgba(255, 255, 255, 0.94)',
-                'rgba(255, 255, 255, 0.52)',
-                'rgba(255, 255, 255, 0.08)',
+                'rgba(255, 255, 255, 0.95)',
+                'rgba(255, 255, 255, 0.70)',
+                'rgba(255, 255, 255, 0.20)',
                 'transparent',
               ]}
-              locations={[0, 0.22, 0.44, 0.72, 1]}
+              locations={[0, 0.20, 0.44, 0.72]}
               style={StyleSheet.absoluteFill}
             />
           </View>
@@ -381,14 +381,14 @@ export default function HomeScreen({ navigation }: Props) {
               height: cardHeight,
               position: 'relative',
             }}>
-            {/* Native Drop Shadow for bottom & sides */}
+            {/* Native Drop Shadow along the bottom edge */}
             <View
               style={{
                 position: 'absolute',
                 left: 0,
                 right: 0,
                 bottom: 0,
-                height: cardHeight - dip,
+                height: px(52),
                 borderBottomLeftRadius: R,
                 borderBottomRightRadius: R,
                 backgroundColor: '#FFFFFF',
@@ -401,7 +401,15 @@ export default function HomeScreen({ navigation }: Props) {
             />
 
             <Svg width={cardWidth} height={cardHeight} style={StyleSheet.absoluteFill}>
-              <Path d={cardPath} fill="#FFFFFF" stroke="none" />
+              <Defs>
+                <SvgLinearGradient id="cardBgGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <Stop offset="0%" stopColor="#FFFFFF" stopOpacity="1" />
+                  <Stop offset="40%" stopColor="#FFFFFF" stopOpacity="1" />
+                  <Stop offset="68%" stopColor="#FFFFFF" stopOpacity="0.88" />
+                  <Stop offset="100%" stopColor="#FFFFFF" stopOpacity="0.75" />
+                </SvgLinearGradient>
+              </Defs>
+              <Path d={cardPath} fill="url(#cardBgGrad)" stroke="none" />
             </Svg>
 
             {/* Content inside the card */}

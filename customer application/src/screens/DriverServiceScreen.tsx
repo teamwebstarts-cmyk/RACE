@@ -15,7 +15,6 @@ import {
   Calendar,
   Car,
   CheckCircle2,
-  Clock,
   Moon,
   Phone,
   User,
@@ -23,13 +22,14 @@ import {
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { images } from '../assets';
+import { getServiceCategoryCard } from '../constants/serviceCategoryCards';
 import { useDriverBooking } from '../context/DriverBookingContext';
 import { useCatalogStore } from '../store/catalogStore';
 import { brand } from '../theme/brand';
 import type { HomeStackParamList } from '../types/navigation';
 import type { DriverTypeId } from '../types/driverBooking';
 import { colors, shadows, typography } from '../theme';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const REF_W = 390;
 
@@ -74,6 +74,7 @@ export default function DriverServiceScreen({ navigation }: Props) {
   const s = width / REF_W;
   const px = (n: number) => Math.round(n * s);
   const insets = useSafeAreaInsets();
+  const heroCard = getServiceCategoryCard('driver');
 
   const { updateBooking, resetBooking } = useDriverBooking();
   const apiBrand = useCatalogStore(state => state.brand);
@@ -137,50 +138,56 @@ export default function DriverServiceScreen({ navigation }: Props) {
           gap: px(14),
         }}
         showsVerticalScrollIndicator={false}>
-        {/* Hero Banner Card */}
+        {/* Hero Card — same card as the Services page */}
         <View
           style={[
-            shadows.card,
+            shadows.cardSoft,
             {
-              borderRadius: px(18),
+              borderRadius: px(22),
               overflow: 'hidden',
-              height: px(165),
-              position: 'relative',
-              backgroundColor: '#1E2530',
+              height: px(158),
+              backgroundColor: '#FFFFFF',
             },
           ]}>
           <Image
-            source={images.driverHeroBanner}
-            style={{ width: '100%', height: '100%' }}
+            source={heroCard.image}
+            style={StyleSheet.absoluteFill}
             resizeMode="cover"
           />
-          {/* Text & Badge Overlay */}
+          <LinearGradient
+            colors={heroCard.gradientColors}
+            locations={heroCard.gradientLocations}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={StyleSheet.absoluteFill}
+          />
           <View
-            style={[
-              StyleSheet.absoluteFill,
-              {
-                backgroundColor: 'rgba(0,0,0,0.36)',
-                padding: px(16),
-                justifyContent: 'space-between',
-              },
-            ]}>
+            style={{
+              flex: 1,
+              paddingHorizontal: px(18),
+              paddingVertical: px(16),
+              justifyContent: 'space-between',
+              maxWidth: '72%',
+            }}>
             <View>
               <Text
                 style={{
-                  fontSize: px(22),
+                  fontSize: px(20),
                   fontWeight: typography.weights.extrabold,
-                  color: '#FFFFFF',
+                  color: '#111827',
                   marginBottom: px(4),
+                  letterSpacing: -0.3,
                 }}>
-                Driver Service
+                {heroCard.title}
               </Text>
               <Text
                 style={{
                   fontSize: px(13),
-                  color: '#F0F0F0',
+                  color: heroCard.subtitleColor,
+                  fontWeight: '600',
                   lineHeight: px(18),
                 }}>
-                Hire verified drivers{'\n'}anytime, anywhere.
+                {heroCard.subtitle}
               </Text>
             </View>
 
@@ -222,7 +229,7 @@ export default function DriverServiceScreen({ navigation }: Props) {
             <View
               key={opt.id}
               style={[
-                shadows.card,
+                shadows.cardSoft,
                 {
                   flexDirection: 'row',
                   alignItems: 'center',
@@ -243,7 +250,7 @@ export default function DriverServiceScreen({ navigation }: Props) {
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}>
-                <opt.Icon size={px(20)} color={colors.primary} strokeWidth={2.2} />
+                <opt.Icon size={px(20)} color={colors.primary} strokeWidth={2.6} />
               </View>
 
               <View style={{ flex: 1 }}>
@@ -292,7 +299,7 @@ export default function DriverServiceScreen({ navigation }: Props) {
         {/* Why Choose Us? Section */}
         <View
           style={[
-            shadows.card,
+            shadows.cardSoft,
             {
               backgroundColor: colors.background,
               borderRadius: px(16),
