@@ -34,3 +34,7 @@
 	visibility: visible !important;
 	transform: none !important;
 }
+/* Local-site interaction fixes */
+.race-contact-cta { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+.race-contact-cta p { margin: 0; }
+[id="about"], [id="coverage-areas"], [id="reviews"], [id="faq"], [id="service-list"], [id="plans"], [id="contact-details"] { scroll-margin-top: 100px; }

@@ -78,13 +78,14 @@ and Cuttack.
 - **Testimonials.** The three customer quotes on the homepage come from the
   client brief and carry real names and localities. Confirm written consent
   before this goes public.
-- **Structured data.** No `Application/ld+json` is present yet.
-  `AutomotiveBusiness` with `offers`, an `OfferCatalog` for the plans and a
-  `FAQPage` block would be the next step.
-- **Forms.** The contact page renders an empty MetaForm container; it displays
-  a plugin placeholder and needs a real endpoint.
-- **Phone links.** The helpline is plain text in several places where a
-  `tel:` link would convert better.
+- **Structured data.** FAQPage JSON-LD is present, but its answers should be
+  checked against the visible FAQs. Add `AutomotiveBusiness` and an
+  `OfferCatalog` after verifying the business details and plan terms.
+- **Online requests.** The captured MetaForm had no fields or endpoint. The
+  empty widget is replaced by a direct 24/7 call action until a real request
+  endpoint is available.
+- **Contact details.** Main phone actions and the contact card use `tel:` links;
+  the displayed support email uses `mailto:`.
 
 ## Licence
 
