@@ -81,8 +81,12 @@ export default function CustomTabBar({
             canPreventDefault: true,
           });
 
-          if (!isFocused && !event.defaultPrevented) {
-            navigation.navigate(route.name, route.params);
+          if (!event.defaultPrevented) {
+            if (route.name === 'Services') {
+              (navigation as any).navigate('Services', { screen: 'ServicesMain' });
+            } else if (!isFocused) {
+              navigation.navigate(route.name, route.params);
+            }
           }
         };
 
@@ -101,7 +105,6 @@ export default function CustomTabBar({
               fill={isFocused ? tint : 'transparent'}
             />
             <Text style={[styles.tabLabel, { color: tint }]}>{label}</Text>
-            {isFocused ? <View style={styles.activeDot} /> : <View style={styles.dotSpacer} />}
           </Pressable>
         );
       })}

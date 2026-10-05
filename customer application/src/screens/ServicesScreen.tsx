@@ -1,250 +1,265 @@
 import React, { useEffect } from 'react';
 import {
-  ActivityIndicator,
   Image,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   useWindowDimensions,
   View,
 } from 'react-native';
+import { ArrowLeft } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import ServiceCategoryGridCard from '../components/services/ServiceCategoryGridCard';
-import AppScreenLayout from '../components/ui/AppScreenLayout';
-import TabRootHeader from '../components/ui/TabRootHeader';
-import { HOME_HERO_IMAGE } from '../constants/home';
-import { mapApiCategoryToGridCard, SERVICES_TRUST_ITEMS } from '../constants/servicesScreen';
+import { images } from '../assets';
 import { useCatalogStore } from '../store/catalogStore';
 import type { ServicesStackParamList } from '../types/navigation';
 import { openServiceCategory } from '../utils/serviceNavigation';
 import { colors, shadows, typography } from '../theme';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const REF_W = 390;
 
 type Props = NativeStackScreenProps<ServicesStackParamList, 'ServicesMain'>;
+
+const SERVICE_CARDS = [
+  {
+    id: 'towing',
+    title: 'Towing Service',
+    categoryTitle: 'Towing Service',
+    subtitle: 'Fast & safe towing\nanytime, anywhere.',
+    subtitleColor: '#5C4813',
+    cardBg: '#FED569',
+    fogColors: [
+      '#FED569',
+      'rgba(254, 213, 105, 0.75)',
+      'rgba(254, 213, 105, 0)',
+    ] as const,
+    image: images.serviceTowingCard,
+  },
+  {
+    id: 'driver',
+    title: 'Driver Service',
+    categoryTitle: 'Driver Service',
+    subtitle: 'Hire verified drivers\nfor your journey.',
+    subtitleColor: '#4B5563',
+    cardBg: '#FFFFFF',
+    fogColors: [
+      '#FFFFFF',
+      'rgba(255, 255, 255, 0.75)',
+      'rgba(255, 255, 255, 0)',
+    ] as const,
+    image: images.serviceDriverCard,
+  },
+  {
+    id: 'roadside',
+    title: 'Roadside Assistance',
+    categoryTitle: 'Roadside Assistance',
+    subtitle: 'Quick on-spot help for\ncommon issues.',
+    subtitleColor: '#334155',
+    cardBg: '#FFFFFF',
+    fogColors: [
+      '#FFFFFF',
+      'rgba(255, 255, 255, 0.75)',
+      'rgba(255, 255, 255, 0)',
+    ] as const,
+    image: images.serviceRoadsideCard,
+  },
+  {
+    id: 'future',
+    title: 'More Services',
+    categoryTitle: 'More Services',
+    subtitle: 'Car wash, inspection,\ninsurance and more.',
+    subtitleColor: '#57534E',
+    cardBg: '#FFFFFF',
+    fogColors: [
+      '#FFFFFF',
+      'rgba(255, 255, 255, 0.75)',
+      'rgba(255, 255, 255, 0)',
+    ] as const,
+    image: images.serviceMoreCard,
+  },
+];
 
 export default function ServicesScreen({ navigation }: Props) {
   const { width } = useWindowDimensions();
   const s = width / REF_W;
   const px = (n: number) => Math.round(n * s);
 
-  const { services, fetchServices, isLoading, error } = useCatalogStore();
+  const { fetchServices } = useCatalogStore();
 
   useEffect(() => {
     void fetchServices();
   }, [fetchServices]);
 
-  const safeServices = Array.isArray(services) ? services : [];
-  const gridCards = safeServices.map(mapApiCategoryToGridCard);
-
   const openCategory = (categoryId: string, categoryTitle: string) => {
     openServiceCategory(navigation, categoryId, categoryTitle);
   };
 
-  return (
-    <AppScreenLayout
-      backgroundColor={colors.pageBg}
-      contentStyle={{ paddingTop: px(10) }}
-      header={
-        <TabRootHeader
-          title="Services"
-          subtitle="Choose a service category to get started"
-          onAvatarPress={() => {
-            const parent = navigation.getParent();
-            parent?.navigate('Profile' as never);
-          }}
-        />
-      }>
-          <View
-            style={[
-              styles.heroCard,
-              shadows.card,
-              {
-                borderRadius: px(20),
-                marginTop: px(10),
-                marginBottom: px(8),
-                paddingTop: px(14),
-                paddingBottom: px(10),
-                paddingLeft: px(14),
-                paddingRight: 0,
-              },
-            ]}>
-            <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-              <View
-                style={{
-                  width: px(158),
-                  flexShrink: 0,
-                }}>
-                <Text
-                  style={{
-                    fontSize: px(18),
-                    fontWeight: typography.weights.extrabold,
-                    color: colors.dark,
-                    lineHeight: px(23),
-                  }}>
-                  We're here for you{' '}
-                  <Text style={{ color: colors.primary }}>24/7</Text>
-                </Text>
-                <Text
-                  style={{
-                    marginTop: px(5),
-                    fontSize: px(13),
-                    color: colors.grey,
-                    lineHeight: px(18),
-                  }}>
-                  Professional help, anytime you need it.
-                </Text>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: px(5),
-                    marginTop: px(10),
-                  }}>
-                  {[0, 1, 2].map(index => (
-                    <View
-                      key={index}
-                      style={{
-                        width: index === 0 ? px(7) : px(6),
-                        height: index === 0 ? px(7) : px(6),
-                        borderRadius: px(4),
-                        backgroundColor: index === 0 ? colors.primary : colors.border,
-                      }}
-                    />
-                  ))}
-                </View>
-              </View>
-              <View
-                style={{
-                  flex: 1,
-                  height: px(140),
-                  overflow: 'hidden',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}>
-                <Image
-                  source={HOME_HERO_IMAGE}
-                  style={{
-                    width: px(180),
-                    height: px(140),
-                  }}
-                  resizeMode="contain"
-                />
-              </View>
-            </View>
-          </View>
+  const handleBack = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      const parent = navigation.getParent();
+      (parent as any)?.navigate('Home', { screen: 'HomeMain' });
+    }
+  };
 
+  return (
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+      {/* Header */}
+      <View
+        style={{
+          paddingHorizontal: px(16),
+          paddingTop: px(12),
+          paddingBottom: px(16),
+          backgroundColor: '#FFFFFF',
+          borderBottomWidth: 1,
+          borderBottomColor: '#F3F4F6',
+        }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            position: 'relative',
+            height: px(42),
+          }}>
+          <Pressable
+            onPress={handleBack}
+            hitSlop={14}
+            style={{
+              position: 'absolute',
+              left: 0,
+              width: px(40),
+              height: px(40),
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+            <ArrowLeft size={px(24)} color="#111827" strokeWidth={2.4} />
+          </Pressable>
           <Text
             style={{
-              fontSize: px(18),
+              fontSize: px(23),
               fontWeight: typography.weights.extrabold,
-              color: colors.dark,
-              marginBottom: px(12),
+              color: '#111827',
+              textAlign: 'center',
+              letterSpacing: -0.4,
             }}>
-            Service Categories
+            Services
           </Text>
+        </View>
+        <Text
+          style={{
+            marginTop: px(4),
+            fontSize: px(13.5),
+            color: '#4B5563',
+            fontWeight: '500',
+            textAlign: 'center',
+          }}>
+          Choose a service category to get started
+        </Text>
+      </View>
 
-          {isLoading && gridCards.length === 0 ? (
-            <View style={{ alignItems: 'center', paddingVertical: px(40) }}>
-              <ActivityIndicator size="large" color={colors.primary} />
-              <Text style={{ marginTop: px(10), fontSize: px(13), color: colors.grey }}>
-                Loading services...
-              </Text>
-            </View>
-          ) : error && gridCards.length === 0 ? (
-            <Pressable
-              onPress={() => void fetchServices()}
+      <ScrollView
+        contentContainerStyle={{
+          paddingHorizontal: px(14),
+          paddingTop: px(16),
+          paddingBottom: px(36),
+          gap: px(16),
+        }}
+        showsVerticalScrollIndicator={false}>
+        {SERVICE_CARDS.map(item => (
+          <Pressable
+            key={item.id}
+            onPress={() => openCategory(item.id, item.categoryTitle)}
+            style={({ pressed }) => [
+              {
+                width: '100%',
+                height: px(150),
+                borderRadius: px(22),
+                overflow: 'hidden',
+                backgroundColor: item.cardBg,
+                shadowColor: '#000000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.08,
+                shadowRadius: 10,
+                elevation: 3,
+                transform: [{ scale: pressed ? 0.985 : 1 }],
+                opacity: pressed ? 0.94 : 1,
+              },
+            ]}>
+            {/* Right-Anchored Artwork with reduced height & soft left fog */}
+            <View
+              pointerEvents="none"
               style={{
-                alignItems: 'center',
-                paddingVertical: px(32),
-                borderRadius: px(12),
-                backgroundColor: colors.lightGrey,
-                marginBottom: px(22),
+                position: 'absolute',
+                right: 0,
+                top: 0,
+                bottom: 0,
+                width: '58%',
+                justifyContent: 'center',
+                alignItems: 'flex-end',
+                overflow: 'hidden',
               }}>
-              <Text style={{ fontSize: px(14), color: colors.error, textAlign: 'center' }}>
-                {error}
+              <Image
+                source={item.image}
+                style={{
+                  width: '100%',
+                  height: '92%',
+                }}
+                resizeMode="cover"
+              />
+
+              {/* Soft Fog Gradient on the left edge of the artwork */}
+              <LinearGradient
+                colors={item.fogColors}
+                start={{ x: 0, y: 0.5 }}
+                end={{ x: 1, y: 0.5 }}
+                style={{
+                  position: 'absolute',
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: '40%',
+                }}
+              />
+            </View>
+
+            {/* Left-Aligned Text Content */}
+            <View
+              style={{
+                flex: 1,
+                paddingLeft: px(18),
+                paddingRight: px(8),
+                justifyContent: 'center',
+                maxWidth: '54%',
+                zIndex: 2,
+              }}>
+              <Text
+                style={{
+                  fontSize: px(19.5),
+                  fontWeight: typography.weights.extrabold,
+                  color: '#111827',
+                  marginBottom: px(4),
+                  letterSpacing: -0.3,
+                }}>
+                {item.title}
               </Text>
               <Text
                 style={{
-                  marginTop: px(8),
                   fontSize: px(13),
-                  fontWeight: typography.weights.bold,
-                  color: colors.primary,
+                  color: item.subtitleColor,
+                  fontWeight: '600',
+                  lineHeight: px(18.5),
                 }}>
-                Tap to retry
-              </Text>
-            </Pressable>
-          ) : gridCards.length === 0 ? (
-            <View
-              style={{
-                alignItems: 'center',
-                paddingVertical: px(32),
-                marginBottom: px(22),
-              }}>
-              <Text style={{ fontSize: px(14), color: colors.grey, textAlign: 'center' }}>
-                No services available right now.
+                {item.subtitle}
               </Text>
             </View>
-          ) : (
-            <View
-              style={{
-                flexDirection: 'row',
-                flexWrap: 'wrap',
-                justifyContent: 'space-between',
-                rowGap: px(12),
-                marginBottom: px(22),
-              }}>
-              {gridCards.map(card => (
-                <ServiceCategoryGridCard
-                  key={card.id}
-                  title={card.title}
-                  description={card.description}
-                  servicesCount={card.servicesCount}
-                  Icon={card.Icon}
-                  comingSoon={card.comingSoon}
-                  scale={s}
-                  onPress={() => openCategory(card.categoryId, card.title)}
-                />
-              ))}
-            </View>
-          )}
-
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              backgroundColor: colors.lightGrey,
-              borderRadius: px(16),
-              paddingVertical: px(14),
-              paddingHorizontal: px(10),
-            }}>
-            {SERVICES_TRUST_ITEMS.map(item => (
-              <View key={item.id} style={{ flex: 1, alignItems: 'center' }}>
-                <item.Icon size={px(18)} color={colors.primary} strokeWidth={2} />
-                <Text
-                  style={{
-                    marginTop: px(5),
-                    fontSize: px(11),
-                    fontWeight: typography.weights.bold,
-                    color: colors.dark,
-                    textAlign: 'center',
-                  }}>
-                  <Text style={{ color: colors.primary }}>{item.highlight}</Text>
-                  {'\n'}
-                  {item.label}
-                </Text>
-              </View>
-            ))}
-          </View>
-    </AppScreenLayout>
+          </Pressable>
+        ))}
+      </ScrollView>
+    </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  heroCard: {
-    backgroundColor: colors.background,
-    borderWidth: 0,
-    overflow: 'hidden',
-  },
-});

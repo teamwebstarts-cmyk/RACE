@@ -494,9 +494,9 @@ export function MainTabNavigator() {
         tabBar={props => <CustomTabBar {...props} />}
         screenOptions={{ headerShown: false }}>
         <Tab.Screen name="Home" component={HomeStackNavigator} />
-        <Tab.Screen name="Services" component={ServicesStackNavigator} />
-        <Tab.Screen name="Call" component={CallStackNavigator} />
         <Tab.Screen name="Bookings" component={BookingsStackNavigator} />
+        <Tab.Screen name="Call" component={CallStackNavigator} />
+        <Tab.Screen name="Services" component={ServicesStackNavigator} />
         <Tab.Screen name="Profile" component={ProfileStackNavigator} />
       </Tab.Navigator>
         </RoadsideBookingProvider>

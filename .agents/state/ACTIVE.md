@@ -30,13 +30,16 @@ Customer mobile onboarding UX refinement.
 - [x] System audit documented (`docs/SYSTEM_AUDIT_AND_TEST_CASES.md`)
 - [x] Gap analysis documented (`docs/RACE_REMAINING_WORK_AND_GAPS.md`) — 57→95/100 plan
 - [x] Mock testing mode + universal OTP + data seeders + playbook
-- [x] Customer app onboarding wizard (Steps 1–3) polished:
-  - Gentle card scroll upward when keyboard opens or fields are focused; returns to top on keyboard dismiss.
-  - "Other" vehicle type custom input with proper validation.
-  - Make and Model stacked vertically (top and bottom, 100% width).
-  - In-place custom make & model input fields when "Other" is selected (with "Choose from list" quick reset).
-  - Seamless persistence to `useVehicleStore` so vehicles are immediately available across the customer app.
-  - Removed top `AuthToast` card-shift banner in favor of clean field-level inline validation: red input border + small red error text directly below the missing field, clearing instantly upon user input.
+- [x] Complete pixel-perfect redesign of Customer mobile app core screens based on reference mockups:
+  - `HomeScreen.tsx`: Pure white background, sticky top bar with location pill dropdown, highlighted greeting ("Good afternoon, Welcome! 👋"), road scenery atmospheric background seamlessly melting into white, custom SVG curved 24/7 card with dipped notch starting right beside "24/7", borderless design (`stroke="none"`) with soft shadow, lower card position revealing yellow tow truck grill & wheels, single-line "Roadside Assistance" title, highlighted golden-gradient Request Help CTA, highlighted Our Services icons, and 2x2 Popular Services grid with single-line titles, bold prices, accurate background gradients, and mockup-accurate cropped assets (`popularTowingCardTruck`, `popularTyreCardGraphic`).
+  - `ServicesScreen.tsx`: Top header with highlighted 24px "Services" title and back button, wider cards (`paddingHorizontal: px(14)`), borderless design with soft shadows (`shadowColor: '#000', elevation: 3`), full-card background images (`serviceTowingCard`, `serviceDriverCard`, `serviceRoadsideCard`, `serviceMoreCard`), and horizontal LinearGradient overlays melting into the artwork with zero boxy frames.
+  - `TowingServiceScreen.tsx`: Highway tow truck photo banner, 3-stat quick trust bar (30 min arrival, Verified drivers, Safe & insured), 3 towing options with Book Now buttons, Why Choose Us grid, sticky dual action bar (Call Now & Book Towing).
+  - `DriverServiceScreen.tsx`: Photo banner with green "Drivers Available" badge, 4 driver options (Part-Time, Full-Time, Outstation, Night), Why Choose Us grid, sticky Call Now & Book Driver bar.
+  - `RoadsideAssistanceScreen.tsx`: Photo banner with "Available Now - 25 min" badge, 4 roadside options (Flat Tyre, Battery Jumpstart, Fuel Delivery, Minor Mechanical Fix), Why Choose Us grid, sticky Call Now & Book Service bar.
+  - `MoreServicesScreen.tsx`: Yellow hero banner with "Coming Soon" pill, 6 upcoming service cards with "Soon" status badges.
+  - `LocationSelectorSheet.tsx`: Top grab handle, back button, "Set your location", search pill, "or" divider, "Use my current location", "Select on map" divider, "Open Map Picker", and popular city chips.
+  - `LocationPickerMap.tsx`: Clean header, floating search bar pill on top, yellow pin with blue accuracy circle & dot, floating locate button, bottom sheet with address title & edit icon, and yellow "Use this location" button.
+  - `AppNavigator.tsx`: Reordered bottom tab bar (Home, Bookings, SOS, Services, Profile) matching design mockup.
 
 ## Active Work
 
