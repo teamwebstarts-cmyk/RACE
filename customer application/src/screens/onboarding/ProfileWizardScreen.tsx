@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Asset } from 'expo-asset';
 import {
+  Animated,
   BackHandler,
   Image,
   Keyboard,
@@ -126,6 +127,8 @@ export default function ProfileWizardScreen({ navigation }: Props) {
   const keyboardOpen = keyboardHeight > 0;
   const [, setDropdownOpen] = useState(false);
 
+  const cardShiftY = useRef(new Animated.Value(0)).current;
+
   const clearFieldError = useCallback((field: keyof typeof fieldErrors) => {
     setFieldErrors(prev => {
       if (!prev[field]) return prev;
@@ -135,28 +138,47 @@ export default function ProfileWizardScreen({ navigation }: Props) {
     });
   }, []);
 
-  const gentlyScrollUp = useCallback(() => {
-    scrollRef.current?.scrollTo({ y: Math.round(110 * scale), animated: true });
-  }, [scale]);
+  const handleInputFocus = useCallback(
+    (targetScrollY?: number) => {
+      Animated.timing(cardShiftY, {
+        toValue: -Math.round(110 * scale),
+        duration: Platform.OS === 'ios' ? 250 : 200,
+        useNativeDriver: true,
+      }).start();
+      if (typeof targetScrollY === 'number') {
+        setTimeout(() => {
+          scrollRef.current?.scrollTo({ y: targetScrollY, animated: true });
+        }, 100);
+      }
+    },
+    [cardShiftY, scale],
+  );
 
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
     const showSub = Keyboard.addListener(showEvent, event => {
-      setKeyboardHeight(event.endCoordinates.height);
-      setTimeout(() => {
-        gentlyScrollUp();
-      }, 50);
+      setKeyboardHeight(event.endCoordinates?.height || 280);
+      Animated.timing(cardShiftY, {
+        toValue: -Math.round(110 * scale),
+        duration: Platform.OS === 'ios' ? 250 : 200,
+        useNativeDriver: true,
+      }).start();
     });
     const hideSub = Keyboard.addListener(hideEvent, () => {
       setKeyboardHeight(0);
+      Animated.timing(cardShiftY, {
+        toValue: 0,
+        duration: 220,
+        useNativeDriver: true,
+      }).start();
       scrollRef.current?.scrollTo({ y: 0, animated: true });
     });
     return () => {
       showSub.remove();
       hideSub.remove();
     };
-  }, [gentlyScrollUp]);
+  }, [cardShiftY, scale]);
 
   useEffect(() => {
     if (step >= 3) {
@@ -164,13 +186,22 @@ export default function ProfileWizardScreen({ navigation }: Props) {
     }
   }, [step]);
 
-  const showStep = useCallback((next: SetupStep) => {
-    Keyboard.dismiss();
-    dismissOpenProfileDropdown();
-    setDropdownOpen(false);
-    setFieldErrors({});
-    setStep(next);
-  }, []);
+  const showStep = useCallback(
+    (next: SetupStep) => {
+      Keyboard.dismiss();
+      dismissOpenProfileDropdown();
+      setDropdownOpen(false);
+      setFieldErrors({});
+      Animated.timing(cardShiftY, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: true,
+      }).start();
+      scrollRef.current?.scrollTo({ y: 0, animated: false });
+      setStep(next);
+    },
+    [cardShiftY],
+  );
 
   const goBack = () => {
     if (step > 1) {
@@ -318,109 +349,110 @@ export default function ProfileWizardScreen({ navigation }: Props) {
             keyboardDismissMode="interactive"
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{
-              paddingBottom: Math.max(48 * scale, keyboardHeight > 0 ? (Platform.OS === 'ios' ? keyboardHeight : 160 * scale) : 24 * scale),
+              paddingBottom: Math.max(60 * scale, keyboardHeight > 0 ? (Platform.OS === 'ios' ? keyboardHeight : 180 * scale) : 40 * scale),
               overflow: 'visible',
             }}>
-            <View style={{ height: heroSlot, overflow: 'visible', zIndex: 1 }}>
-              <View
-                pointerEvents="none"
-                style={{
-                  position: 'absolute',
-                  left: -heroBleed,
-                  top: WIZARD_HERO_TOP * scale,
-                  width: heroWidth,
-                  height: heroHeight,
-                  zIndex: 0,
-                }}>
-                {step === 1 ? (
-                  <AboutYouHero width={heroWidth} height={heroHeight} />
-                ) : step === 2 ? (
-                  <EmergencyHero width={heroWidth} height={heroHeight} />
-                ) : (
-                  <VehicleHero width={heroWidth} height={heroHeight} />
-                )}
-              </View>
-              <View
-                style={{
-                  paddingHorizontal: 24 * scale,
-                  paddingTop: 12 * scale,
-                  backgroundColor: 'transparent',
-                  zIndex: 2,
-                }}>
-                <Text
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.78}
+            <Animated.View style={{ transform: [{ translateY: cardShiftY }] }}>
+              <View style={{ height: heroSlot, overflow: 'visible', zIndex: 1 }}>
+                <View
+                  pointerEvents="none"
                   style={{
-                    color: '#111318',
-                    fontSize: 28 * scale,
-                    lineHeight: 36 * scale,
-                    fontWeight: '800',
-                    letterSpacing: -0.7 * scale,
+                    position: 'absolute',
+                    left: -heroBleed,
+                    top: WIZARD_HERO_TOP * scale,
+                    width: heroWidth,
+                    height: heroHeight,
+                    zIndex: 0,
                   }}>
-                  {step === 1
-                    ? "Let's get to know you"
-                    : step === 2
-                      ? 'Add an emergency contact'
-                      : 'Set up your vehicle'}
-                </Text>
-                <Text
-                  numberOfLines={2}
+                  {step === 1 ? (
+                    <AboutYouHero width={heroWidth} height={heroHeight} />
+                  ) : step === 2 ? (
+                    <EmergencyHero width={heroWidth} height={heroHeight} />
+                  ) : (
+                    <VehicleHero width={heroWidth} height={heroHeight} />
+                  )}
+                </View>
+                <View
                   style={{
-                    marginTop: 6 * scale,
-                    color: COLORS.secondary,
-                    fontSize: 15 * scale,
-                    lineHeight: 22 * scale,
+                    paddingHorizontal: 24 * scale,
+                    paddingTop: 12 * scale,
+                    backgroundColor: 'transparent',
+                    zIndex: 2,
                   }}>
-                  {step === 1
-                    ? 'A few details help us personalize your RACE experience.'
-                    : step === 2
-                      ? "We'll use this only when you need help on the road."
-                      : 'Save your vehicle once and make future assistance faster.'}
-                </Text>
+                  <Text
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.78}
+                    style={{
+                      color: '#111318',
+                      fontSize: 28 * scale,
+                      lineHeight: 36 * scale,
+                      fontWeight: '800',
+                      letterSpacing: -0.7 * scale,
+                    }}>
+                    {step === 1
+                      ? "Let's get to know you"
+                      : step === 2
+                        ? 'Add an emergency contact'
+                        : 'Set up your vehicle'}
+                  </Text>
+                  <Text
+                    numberOfLines={2}
+                    style={{
+                      marginTop: 6 * scale,
+                      color: COLORS.secondary,
+                      fontSize: 15 * scale,
+                      lineHeight: 22 * scale,
+                    }}>
+                    {step === 1
+                      ? 'A few details help us personalize your RACE experience.'
+                      : step === 2
+                        ? "We'll use this only when you need help on the road."
+                        : 'Save your vehicle once and make future assistance faster.'}
+                  </Text>
+                </View>
               </View>
-            </View>
 
-            <View
-              style={{
-                marginHorizontal: 16 * scale,
-                marginTop: -(cardOverlap - WIZARD_CARD_GAP * scale),
-                padding: 18 * scale,
-                borderRadius: 20 * scale,
-                backgroundColor: '#FFFFFF',
-                borderWidth: 1,
-                borderColor: '#F2EEE6',
-                zIndex: 10,
-                elevation: 8,
-              }}>
-                {step === 1 ? (
-                  <>
-                    <ProfileField
-                      scale={scale}
-                      label="Full name"
-                      required
-                      icon="user"
-                      value={fullName}
-                      placeholder="Your full name"
-                      autoCapitalize="words"
-                      error={fieldErrors.fullName}
-                      onFocus={gentlyScrollUp}
-                      onChangeText={value => {
-                        setFullName(value);
-                        clearFieldError('fullName');
-                      }}
-                    />
-                    <ProfileField
-                      scale={scale}
-                      label="Email (optional)"
-                      icon="mail"
-                      value={email}
-                      placeholder="you@example.com"
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                      onFocus={gentlyScrollUp}
-                      onChangeText={setEmail}
-                    />
+              <View
+                style={{
+                  marginHorizontal: 16 * scale,
+                  marginTop: -(cardOverlap - WIZARD_CARD_GAP * scale),
+                  padding: 18 * scale,
+                  borderRadius: 20 * scale,
+                  backgroundColor: '#FFFFFF',
+                  borderWidth: 1,
+                  borderColor: '#F2EEE6',
+                  zIndex: 10,
+                  elevation: 8,
+                }}>
+                  {step === 1 ? (
+                    <>
+                      <ProfileField
+                        scale={scale}
+                        label="Full name"
+                        required
+                        icon="user"
+                        value={fullName}
+                        placeholder="Your full name"
+                        autoCapitalize="words"
+                        error={fieldErrors.fullName}
+                        onFocus={() => handleInputFocus()}
+                        onChangeText={value => {
+                          setFullName(value);
+                          clearFieldError('fullName');
+                        }}
+                      />
+                      <ProfileField
+                        scale={scale}
+                        label="Email (optional)"
+                        icon="mail"
+                        value={email}
+                        placeholder="you@example.com"
+                        keyboardType="email-address"
+                        autoCapitalize="none"
+                        onFocus={() => handleInputFocus()}
+                        onChangeText={setEmail}
+                      />
                     <InfoNote scale={scale} text="You can add these later in profile settings." />
                     <GoldCta scale={scale} label="Continue" onPress={continueFromAbout} />
                   </>
@@ -437,7 +469,7 @@ export default function ProfileWizardScreen({ navigation }: Props) {
                       placeholder="Contact person name"
                       autoCapitalize="words"
                       error={fieldErrors.emergencyName}
-                      onFocus={gentlyScrollUp}
+                      onFocus={() => handleInputFocus()}
                       onChangeText={value => {
                         setEmergencyName(value);
                         clearFieldError('emergencyName');
@@ -450,7 +482,7 @@ export default function ProfileWizardScreen({ navigation }: Props) {
                       value={emergencyMobile}
                       placeholder="98765 43210"
                       error={fieldErrors.emergencyMobile}
-                      onFocus={gentlyScrollUp}
+                      onFocus={() => handleInputFocus()}
                       onChangeText={value => {
                         setEmergencyMobile(value.replace(/[^\d\s]/g, ''));
                         clearFieldError('emergencyMobile');
@@ -483,7 +515,7 @@ export default function ProfileWizardScreen({ navigation }: Props) {
                       placeholder="OD 02 AB 1234"
                       autoCapitalize="characters"
                       error={fieldErrors.registration}
-                      onFocus={gentlyScrollUp}
+                      onFocus={() => handleInputFocus()}
                       onChangeText={value => {
                         setRegistration(value);
                         clearFieldError('registration');
@@ -535,7 +567,7 @@ export default function ProfileWizardScreen({ navigation }: Props) {
                               setCustomVehicleType(val);
                               clearFieldError('customVehicleType');
                             }}
-                            onFocus={gentlyScrollUp}
+                            onFocus={() => handleInputFocus()}
                             style={{
                               flex: 1,
                               marginLeft: 10 * scale,
@@ -622,7 +654,7 @@ export default function ProfileWizardScreen({ navigation }: Props) {
                                 setCustomMake(val);
                                 clearFieldError('customMake');
                               }}
-                              onFocus={gentlyScrollUp}
+                              onFocus={() => handleInputFocus()}
                               style={{
                                 flex: 1,
                                 marginLeft: 10 * scale,
@@ -734,7 +766,7 @@ export default function ProfileWizardScreen({ navigation }: Props) {
                                 setCustomModel(val);
                                 clearFieldError('customModel');
                               }}
-                              onFocus={gentlyScrollUp}
+                              onFocus={() => handleInputFocus(50 * scale)}
                               style={{
                                 flex: 1,
                                 marginLeft: 10 * scale,
@@ -789,7 +821,8 @@ export default function ProfileWizardScreen({ navigation }: Props) {
                     </Text>
                   </>
                 ) : null}
-            </View>
+              </View>
+            </Animated.View>
           </ScrollView>
         )}
       </View>
