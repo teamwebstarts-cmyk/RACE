@@ -149,9 +149,17 @@ export default function TowingServiceScreen({ navigation }: Props) {
             />
             <LinearGradient
               colors={heroCard.gradientColors}
-              locations={heroCard.gradientLocations}
+              locations={[0, 0.4, 0.56, 0.74]}
               start={{ x: 0, y: 0.5 }}
               end={{ x: 1, y: 0.5 }}
+              style={StyleSheet.absoluteFill}
+            />
+            {/* Vertical melt: dissolve the cropped top/bottom edges into the card surface */}
+            <LinearGradient
+              colors={['#FFFFFF', 'rgba(255,255,255,0)', 'rgba(255,255,255,0)', '#FFFFFF']}
+              locations={[0, 0.13, 0.7, 1]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
               style={StyleSheet.absoluteFill}
             />
             <View

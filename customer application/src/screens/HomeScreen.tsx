@@ -318,7 +318,7 @@ export default function HomeScreen({ navigation }: Props) {
               top: -px(56),
               left: -px(20),
               width: width,
-              height: px(360),
+              height: px(380),
               overflow: 'hidden',
             }}>
             <Image
@@ -326,15 +326,20 @@ export default function HomeScreen({ navigation }: Props) {
               style={{ width: '100%', height: '100%' }}
               resizeMode="cover"
             />
-            {/* Melted Gradient Overlay into White */}
+            {/* Melted Gradient Overlay into White (both top and bottom) */}
             <LinearGradient
               colors={[
-                'rgba(255, 255, 255, 0.95)',
-                'rgba(255, 255, 255, 0.70)',
-                'rgba(255, 255, 255, 0.20)',
+                'rgba(255, 255, 255, 0.96)',
+                'rgba(255, 255, 255, 0.75)',
+                'rgba(255, 255, 255, 0.25)',
                 'transparent',
+                'transparent',
+                'rgba(255, 255, 255, 0.35)',
+                'rgba(255, 255, 255, 0.78)',
+                'rgba(255, 255, 255, 0.96)',
+                '#FFFFFF',
               ]}
-              locations={[0, 0.20, 0.44, 0.72]}
+              locations={[0, 0.16, 0.34, 0.50, 0.66, 0.78, 0.88, 0.95, 1.0]}
               style={StyleSheet.absoluteFill}
             />
           </View>
@@ -404,9 +409,11 @@ export default function HomeScreen({ navigation }: Props) {
               <Defs>
                 <SvgLinearGradient id="cardBgGrad" x1="0%" y1="0%" x2="100%" y2="0%">
                   <Stop offset="0%" stopColor="#FFFFFF" stopOpacity="1" />
-                  <Stop offset="40%" stopColor="#FFFFFF" stopOpacity="1" />
-                  <Stop offset="68%" stopColor="#FFFFFF" stopOpacity="0.88" />
-                  <Stop offset="100%" stopColor="#FFFFFF" stopOpacity="0.75" />
+                  <Stop offset="30%" stopColor="#FFFFFF" stopOpacity="1" />
+                  <Stop offset="46%" stopColor="#FFFFFF" stopOpacity="0.96" />
+                  <Stop offset="62%" stopColor="#FFFFFF" stopOpacity="0.86" />
+                  <Stop offset="80%" stopColor="#FFFFFF" stopOpacity="0.68" />
+                  <Stop offset="100%" stopColor="#FFFFFF" stopOpacity="0.45" />
                 </SvgLinearGradient>
               </Defs>
               <Path d={cardPath} fill="url(#cardBgGrad)" stroke="none" />

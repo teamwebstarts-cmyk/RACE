@@ -10,10 +10,8 @@ import {
 } from 'react-native';
 import {
   Activity,
-  AlertCircle,
   ArrowLeft,
   Building2,
-  Car,
   FileCheck2,
   ShieldAlert,
   Sparkles,
@@ -22,9 +20,10 @@ import {
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { images } from '../assets';
+import { getServiceCategoryCard } from '../constants/serviceCategoryCards';
 import type { HomeStackParamList } from '../types/navigation';
 import { colors, shadows, typography } from '../theme';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const REF_W = 390;
 
@@ -73,6 +72,7 @@ export default function MoreServicesScreen({ navigation }: Props) {
   const { width } = useWindowDimensions();
   const s = width / REF_W;
   const px = (n: number) => Math.round(n * s);
+  const heroCard = getServiceCategoryCard('future');
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.pageBg }}>
@@ -116,62 +116,79 @@ export default function MoreServicesScreen({ navigation }: Props) {
           gap: px(12),
         }}
         showsVerticalScrollIndicator={false}>
-        {/* Hero Banner Card */}
+        {/* Hero Card — same card as the Services page */}
         <View
           style={[
-            shadows.card,
+            shadows.cardSoft,
             {
-              borderRadius: px(20),
-              backgroundColor: '#FEF7EC',
-              borderWidth: 1,
-              borderColor: '#FFE8BD',
-              padding: px(16),
-              height: px(132),
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              alignItems: 'center',
+              borderRadius: px(22),
+              overflow: 'hidden',
+              height: px(158),
+              backgroundColor: '#FFFFFF',
             },
           ]}>
-          <View style={{ flex: 1, paddingRight: px(10) }}>
-            <Text
-              style={{
-                fontSize: px(20),
-                fontWeight: typography.weights.extrabold,
-                color: colors.dark,
-                marginBottom: px(4),
-              }}>
-              More Services
-            </Text>
-            <Text
-              style={{
-                fontSize: px(13),
-                color: colors.grey,
-                lineHeight: px(18),
-              }}>
-              Exciting new services{'\n'}coming soon!
-            </Text>
-          </View>
+          <Image
+            source={heroCard.image}
+            style={StyleSheet.absoluteFill}
+            resizeMode="cover"
+          />
+          <LinearGradient
+            colors={heroCard.gradientColors}
+            locations={[0, 0.4, 0.56, 0.74]}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={StyleSheet.absoluteFill}
+          />
+          {/* Vertical melt: dissolve the cropped top/bottom edges into the card surface */}
+          <LinearGradient
+            colors={['#FFFFFF', 'rgba(255,255,255,0)', 'rgba(255,255,255,0)', '#FFFFFF']}
+            locations={[0, 0.13, 0.7, 1]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <View
+            style={{
+              flex: 1,
+              paddingHorizontal: px(18),
+              paddingVertical: px(16),
+              justifyContent: 'space-between',
+              maxWidth: '72%',
+            }}>
+            <View>
+              <Text
+                style={{
+                  fontSize: px(20),
+                  fontWeight: typography.weights.extrabold,
+                  color: '#111827',
+                  marginBottom: px(4),
+                  letterSpacing: -0.3,
+                }}>
+                {heroCard.title}
+              </Text>
+              <Text
+                style={{
+                  fontSize: px(13),
+                  color: heroCard.subtitleColor,
+                  fontWeight: '600',
+                  lineHeight: px(18),
+                }}>
+                {heroCard.subtitle}
+              </Text>
+            </View>
 
-          <View style={{ position: 'relative', width: px(110), height: px(90), alignItems: 'center', justifyContent: 'center' }}>
-            <Image
-              source={images.moreServicesBanner}
-              style={{ width: px(105), height: px(82) }}
-              resizeMode="contain"
-            />
-            {/* Pill on car */}
+            {/* Coming Soon Pill */}
             <View
               style={{
-                position: 'absolute',
-                bottom: 0,
-                right: 0,
+                alignSelf: 'flex-start',
                 backgroundColor: colors.primary,
-                paddingHorizontal: px(8),
-                paddingVertical: px(3),
-                borderRadius: px(8),
+                paddingHorizontal: px(10),
+                paddingVertical: px(4),
+                borderRadius: px(12),
               }}>
               <Text
                 style={{
-                  fontSize: px(9),
+                  fontSize: px(11),
                   fontWeight: typography.weights.bold,
                   color: colors.dark,
                 }}>
@@ -186,7 +203,7 @@ export default function MoreServicesScreen({ navigation }: Props) {
           <View
             key={item.id}
             style={[
-              shadows.card,
+              shadows.cardSoft,
               {
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -207,7 +224,7 @@ export default function MoreServicesScreen({ navigation }: Props) {
                 alignItems: 'center',
                 justifyContent: 'center',
               }}>
-              <item.Icon size={px(20)} color={colors.primary} strokeWidth={2.2} />
+              <item.Icon size={px(20)} color={colors.primary} strokeWidth={2.6} />
             </View>
 
             <View style={{ flex: 1 }}>
