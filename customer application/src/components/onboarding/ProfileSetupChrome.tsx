@@ -130,6 +130,7 @@ export function ProfileField({
   keyboardType,
   autoCapitalize,
   onFocus,
+  error,
 }: {
   scale: number;
   label: string;
@@ -141,6 +142,7 @@ export function ProfileField({
   keyboardType?: 'default' | 'email-address' | 'phone-pad' | 'number-pad';
   autoCapitalize?: 'none' | 'words' | 'characters';
   onFocus?: () => void;
+  error?: string;
 }) {
   const Icon = ICONS[icon];
   return (
@@ -163,7 +165,7 @@ export function ProfileField({
           alignItems: 'center',
           paddingHorizontal: 14 * scale,
           borderWidth: 1,
-          borderColor: COLORS.border,
+          borderColor: error ? '#E23B3B' : COLORS.border,
           borderRadius: 12 * scale,
           backgroundColor: '#FFFFFF',
         }}>
@@ -186,6 +188,18 @@ export function ProfileField({
           }}
         />
       </View>
+      {error ? (
+        <Text
+          style={{
+            marginTop: 4 * scale,
+            color: '#E23B3B',
+            fontSize: 12 * scale,
+            lineHeight: 16 * scale,
+            fontWeight: '500',
+          }}>
+          {error}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -198,6 +212,7 @@ export function ProfileMobileField({
   placeholder,
   onChangeText,
   onFocus,
+  error,
 }: {
   scale: number;
   label: string;
@@ -206,6 +221,7 @@ export function ProfileMobileField({
   placeholder: string;
   onChangeText: (value: string) => void;
   onFocus?: () => void;
+  error?: string;
 }) {
   return (
     <View style={{ marginBottom: 16 * scale }}>
@@ -226,7 +242,7 @@ export function ProfileMobileField({
           flexDirection: 'row',
           alignItems: 'center',
           borderWidth: 1,
-          borderColor: COLORS.border,
+          borderColor: error ? '#E23B3B' : COLORS.border,
           borderRadius: 12 * scale,
           backgroundColor: '#FFFFFF',
           paddingLeft: 12 * scale,
@@ -260,6 +276,18 @@ export function ProfileMobileField({
           }}
         />
       </View>
+      {error ? (
+        <Text
+          style={{
+            marginTop: 4 * scale,
+            color: '#E23B3B',
+            fontSize: 12 * scale,
+            lineHeight: 16 * scale,
+            fontWeight: '500',
+          }}>
+          {error}
+        </Text>
+      ) : null}
     </View>
   );
 }

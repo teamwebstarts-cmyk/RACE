@@ -1,13 +1,17 @@
 # RACE — Active State
 
-> **Updated:** 2026-10-02
+> **Updated:** 2026-10-05
 > **Read this first in every new session.**
 
 ---
 
 ## Current Objective
 
-Context engineering infrastructure — adding `.agents/` layered context architecture (this session).
+Customer mobile app polish — Onboarding wizard "Set up your vehicle" step improvements:
+1. Smooth upward keyboard scrolling (`~110px`) aligned above keyboard without hiding card fields.
+2. Custom vehicle type text input when "Other" is selected in `VehicleTypeChips`.
+3. Stacked Make and Model fields (top and bottom, 100% width).
+4. In-place transformation of Make & Model dropdowns into custom text inputs when "Other" is picked with "Choose from list" reset.
 
 ## Active Branch
 
@@ -16,7 +20,7 @@ Previous cleanup branch `v2.0.1-cleanup` was merged/superseded.
 
 ## Phase
 
-Context infrastructure setup — creating `.agents/` layout, rules, skills, state files, ADRs.
+Customer mobile onboarding UX refinement.
 
 ## Completed Work
 
@@ -26,7 +30,13 @@ Context infrastructure setup — creating `.agents/` layout, rules, skills, stat
 - [x] System audit documented (`docs/SYSTEM_AUDIT_AND_TEST_CASES.md`)
 - [x] Gap analysis documented (`docs/RACE_REMAINING_WORK_AND_GAPS.md`) — 57→95/100 plan
 - [x] Mock testing mode + universal OTP + data seeders + playbook
-- [x] `.agents/` context engineering infrastructure (this session)
+- [x] Customer app onboarding wizard (Steps 1–3) polished:
+  - Gentle card scroll upward when keyboard opens or fields are focused; returns to top on keyboard dismiss.
+  - "Other" vehicle type custom input with proper validation.
+  - Make and Model stacked vertically (top and bottom, 100% width).
+  - In-place custom make & model input fields when "Other" is selected (with "Choose from list" quick reset).
+  - Seamless persistence to `useVehicleStore` so vehicles are immediately available across the customer app.
+  - Removed top `AuthToast` card-shift banner in favor of clean field-level inline validation: red input border + small red error text directly below the missing field, clearing instantly upon user input.
 
 ## Active Work
 

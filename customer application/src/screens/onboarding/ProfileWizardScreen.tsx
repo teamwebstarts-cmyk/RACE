@@ -5,10 +5,12 @@ import {
   Image,
   Keyboard,
   Platform,
+  Pressable,
   ScrollView,
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   View,
   useWindowDimensions,
 } from 'react-native';
@@ -16,7 +18,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import Svg, { Circle, Path } from 'react-native-svg';
-import { MapPin, ShieldCheck, Zap } from 'lucide-react-native';
+import { IdCard, MapPin, ShieldCheck, Zap } from 'lucide-react-native';
 
 import {
   AUTH_COLORS as COLORS,
@@ -52,6 +54,7 @@ import { completeOnboarding } from '../../redux/auth/authSlice';
 import { finishVehicleOnboarding } from '../../redux/onboarding/onboardingSlice';
 import { markCustomerOnboardingComplete } from '../../store/customerOnboarding';
 import { useAuthStore } from '../../store/authStore';
+import { useVehicleStore } from '../../store/vehicleStore';
 import type { AuthStackParamList } from '../../types/navigation';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'ProfileWizard'>;
@@ -92,7 +95,15 @@ export default function ProfileWizardScreen({ navigation }: Props) {
   const scale = Math.min(screenWidth / AUTH_DESIGN_WIDTH, innerHeight / AUTH_DESIGN_HEIGHT);
 
   const [step, setStep] = useState<SetupStep>(1);
-  const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<{
+    fullName?: string;
+    emergencyName?: string;
+    emergencyMobile?: string;
+    registration?: string;
+    customVehicleType?: string;
+    customMake?: string;
+    customModel?: string;
+  }>({});
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [emergencyName, setEmergencyName] = useState('');
@@ -100,6 +111,7 @@ export default function ProfileWizardScreen({ navigation }: Props) {
   const [relationship, setRelationship] = useState('Parent');
   const [registration, setRegistration] = useState('');
   const [vehicleType, setVehicleType] = useState<(typeof VEHICLE_TYPES)[number]>('car');
+  const [customVehicleType, setCustomVehicleType] = useState('');
   const [make, setMake] = useState('Maruti Suzuki');
   const [model, setModel] = useState('Swift');
   const [customMake, setCustomMake] = useState('');
@@ -114,21 +126,37 @@ export default function ProfileWizardScreen({ navigation }: Props) {
   const keyboardOpen = keyboardHeight > 0;
   const [, setDropdownOpen] = useState(false);
 
+  const clearFieldError = useCallback((field: keyof typeof fieldErrors) => {
+    setFieldErrors(prev => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  }, []);
+
+  const gentlyScrollUp = useCallback(() => {
+    scrollRef.current?.scrollTo({ y: Math.round(110 * scale), animated: true });
+  }, [scale]);
+
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
     const showSub = Keyboard.addListener(showEvent, event => {
       setKeyboardHeight(event.endCoordinates.height);
-      requestAnimationFrame(() => {
-        scrollRef.current?.scrollTo({ y: 0, animated: true });
-      });
+      setTimeout(() => {
+        gentlyScrollUp();
+      }, 50);
     });
-    const hideSub = Keyboard.addListener(hideEvent, () => setKeyboardHeight(0));
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+    });
     return () => {
       showSub.remove();
       hideSub.remove();
     };
-  }, []);
+  }, [gentlyScrollUp]);
 
   useEffect(() => {
     if (step >= 3) {
@@ -136,17 +164,11 @@ export default function ProfileWizardScreen({ navigation }: Props) {
     }
   }, [step]);
 
-  const revealFocusedField = useCallback(() => {
-    setTimeout(() => {
-      scrollRef.current?.scrollToEnd({ animated: true });
-    }, 220);
-  }, []);
-
   const showStep = useCallback((next: SetupStep) => {
     Keyboard.dismiss();
     dismissOpenProfileDropdown();
     setDropdownOpen(false);
-    setError('');
+    setFieldErrors({});
     setStep(next);
   }, []);
 
@@ -177,29 +199,76 @@ export default function ProfileWizardScreen({ navigation }: Props) {
   );
 
   const continueFromAbout = () => {
-    if (!UI_PREVIEW_AUTH_FLOW && !fullName.trim()) {
-      setError('Enter your full name to continue.');
+    if (!fullName.trim()) {
+      setFieldErrors({ fullName: 'Enter your full name to continue' });
       return;
     }
+    setFieldErrors({});
     showStep(2);
   };
 
   const continueFromEmergency = () => {
-    if (!UI_PREVIEW_AUTH_FLOW) {
-      const digits = emergencyMobile.replace(/\D/g, '');
-      if (!emergencyName.trim() || !/^[6-9]\d{9}$/.test(digits)) {
-        setError('Enter the contact name and a 10-digit Indian mobile.');
-        return;
-      }
+    const nextErrors: typeof fieldErrors = {};
+    if (!emergencyName.trim()) {
+      nextErrors.emergencyName = 'Enter contact person name';
     }
+    const digits = emergencyMobile.replace(/\D/g, '');
+    if (!/^[6-9]\d{9}$/.test(digits)) {
+      nextErrors.emergencyMobile = 'Enter a valid 10-digit Indian mobile';
+    }
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors);
+      return;
+    }
+    setFieldErrors({});
     showStep(3);
   };
 
   const saveVehicle = () => {
-    if (!UI_PREVIEW_AUTH_FLOW && !registration.trim()) {
-      setError('Enter the vehicle registration number.');
+    const nextErrors: typeof fieldErrors = {};
+    if (!registration.trim()) {
+      nextErrors.registration = 'Enter the vehicle registration number';
+    }
+    if (vehicleType === 'other' && !customVehicleType.trim()) {
+      nextErrors.customVehicleType = 'Enter your custom vehicle type';
+    }
+    if (make === CUSTOM_OPTION && !customMake.trim()) {
+      nextErrors.customMake = 'Enter the vehicle make (brand)';
+    }
+    if ((make === CUSTOM_OPTION || model === CUSTOM_OPTION) && !customModel.trim()) {
+      nextErrors.customModel = 'Enter the vehicle model';
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors);
       return;
     }
+    setFieldErrors({});
+
+    const finalType = vehicleType === 'other' ? customVehicleType.trim() : vehicleType;
+    const finalMake = make === CUSTOM_OPTION ? customMake.trim() : make;
+    const finalModel = (make === CUSTOM_OPTION || model === CUSTOM_OPTION) ? customModel.trim() : model;
+
+    const newVehId = `veh_${Date.now()}`;
+    const newVeh = {
+      id: newVehId,
+      customerId: user?.id || 'cust_sample_1',
+      vehicleType: (finalType.toLowerCase() === 'bike' ? 'bike' : finalType.toLowerCase() === 'truck' ? 'truck' : 'car') as any,
+      vehicleSubtype: finalType,
+      vehicleNumber: registration.trim().toUpperCase(),
+      brand: finalMake,
+      model: finalModel,
+      color: 'White',
+      fuelType: 'petrol' as const,
+      qrCode: `https://raceservice.in/qr/${newVehId}`,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    useVehicleStore.setState(state => ({
+      vehicles: [newVeh, ...(state.vehicles || []).filter(v => v.id !== newVeh.id)],
+      selectedVehicle: newVeh,
+    }));
+
     showStep(4);
   };
 
@@ -249,29 +318,28 @@ export default function ProfileWizardScreen({ navigation }: Props) {
             keyboardDismissMode="interactive"
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{
-              paddingBottom: 28 * scale + (keyboardOpen ? keyboardHeight : 0),
+              paddingBottom: Math.max(48 * scale, keyboardHeight > 0 ? (Platform.OS === 'ios' ? keyboardHeight : 160 * scale) : 24 * scale),
               overflow: 'visible',
             }}>
-            {keyboardOpen ? null : (
             <View style={{ height: heroSlot, overflow: 'visible', zIndex: 1 }}>
-                <View
-                  pointerEvents="none"
-                  style={{
-                    position: 'absolute',
-                    left: -heroBleed,
-                    top: WIZARD_HERO_TOP * scale,
-                    width: heroWidth,
-                    height: heroHeight,
-                    zIndex: 0,
-                  }}>
-                  {step === 1 ? (
-                    <AboutYouHero width={heroWidth} height={heroHeight} />
-                  ) : step === 2 ? (
-                    <EmergencyHero width={heroWidth} height={heroHeight} />
-                  ) : (
-                    <VehicleHero width={heroWidth} height={heroHeight} />
-                  )}
-                </View>
+              <View
+                pointerEvents="none"
+                style={{
+                  position: 'absolute',
+                  left: -heroBleed,
+                  top: WIZARD_HERO_TOP * scale,
+                  width: heroWidth,
+                  height: heroHeight,
+                  zIndex: 0,
+                }}>
+                {step === 1 ? (
+                  <AboutYouHero width={heroWidth} height={heroHeight} />
+                ) : step === 2 ? (
+                  <EmergencyHero width={heroWidth} height={heroHeight} />
+                ) : (
+                  <VehicleHero width={heroWidth} height={heroHeight} />
+                )}
+              </View>
               <View
                 style={{
                   paddingHorizontal: 24 * scale,
@@ -296,30 +364,27 @@ export default function ProfileWizardScreen({ navigation }: Props) {
                       ? 'Add an emergency contact'
                       : 'Set up your vehicle'}
                 </Text>
-                  <Text
-                    numberOfLines={2}
-                    style={{
-                      marginTop: 6 * scale,
-                      color: COLORS.secondary,
-                      fontSize: 15 * scale,
-                      lineHeight: 22 * scale,
-                    }}>
-                    {step === 1
-                      ? 'A few details help us personalize your RACE experience.'
-                      : step === 2
-                        ? "We'll use this only when you need help on the road."
-                        : 'Save your vehicle once and make future assistance faster.'}
-                  </Text>
+                <Text
+                  numberOfLines={2}
+                  style={{
+                    marginTop: 6 * scale,
+                    color: COLORS.secondary,
+                    fontSize: 15 * scale,
+                    lineHeight: 22 * scale,
+                  }}>
+                  {step === 1
+                    ? 'A few details help us personalize your RACE experience.'
+                    : step === 2
+                      ? "We'll use this only when you need help on the road."
+                      : 'Save your vehicle once and make future assistance faster.'}
+                </Text>
               </View>
             </View>
-            )}
 
             <View
               style={{
                 marginHorizontal: 16 * scale,
-                marginTop: keyboardOpen
-                  ? 8 * scale
-                  : -(cardOverlap - WIZARD_CARD_GAP * scale),
+                marginTop: -(cardOverlap - WIZARD_CARD_GAP * scale),
                 padding: 18 * scale,
                 borderRadius: 20 * scale,
                 backgroundColor: '#FFFFFF',
@@ -328,33 +393,32 @@ export default function ProfileWizardScreen({ navigation }: Props) {
                 zIndex: 10,
                 elevation: 8,
               }}>
-                {error ? <AuthToast message={error} type="error" /> : null}
-
                 {step === 1 ? (
                   <>
                     <ProfileField
                       scale={scale}
-                      onFocus={revealFocusedField}
                       label="Full name"
                       required
                       icon="user"
                       value={fullName}
                       placeholder="Your full name"
                       autoCapitalize="words"
+                      error={fieldErrors.fullName}
+                      onFocus={gentlyScrollUp}
                       onChangeText={value => {
                         setFullName(value);
-                        setError('');
+                        clearFieldError('fullName');
                       }}
                     />
                     <ProfileField
                       scale={scale}
-                      onFocus={revealFocusedField}
                       label="Email (optional)"
                       icon="mail"
                       value={email}
                       placeholder="you@example.com"
                       keyboardType="email-address"
                       autoCapitalize="none"
+                      onFocus={gentlyScrollUp}
                       onChangeText={setEmail}
                     />
                     <InfoNote scale={scale} text="You can add these later in profile settings." />
@@ -366,28 +430,30 @@ export default function ProfileWizardScreen({ navigation }: Props) {
                   <>
                     <ProfileField
                       scale={scale}
-                      onFocus={revealFocusedField}
                       label="Contact name"
                       required
                       icon="user"
                       value={emergencyName}
                       placeholder="Contact person name"
                       autoCapitalize="words"
+                      error={fieldErrors.emergencyName}
+                      onFocus={gentlyScrollUp}
                       onChangeText={value => {
                         setEmergencyName(value);
-                        setError('');
+                        clearFieldError('emergencyName');
                       }}
                     />
                     <ProfileMobileField
                       scale={scale}
-                      onFocus={revealFocusedField}
                       label="Mobile number"
                       required
                       value={emergencyMobile}
                       placeholder="98765 43210"
+                      error={fieldErrors.emergencyMobile}
+                      onFocus={gentlyScrollUp}
                       onChangeText={value => {
                         setEmergencyMobile(value.replace(/[^\d\s]/g, ''));
-                        setError('');
+                        clearFieldError('emergencyMobile');
                       }}
                     />
                     <ProfileDropdown
@@ -410,21 +476,176 @@ export default function ProfileWizardScreen({ navigation }: Props) {
                   <>
                     <ProfileField
                       scale={scale}
-                      onFocus={revealFocusedField}
                       label="Registration number"
                       required
                       icon="plate"
                       value={registration}
                       placeholder="OD 02 AB 1234"
                       autoCapitalize="characters"
+                      error={fieldErrors.registration}
+                      onFocus={gentlyScrollUp}
                       onChangeText={value => {
                         setRegistration(value);
-                        setError('');
+                        clearFieldError('registration');
                       }}
                     />
-                    <VehicleTypeChips scale={scale} value={vehicleType} onChange={value => setVehicleType(value as (typeof VEHICLE_TYPES)[number])} />
-                    <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 * scale, zIndex: 12 }}>
-                      <View style={{ flex: 1 }}>
+                    <VehicleTypeChips
+                      scale={scale}
+                      value={vehicleType}
+                      onChange={value => {
+                        setVehicleType(value as (typeof VEHICLE_TYPES)[number]);
+                        if (value !== 'other') {
+                          setCustomVehicleType('');
+                          clearFieldError('customVehicleType');
+                        }
+                      }}
+                    />
+
+                    {vehicleType === 'other' ? (
+                      <View style={{ marginBottom: 16 * scale }}>
+                        <Text
+                          style={{
+                            marginBottom: 6 * scale,
+                            color: '#24252B',
+                            fontSize: 14 * scale,
+                            lineHeight: 20 * scale,
+                            fontWeight: '600',
+                          }}>
+                          Custom vehicle type <Text style={{ color: '#E23B3B' }}>*</Text>
+                        </Text>
+                        <View
+                          style={{
+                            height: 50 * scale,
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            paddingHorizontal: 14 * scale,
+                            borderWidth: 1,
+                            borderColor: fieldErrors.customVehicleType ? '#E23B3B' : COLORS.orange,
+                            borderRadius: 12 * scale,
+                            backgroundColor: '#FFFFFF',
+                          }}>
+                          <IdCard size={18 * scale} color="#8A8B94" strokeWidth={1.9} />
+                          <TextInput
+                            value={customVehicleType}
+                            placeholder="e.g. Auto Rickshaw, Tractor, Bus"
+                            placeholderTextColor="#B0B1B8"
+                            autoCapitalize="words"
+                            autoCorrect={false}
+                            onChangeText={val => {
+                              setCustomVehicleType(val);
+                              clearFieldError('customVehicleType');
+                            }}
+                            onFocus={gentlyScrollUp}
+                            style={{
+                              flex: 1,
+                              marginLeft: 10 * scale,
+                              fontSize: 15 * scale,
+                              color: COLORS.ink,
+                              paddingVertical: 0,
+                            }}
+                          />
+                        </View>
+                        {fieldErrors.customVehicleType ? (
+                          <Text
+                            style={{
+                              marginTop: 4 * scale,
+                              color: '#E23B3B',
+                              fontSize: 12 * scale,
+                              lineHeight: 16 * scale,
+                              fontWeight: '500',
+                            }}>
+                            {fieldErrors.customVehicleType}
+                          </Text>
+                        ) : null}
+                      </View>
+                    ) : null}
+
+                    {/* Make Field (top, full width, with in-place custom input if 'Other' selected) */}
+                    <View style={{ width: '100%', zIndex: 20 }}>
+                      {make === CUSTOM_OPTION ? (
+                        <View style={{ marginBottom: 16 * scale }}>
+                          <View
+                            style={{
+                              flexDirection: 'row',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              marginBottom: 6 * scale,
+                            }}>
+                            <Text
+                              style={{
+                                color: '#24252B',
+                                fontSize: 14 * scale,
+                                lineHeight: 20 * scale,
+                                fontWeight: '600',
+                              }}>
+                              Make <Text style={{ color: '#E23B3B' }}>*</Text>
+                            </Text>
+                            <Pressable
+                              hitSlop={8}
+                              onPress={() => {
+                                setMake('Maruti Suzuki');
+                                setModel(MODELS_BY_MAKE['Maruti Suzuki'][0]);
+                                setCustomMake('');
+                                setCustomModel('');
+                                clearFieldError('customMake');
+                                clearFieldError('customModel');
+                              }}>
+                              <Text
+                                style={{
+                                  color: COLORS.orange,
+                                  fontSize: 13 * scale,
+                                  fontWeight: '700',
+                                }}>
+                                Choose from list
+                              </Text>
+                            </Pressable>
+                          </View>
+                          <View
+                            style={{
+                              height: 50 * scale,
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              paddingHorizontal: 14 * scale,
+                              borderWidth: 1,
+                              borderColor: fieldErrors.customMake ? '#E23B3B' : COLORS.orange,
+                              borderRadius: 12 * scale,
+                              backgroundColor: '#FFFFFF',
+                            }}>
+                            <IdCard size={18 * scale} color="#8A8B94" strokeWidth={1.9} />
+                            <TextInput
+                              value={customMake}
+                              placeholder="Type vehicle make (brand)"
+                              placeholderTextColor="#B0B1B8"
+                              autoCapitalize="words"
+                              autoCorrect={false}
+                              onChangeText={val => {
+                                setCustomMake(val);
+                                clearFieldError('customMake');
+                              }}
+                              onFocus={gentlyScrollUp}
+                              style={{
+                                flex: 1,
+                                marginLeft: 10 * scale,
+                                fontSize: 15 * scale,
+                                color: COLORS.ink,
+                                paddingVertical: 0,
+                              }}
+                            />
+                          </View>
+                          {fieldErrors.customMake ? (
+                            <Text
+                              style={{
+                                marginTop: 4 * scale,
+                                color: '#E23B3B',
+                                fontSize: 12 * scale,
+                                lineHeight: 16 * scale,
+                                fontWeight: '500',
+                              }}>
+                              {fieldErrors.customMake}
+                            </Text>
+                          ) : null}
+                        </View>
+                      ) : (
                         <ProfileDropdown
                           scale={scale}
                           label="Make"
@@ -434,53 +655,127 @@ export default function ProfileWizardScreen({ navigation }: Props) {
                           onOpenChange={setDropdownOpen}
                           onSelect={value => {
                             setMake(value);
-                            setModel(MODELS_BY_MAKE[value]?.[0] ?? CUSTOM_OPTION);
-                            setCustomMake('');
-                            setCustomModel('');
+                            if (value === CUSTOM_OPTION) {
+                              setCustomMake('');
+                              setModel(CUSTOM_OPTION);
+                              setCustomModel('');
+                            } else {
+                              setModel(MODELS_BY_MAKE[value]?.[0] ?? CUSTOM_OPTION);
+                              setCustomMake('');
+                              setCustomModel('');
+                            }
+                            clearFieldError('customMake');
+                            clearFieldError('customModel');
                           }}
                         />
-                      </View>
-                      {make !== CUSTOM_OPTION ? (
-                        <View style={{ flex: 1 }}>
-                          <ProfileDropdown
-                            scale={scale}
-                            label="Model"
-                            value={model}
-                            placeholder="Swift"
-                            options={MODELS_BY_MAKE[make] ?? [CUSTOM_OPTION]}
-                            onOpenChange={setDropdownOpen}
-                            onSelect={value => {
-                              setModel(value);
-                              setCustomModel('');
-                            }}
-                          />
-                        </View>
-                      ) : null}
+                      )}
                     </View>
-                    {make === CUSTOM_OPTION ? (
-                      <ProfileField
-                        scale={scale}
-                        onFocus={revealFocusedField}
-                        label="Custom make"
-                        icon="plate"
-                        value={customMake}
-                        placeholder="Brand name"
-                        autoCapitalize="words"
-                        onChangeText={setCustomMake}
-                      />
-                    ) : null}
-                    {make === CUSTOM_OPTION || model === CUSTOM_OPTION ? (
-                      <ProfileField
-                        scale={scale}
-                        onFocus={revealFocusedField}
-                        label="Custom model"
-                        icon="plate"
-                        value={customModel}
-                        placeholder="Model name"
-                        autoCapitalize="words"
-                        onChangeText={setCustomModel}
-                      />
-                    ) : null}
+
+                    {/* Model Field (bottom, full width, with in-place custom input if 'Other' selected) */}
+                    <View style={{ width: '100%', zIndex: 10 }}>
+                      {make === CUSTOM_OPTION || model === CUSTOM_OPTION ? (
+                        <View style={{ marginBottom: 16 * scale }}>
+                          <View
+                            style={{
+                              flexDirection: 'row',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              marginBottom: 6 * scale,
+                            }}>
+                            <Text
+                              style={{
+                                color: '#24252B',
+                                fontSize: 14 * scale,
+                                lineHeight: 20 * scale,
+                                fontWeight: '600',
+                              }}>
+                              Model <Text style={{ color: '#E23B3B' }}>*</Text>
+                            </Text>
+                            {make !== CUSTOM_OPTION ? (
+                              <Pressable
+                                hitSlop={8}
+                                onPress={() => {
+                                  setModel(MODELS_BY_MAKE[make]?.[0] ?? 'Swift');
+                                  setCustomModel('');
+                                  clearFieldError('customModel');
+                                }}>
+                                <Text
+                                  style={{
+                                    color: COLORS.orange,
+                                    fontSize: 13 * scale,
+                                    fontWeight: '700',
+                                  }}>
+                                  Choose from list
+                                </Text>
+                              </Pressable>
+                            ) : null}
+                          </View>
+                          <View
+                            style={{
+                              height: 50 * scale,
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              paddingHorizontal: 14 * scale,
+                              borderWidth: 1,
+                              borderColor: fieldErrors.customModel ? '#E23B3B' : COLORS.orange,
+                              borderRadius: 12 * scale,
+                              backgroundColor: '#FFFFFF',
+                            }}>
+                            <IdCard size={18 * scale} color="#8A8B94" strokeWidth={1.9} />
+                            <TextInput
+                              value={customModel}
+                              placeholder={
+                                make === CUSTOM_OPTION ? 'Type vehicle model' : `Type ${make} model`
+                              }
+                              placeholderTextColor="#B0B1B8"
+                              autoCapitalize="words"
+                              autoCorrect={false}
+                              onChangeText={val => {
+                                setCustomModel(val);
+                                clearFieldError('customModel');
+                              }}
+                              onFocus={gentlyScrollUp}
+                              style={{
+                                flex: 1,
+                                marginLeft: 10 * scale,
+                                fontSize: 15 * scale,
+                                color: COLORS.ink,
+                                paddingVertical: 0,
+                              }}
+                            />
+                          </View>
+                          {fieldErrors.customModel ? (
+                            <Text
+                              style={{
+                                marginTop: 4 * scale,
+                                color: '#E23B3B',
+                                fontSize: 12 * scale,
+                                lineHeight: 16 * scale,
+                                fontWeight: '500',
+                              }}>
+                              {fieldErrors.customModel}
+                            </Text>
+                          ) : null}
+                        </View>
+                      ) : (
+                        <ProfileDropdown
+                          scale={scale}
+                          label="Model"
+                          value={model}
+                          placeholder="Swift"
+                          options={MODELS_BY_MAKE[make] ?? [CUSTOM_OPTION]}
+                          onOpenChange={setDropdownOpen}
+                          onSelect={value => {
+                            setModel(value);
+                            if (value === CUSTOM_OPTION) {
+                              setCustomModel('');
+                            }
+                            clearFieldError('customModel');
+                          }}
+                        />
+                      )}
+                    </View>
+
                     <GoldCta scale={scale} label="Save vehicle" onPress={saveVehicle} />
                     <Text
                       numberOfLines={1}
