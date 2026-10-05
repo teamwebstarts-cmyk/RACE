@@ -64,6 +64,7 @@ export default function HomeScreen({ navigation }: Props) {
 
   const { services, fetchServices, fetchBrand, brand: apiBrand, isLoading, error } =
     useCatalogStore();
+  const safeServices = useMemo(() => (Array.isArray(services) ? services : []), [services]);
   const profile = useProfileStore(state => state.profile);
   const authUser = useAuthStore(state => state.user);
 
@@ -79,28 +80,30 @@ export default function HomeScreen({ navigation }: Props) {
   }, [hasSelectedLocation, isLocationHydrated]);
 
   const quickItems = useMemo(() => {
-    return services.slice(0, 4).map(category => ({
+    return safeServices.slice(0, 4).map(category => ({
       id: category.id,
       label: category.title,
       categoryId: category.id,
       categoryTitle: category.title,
       Icon: getServiceCategoryIcon(category.id),
     }));
-  }, [services]);
+  }, [safeServices]);
 
   const popularItems = useMemo(() => {
-    return services.flatMap(category =>
-      category.services.map(service => ({
-        id: service.id,
-        title: service.label,
-        categoryId: category.id,
-        categoryTitle: category.title,
-        image:
-          CATEGORY_HERO_IMAGES[category.id as keyof typeof CATEGORY_HERO_IMAGES] ??
-          images.homePopularTowing,
-      })),
-    ).slice(0, 6);
-  }, [services]);
+    return safeServices
+      .flatMap(category =>
+        (category?.services ?? []).map(service => ({
+          id: service.id,
+          title: service.label,
+          categoryId: category.id,
+          categoryTitle: category.title,
+          image:
+            CATEGORY_HERO_IMAGES[category.id as keyof typeof CATEGORY_HERO_IMAGES] ??
+            images.homePopularTowing,
+        })),
+      )
+      .slice(0, 6);
+  }, [safeServices]);
 
   const displayName =
     getProfileFirstName(profile?.fullName) ||
@@ -324,14 +327,14 @@ export default function HomeScreen({ navigation }: Props) {
           </View>
 
           {/* Quick services */}
-          {isLoading && services.length === 0 ? (
+          {isLoading && safeServices.length === 0 ? (
             <View style={{ alignItems: 'center', paddingVertical: px(24), marginBottom: px(18) }}>
               <ActivityIndicator size="small" color={colors.primary} />
               <Text style={{ marginTop: px(8), fontSize: px(12), color: colors.grey }}>
                 Loading services...
               </Text>
             </View>
-          ) : error && services.length === 0 ? (
+          ) : error && safeServices.length === 0 ? (
             <Pressable
               onPress={() => void fetchServices()}
               style={{

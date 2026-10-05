@@ -43,8 +43,6 @@ module.exports = {
       'expo-asset',
       'expo-font',
       'expo-secure-store',
-      'react-native-reanimated',
-      'react-native-keyboard-controller',
       '@react-native-community/datetimepicker',
       [
         'expo-image-picker',

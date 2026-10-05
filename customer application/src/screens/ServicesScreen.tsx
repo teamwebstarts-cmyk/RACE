@@ -35,7 +35,8 @@ export default function ServicesScreen({ navigation }: Props) {
     void fetchServices();
   }, [fetchServices]);
 
-  const gridCards = services.map(mapApiCategoryToGridCard);
+  const safeServices = Array.isArray(services) ? services : [];
+  const gridCards = safeServices.map(mapApiCategoryToGridCard);
 
   const openCategory = (categoryId: string, categoryTitle: string) => {
     openServiceCategory(navigation, categoryId, categoryTitle);

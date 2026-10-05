@@ -66,7 +66,10 @@ export const store = configureStore({
     vendorOnboarding: vendorOnboardingReducer,
   },
   middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware().concat(persistAuthMiddleware),
+    getDefaultMiddleware({
+      serializableCheck: false,
+      immutableCheck: false,
+    }).concat(persistAuthMiddleware),
 });
 
 export async function hydrateAuthStore(): Promise<void> {

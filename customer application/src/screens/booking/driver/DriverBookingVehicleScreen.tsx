@@ -22,6 +22,7 @@ export default function DriverBookingVehicleScreen({ navigation, route }: Props)
   const { t } = useBookingTheme();
   const { booking, updateBooking } = useDriverBooking();
   const { vehicles, fetchVehicles } = useVehicleStore();
+  const safeVehicles = Array.isArray(vehicles) ? vehicles : [];
   const [selectedId, setSelectedId] = useState(booking.vehicleId);
   const nextScreen = route.params?.nextScreen ?? 'DriverBookingLocation';
   const step = nextScreen === 'DriverReview' ? 3 : 1;
@@ -34,7 +35,7 @@ export default function DriverBookingVehicleScreen({ navigation, route }: Props)
     });
   }, [fetchVehicles]);
 
-  const canContinue = selectedId.length > 0 && vehicles.length > 0;
+  const canContinue = Boolean(selectedId && selectedId.length > 0 && safeVehicles.length > 0);
 
   return (
     <TowingBookingLayout
@@ -44,7 +45,7 @@ export default function DriverBookingVehicleScreen({ navigation, route }: Props)
       continueDisabled={!canContinue}
       onBack={() => navigation.goBack()}
       onContinue={() => {
-        const vehicle = vehicles.find(item => item.id === selectedId);
+        const vehicle = safeVehicles.find(item => item.id === selectedId);
         if (!vehicle) return;
         updateBooking({
           vehicleId: vehicle.id,
@@ -64,7 +65,7 @@ export default function DriverBookingVehicleScreen({ navigation, route }: Props)
       </Text>
 
       <View style={{ gap: t.px(12) }}>
-        {vehicles.length === 0 ? (
+        {safeVehicles.length === 0 ? (
           <View
             style={{
               borderRadius: t.cardRadius,
@@ -103,7 +104,7 @@ export default function DriverBookingVehicleScreen({ navigation, route }: Props)
             </Pressable>
           </View>
         ) : (
-          vehicles.map(vehicle => {
+          safeVehicles.map(vehicle => {
             const isSelected = selectedId === vehicle.id;
             return (
               <Pressable
