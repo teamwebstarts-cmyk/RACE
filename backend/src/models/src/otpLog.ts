@@ -4,7 +4,7 @@ export interface IOtpLog extends Document {
   mobileNumber: string;
   email?: string;
   fullName?: string;
-  mobileOtp?: string;
+  mobileOtp?: string;          // Stored only in dev/mock mode for logDevOtp
   emailOtp?: string;
   mobileOtpExpiry?: Date;
   emailOtpExpiry?: Date;
@@ -12,6 +12,7 @@ export interface IOtpLog extends Document {
   emailVerified: boolean;
   mobileAttempts: number;
   emailAttempts: number;
+  mcVerificationId?: string;   // MessageCentral verificationId for server-side OTP validation
   createdAt: Date;
 }
 
@@ -28,6 +29,7 @@ const OtpLogSchema = new Schema<IOtpLog>(
     emailVerified: { type: Boolean, default: false },
     mobileAttempts: { type: Number, default: 0 },
     emailAttempts: { type: Number, default: 0 },
+    mcVerificationId: { type: String },
     createdAt: { type: Date, default: Date.now, index: true },
   },
   { timestamps: false },

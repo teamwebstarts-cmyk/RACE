@@ -36,6 +36,14 @@ const envSchema = z.object({
   ADMIN_NAME: z.string().default('Admin User'),
   MOCK_DATA_MODE: z.coerce.boolean().default(true),
   MOCK_UNIVERSAL_OTP: z.string().default('123456'),
+  // MessageCentral VerifyNow SMS OTP service
+  MC_CUSTOMER_ID: z.string().optional(),
+  MC_AUTH_TOKEN: z.string().optional(),
+  MC_BASE_URL: z.string().default('https://cpaas.messagecentral.com'),
+  // Twilio (legacy / fallback — kept optional)
+  TWILIO_ACCOUNT_SID: z.string().optional(),
+  TWILIO_AUTH_TOKEN: z.string().optional(),
+  TWILIO_PHONE_NUMBER: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

@@ -45,15 +45,20 @@ export class AuthRepository {
     withinMs: number,
   ): Promise<IOtpLog | null> {
     const since = new Date(Date.now() - withinMs);
+    // In MC mode mobileOtp is not stored; match either by otp OR any verified log with mcVerificationId
     return OtpLogModel.findOne({
       mobileNumber,
-      mobileOtp: otp,
       mobileVerified: true,
       createdAt: { $gte: since },
+      $or: [
+        { mobileOtp: otp },
+        { mcVerificationId: { $exists: true, $ne: null } },
+      ],
     })
       .sort({ createdAt: -1 })
       .exec();
   }
+
 }
 
 export const authRepository = new AuthRepository();

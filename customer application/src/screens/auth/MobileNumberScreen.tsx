@@ -57,8 +57,8 @@ type Props = NativeStackScreenProps<AuthStackParamList, 'MobileNumber'>;
 
 const MOBILE_REGEX = /^[6-9]\d{9}$/;
 
-/** TEMP: skip OTP UI — auto-verify with backend dev OTP. Re-enable OTP by flipping this off. */
-const SKIP_OTP_AUTH = true;
+/** Re-enabled OTP verification screen for real MessageCentral SMS delivery. Can be forced off via EXPO_PUBLIC_SKIP_OTP_AUTH=true */
+const SKIP_OTP_AUTH = process.env.EXPO_PUBLIC_SKIP_OTP_AUTH === 'true';
 
 function friendlyAuthError(raw: string): string {
   const text = raw.toLowerCase();

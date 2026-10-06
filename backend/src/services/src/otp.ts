@@ -1,12 +1,35 @@
+/**
+ * OTP Service — MessageCentral VerifyNow integration.
+ *
+ * Two modes:
+ *
+ * A) PRODUCTION (MC configured):
+ *    sendOtp   → calls mcSendOtp()  → stores mcVerificationId in OtpLog
+ *    verifyOtp → calls mcValidateOtp(verificationId, code) → MC verifies OTP digit server-side
+ *    No OTP digit is stored in our database.
+ *
+ * B) DEVELOPMENT (MC not configured OR MOCK_DATA_MODE=true + non-prod):
+ *    sendOtp   → generates 6-digit OTP locally, prints to console
+ *    verifyOtp → checks against stored digit or MOCK_UNIVERSAL_OTP (123456)
+ */
+
 import { env } from '../../config/env';
 import { AppError, TooManyRequestsError } from '../../utils/src/errors';
 import { generateOtp } from '../../utils/src/otp';
-import { sendSms } from '../../utils/src/sms';
+import { isMcConfigured, logDevOtp, mcSendOtp, mcValidateOtp } from '../../utils/src/sms';
 import { authRepository } from './authRepository';
 
 export class OtpService {
   private getExpiryDate(): Date {
     return new Date(Date.now() + env.OTP_EXPIRY_SECONDS * 1000);
+  }
+
+
+  private get useMc(): boolean {
+    if (process.env.FORCE_MOCK_OTP === 'true') {
+      return false;
+    }
+    return isMcConfigured();
   }
 
   private async assertResendAllowed(mobileNumber: string): Promise<void> {
@@ -22,11 +45,34 @@ export class OtpService {
     }
   }
 
-  async sendOtp(mobileNumber: string): Promise<{ message: string; expiresIn: number; devOtp?: string }> {
+  async sendOtp(
+    mobileNumber: string,
+  ): Promise<{ message: string; expiresIn: number; devOtp?: string }> {
     await this.assertResendAllowed(mobileNumber);
     await authRepository.invalidatePendingOtps(mobileNumber);
 
-    // Always generate a real OTP for customer + partner (MVP / all environments).
+    if (this.useMc) {
+      // ─── MessageCentral production path ────────────────────────────────
+      const { verificationId } = await mcSendOtp(mobileNumber);
+
+      const expiry = this.getExpiryDate();
+      await authRepository.createOtpLog({
+        mobileNumber,
+        mobileOtpExpiry: expiry,
+        mobileVerified: false,
+        emailVerified: false,
+        mobileAttempts: 0,
+        emailAttempts: 0,
+        mcVerificationId: verificationId,
+      });
+
+      return {
+        message: 'OTP sent to your mobile number',
+        expiresIn: env.OTP_EXPIRY_SECONDS,
+      };
+    }
+
+    // ─── Dev / mock fallback path ─────────────────────────────────────────
     const mobileOtp = generateOtp();
     const expiry = this.getExpiryDate();
 
@@ -40,14 +86,13 @@ export class OtpService {
       emailAttempts: 0,
     });
 
-    await sendSms(mobileNumber, mobileOtp);
+    logDevOtp(mobileNumber, mobileOtp);
 
     return {
       message: 'OTP sent to your mobile number',
       expiresIn: env.OTP_EXPIRY_SECONDS,
-      // In non-production environments (or when Twilio is not configured), include
-      // the OTP in the response so the mobile/web UI can show it as a toast.
-      ...(env.NODE_ENV !== 'production' ? { devOtp: mobileOtp } : {}),
+      // Surface OTP in response in dev so the mobile UI can show it as a toast
+      devOtp: mobileOtp,
     };
   }
 
@@ -55,6 +100,7 @@ export class OtpService {
     const log = await authRepository.findLatestValidOtpLog(mobileNumber);
 
     if (!log) {
+      // Allow re-use within expiry window (idempotent verify)
       const alreadyUsed = await authRepository.findRecentlyVerifiedOtpLog(
         mobileNumber,
         otp,
@@ -63,7 +109,6 @@ export class OtpService {
       if (alreadyUsed) {
         return;
       }
-
       throw new AppError('OTP expired or already used. Tap Resend OTP for a new code.', 400);
     }
 
@@ -75,6 +120,22 @@ export class OtpService {
       throw new TooManyRequestsError('Maximum OTP verification attempts exceeded');
     }
 
+    // ─── MessageCentral server-side verification ──────────────────────────
+    if (this.useMc && log.mcVerificationId) {
+      const correct = await mcValidateOtp(mobileNumber, log.mcVerificationId, otp);
+
+      if (!correct) {
+        log.mobileAttempts += 1;
+        await log.save();
+        throw new AppError('Invalid OTP', 400);
+      }
+
+      log.mobileVerified = true;
+      await log.save();
+      return;
+    }
+
+    // ─── Dev / mock verification ──────────────────────────────────────────
     const isMockOtpMatch = Boolean(
       env.MOCK_DATA_MODE &&
       env.NODE_ENV !== 'production' &&

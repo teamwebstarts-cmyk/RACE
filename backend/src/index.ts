@@ -1,3 +1,4 @@
+import './config/env';
 import { createApp } from './app';
 import { createServer } from 'http';
 import { connectDatabase, disconnectDatabase } from './config/database';
