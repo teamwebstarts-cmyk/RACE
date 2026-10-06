@@ -69,7 +69,7 @@ FORBIDDEN = [
 REQUIRED = {
     "phone_compact": "+91 82494 75731",
     "phone_spaced": "+91 8249475731",
-    "email": "support@raceservice.com",
+    "email": "support@raceservice.in",
     "company": "Saiprahallad Services",
     "brand": "RACE Service",
     "price_towing": "Rs 499",

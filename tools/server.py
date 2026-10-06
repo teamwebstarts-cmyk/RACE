@@ -6,7 +6,8 @@ import os
 import webbrowser
 
 PORT = 8085
-DIRECTORY = os.path.dirname(os.path.abspath(__file__))
+_HERE = os.path.dirname(os.path.abspath(__file__))
+DIRECTORY = os.path.dirname(_HERE) if os.path.basename(_HERE) == "tools" else _HERE
 
 class Handler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
@@ -19,10 +20,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 if __name__ == '__main__':
     os.chdir(DIRECTORY)
     with socketserver.TCPServer(("", PORT), Handler) as httpd:
-        print(f"🚀 RapidTow Clone running at http://localhost:{PORT}")
-        print(f"📁 Directory: {DIRECTORY}")
-        print(f"📄 Pages:")
-        print(f"   - Home:     http://localhost:{PORT}/home.html")
+        print(f"[+] RACE Service website running at http://localhost:{PORT}")
+        print(f"[*] Directory: {DIRECTORY}")
+        print(f"[*] Pages:")
+        print(f"   - Home:     http://localhost:{PORT}/")
         print(f"   - Service:  http://localhost:{PORT}/service.html")
         print(f"   - Contact:  http://localhost:{PORT}/contact.html")
         print(f"   - Pricing:  http://localhost:{PORT}/pricing.html")
