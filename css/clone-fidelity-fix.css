@@ -97,3 +97,88 @@
 		margin-top: 14px !important;
 	}
 }
+
+/* Header & Footer Logo Display */
+.elementor-323 .elementor-element.elementor-element-365af2c3 img {
+	height: 48px !important;
+	max-height: 48px !important;
+	width: auto !important;
+	max-width: 100% !important;
+	object-fit: contain !important;
+	object-position: left center !important;
+}
+.elementor-329 .elementor-element.elementor-element-3e9b00a img {
+	width: 145px !important;
+	max-width: 100% !important;
+	height: auto !important;
+	object-fit: contain !important;
+}
+@media (max-width: 767px) {
+	.elementor-323 .elementor-element.elementor-element-365af2c3 img {
+		height: 38px !important;
+	}
+	.elementor-329 .elementor-element.elementor-element-3e9b00a img {
+		width: 125px !important;
+	}
+}
+
+/* Stat Counter Cards (Vehicles Rescued & Average Arrival) */
+.elementor-element.elementor-element-56a2d43a,
+.elementor-element.elementor-element-21be2f1e {
+	padding: 24px 20px !important;
+	overflow: hidden !important;
+}
+
+.elementor-element.elementor-element-773012df .elementor-counter-number-wrapper,
+.elementor-element.elementor-element-7a270355 .elementor-counter-number-wrapper {
+	font-size: 42px !important;
+	line-height: 1 !important;
+	display: inline-flex !important;
+	align-items: baseline !important;
+	justify-content: flex-end !important;
+	flex-wrap: nowrap !important;
+	white-space: nowrap !important;
+	max-width: 100% !important;
+}
+
+.elementor-element.elementor-element-7a270355 .elementor-counter-number-suffix {
+	font-size: 20px !important;
+	font-weight: 600 !important;
+	margin-left: 5px !important;
+	white-space: nowrap !important;
+	flex-grow: 0 !important;
+	opacity: 0.92 !important;
+}
+
+.elementor-element.elementor-element-773012df .elementor-counter-number-suffix {
+	font-size: 42px !important;
+	font-weight: 700 !important;
+	flex-grow: 0 !important;
+}
+
+@media (max-width: 767px) {
+	.elementor-element.elementor-element-773012df .elementor-counter-number-wrapper,
+	.elementor-element.elementor-element-7a270355 .elementor-counter-number-wrapper {
+		font-size: 34px !important;
+	}
+	.elementor-element.elementor-element-7a270355 .elementor-counter-number-suffix {
+		font-size: 16px !important;
+	}
+}
+
+/* About Side Image: Remove video button and ensure clean container height */
+.elementor-element.elementor-element-2bc28565 {
+	min-height: 420px !important;
+	border-radius: 16px !important;
+	overflow: hidden !important;
+}
+.elementor-element.elementor-element-45bbf377,
+.ekit-video-popup-btn {
+	display: none !important;
+}
+@media (max-width: 1024px) {
+	.elementor-element.elementor-element-2bc28565 {
+		min-height: 350px !important;
+	}
+}
+
