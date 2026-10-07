@@ -66,15 +66,16 @@ None. Waiting on next product task.
 | Gap/remaining work | `docs/RACE_REMAINING_WORK_AND_GAPS.md` |
 | Backend layout | `backend/src/STRUCTURE.md` |
 | Mock test playbook | `docs/MOCK_TESTING_PLAYBOOK.md` |
+| **Cloud prod runbook** | `docs/ops/CLOUD_PRODUCTION_RUNBOOK.md` |
 | Client overview | `docs/client/CLIENT_OVERVIEW.md` |
 
 ## Important Discoveries
 
 - Expo SDK is **57** (^57.0.0), RN 0.86.3 — stale docs/memory may say 54 or 56, ignore them.
 - Admin uses **Zustand + TanStack Query**, not Redux (CLIENT_FEATURES.md was wrong).
-- `owner: 'race-service'` and MongoDB DB name `race-service` are strings, not the deleted folder.
-- VPS is still on `release/13July26` — prod code does NOT match this workspace.
-- `SKIP_OTP_AUTH = true` on both Expo login screens — real SMS via Twilio is configured but gated.
+- `owner: 'race-service'` in **Expo** was wrong for EAS; customer app uses **`owner: 'webstarts'`**, slug **`race-service`**, projectId **`277981d5-5046-4288-8c91-672aab158419`**. MongoDB DB name `race-service` is still just a string, not a deleted folder.
+- VPS is still on `release/13July26` — **cloud** (Render) is the tested API for mobile/admin; do not assume VM matches this branch.
+- Customer OTP: MessageCentral on Render when `FORCE_MOCK_OTP=false`; app uses `EXPO_PUBLIC_SKIP_OTP_AUTH` (production APK should be false). Partner app may still have dev skip flags — check code before claiming.
 - Admin login: env-hardcoded in `backend/src/config/hardcoded-admin.ts`; `Admin` model unused for auth.
 
 ## Active Decisions
@@ -83,7 +84,9 @@ See `.agents/state/DECISIONS_INDEX.md` for all decisions.
 
 ## Next Action (When User Returns)
 
-Choose from gap list above or ask user for priority. Do not deploy to VM until user asks.
+1. Read `docs/ops/CLOUD_PRODUCTION_RUNBOOK.md`.
+2. For APK: `eas build:view` on latest `@webstarts/race-service` build or start new production Android build after `expo-doctor` + `eas project:info`.
+3. Do not deploy to GCP VM until user asks (see `manual-deployment.md`).
 
 ## Do Not
 
