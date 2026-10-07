@@ -4,7 +4,7 @@ Updated: 2026-10-05
 
 ## Current focus
 
-Profile wizard done screen: outline chips and roadside journey image.
+Customer Android APK via EAS (`@race-service/race`), API baked to Render. Cursor Expo MCP lacks org access until user invites account or sets EXPO_TOKEN.
 
 ## Branch
 
@@ -12,7 +12,7 @@ Profile wizard done screen: outline chips and roadside journey image.
 
 ## Last done
 
-- Light spacing only on steps 1–3: SVG nudge 18→6, card slot 132→148, overlap 40→32. Title and illustration no longer sit on top of each other.
+- 2026-10-07: MessageCentral `otpLength=6` deployed (`004d515`). Health 200. Latest send to 9009785315 returned SUCCESS.
 
 ## Next (when the user asks)
 
