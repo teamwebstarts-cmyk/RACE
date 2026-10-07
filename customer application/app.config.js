@@ -67,7 +67,7 @@ module.exports = {
       apiUrl: productionApiUrl,
       googleMapsApiKey,
       eas: {
-        projectId: 'd2ee249a-2460-48ef-8fab-0ac41d53eb49',
+        projectId: '277981d5-5046-4288-8c91-672aab158419',
       },
     },
   },
