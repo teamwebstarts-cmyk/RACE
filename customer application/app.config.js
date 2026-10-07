@@ -9,8 +9,8 @@ const productionApiUrl =
 module.exports = {
   expo: {
     name: 'RACE',
-    slug: 'race',
-    owner: 'race-service',
+    slug: 'race-service',
+    owner: 'webstarts',
     version: '1.0.0',
     orientation: 'portrait',
     icon: './src/assets/images/logo.png',
