@@ -1,16 +1,12 @@
 import React from 'react';
 import {
-  Image,
-  Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   useWindowDimensions,
   View,
 } from 'react-native';
 import {
   Activity,
-  ArrowLeft,
   Building2,
   FileCheck2,
   ShieldAlert,
@@ -20,10 +16,11 @@ import {
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import ServiceCategoryArtCard from '../components/services/ServiceCategoryArtCard';
+import ServiceNavHeader from '../components/services/ServiceNavHeader';
 import { getServiceCategoryCard } from '../constants/serviceCategoryCards';
 import type { HomeStackParamList } from '../types/navigation';
 import { colors, shadows, typography } from '../theme';
-import { LinearGradient } from 'expo-linear-gradient';
 
 const REF_W = 390;
 
@@ -75,128 +72,19 @@ export default function MoreServicesScreen({ navigation }: Props) {
   const heroCard = getServiceCategoryCard('future');
 
   return (
-    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.pageBg }}>
-      {/* Header */}
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'center',
-          paddingHorizontal: px(20),
-          paddingTop: px(8),
-          paddingBottom: px(14),
-          position: 'relative',
-        }}>
-        <Pressable
-          onPress={() => navigation.goBack()}
-          style={{
-            position: 'absolute',
-            left: px(20),
-            width: px(36),
-            height: px(36),
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}>
-          <ArrowLeft size={px(22)} color={colors.dark} strokeWidth={2.4} />
-        </Pressable>
-        <Text
-          style={{
-            fontSize: px(18),
-            fontWeight: typography.weights.extrabold,
-            color: colors.dark,
-          }}>
-          More Services
-        </Text>
-      </View>
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+      <ServiceNavHeader title="More Services" onBack={() => navigation.goBack()} />
 
       <ScrollView
+        style={{ backgroundColor: colors.pageBg }}
         contentContainerStyle={{
-          paddingHorizontal: px(20),
-          paddingBottom: px(40),
-          gap: px(12),
+          paddingHorizontal: px(14),
+          paddingTop: px(12),
+          paddingBottom: px(36),
+          gap: px(10),
         }}
         showsVerticalScrollIndicator={false}>
-        {/* Hero Card — same card as the Services page */}
-        <View
-          style={[
-            shadows.cardSoft,
-            {
-              borderRadius: px(22),
-              overflow: 'hidden',
-              height: px(158),
-              backgroundColor: '#FFFFFF',
-            },
-          ]}>
-          <Image
-            source={heroCard.image}
-            style={StyleSheet.absoluteFill}
-            resizeMode="cover"
-          />
-          <LinearGradient
-            colors={heroCard.gradientColors}
-            locations={[0, 0.4, 0.56, 0.74]}
-            start={{ x: 0, y: 0.5 }}
-            end={{ x: 1, y: 0.5 }}
-            style={StyleSheet.absoluteFill}
-          />
-          {/* Vertical melt: dissolve the cropped top/bottom edges into the card surface */}
-          <LinearGradient
-            colors={['#FFFFFF', 'rgba(255,255,255,0)', 'rgba(255,255,255,0)', '#FFFFFF']}
-            locations={[0, 0.13, 0.7, 1]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 0, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
-          <View
-            style={{
-              flex: 1,
-              paddingHorizontal: px(18),
-              paddingVertical: px(16),
-              justifyContent: 'space-between',
-              maxWidth: '72%',
-            }}>
-            <View>
-              <Text
-                style={{
-                  fontSize: px(20),
-                  fontWeight: typography.weights.extrabold,
-                  color: '#111827',
-                  marginBottom: px(4),
-                  letterSpacing: -0.3,
-                }}>
-                {heroCard.title}
-              </Text>
-              <Text
-                style={{
-                  fontSize: px(13),
-                  color: heroCard.subtitleColor,
-                  fontWeight: '600',
-                  lineHeight: px(18),
-                }}>
-                {heroCard.subtitle}
-              </Text>
-            </View>
-
-            {/* Coming Soon Pill */}
-            <View
-              style={{
-                alignSelf: 'flex-start',
-                backgroundColor: colors.primary,
-                paddingHorizontal: px(10),
-                paddingVertical: px(4),
-                borderRadius: px(12),
-              }}>
-              <Text
-                style={{
-                  fontSize: px(11),
-                  fontWeight: typography.weights.bold,
-                  color: colors.dark,
-                }}>
-                Coming Soon
-              </Text>
-            </View>
-          </View>
-        </View>
+        <ServiceCategoryArtCard card={heroCard} />
 
         {/* Upcoming Services List */}
         {UPCOMING_SERVICES.map(item => (

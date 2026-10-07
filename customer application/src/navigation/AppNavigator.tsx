@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import {
   NavigationContainer,
   DefaultTheme,
@@ -548,26 +548,34 @@ const navigationTheme = {
 };
 
 export default function AppNavigator() {
-  const { isAuthenticated, customerOnboardingStep } = useAuth();
+  const { isAuthenticated, customerOnboardingStep, isLoading } = useAuth();
   const user = useAppSelector(state => state.auth.user);
   const isPartnerRole = user?.role === 'vendor' || user?.role === 'driver';
   const showWrongApp = isAuthenticated && isPartnerRole;
   const showMainApp = isAuthenticated && customerOnboardingStep === 'done' && !isPartnerRole;
+  const nextRootRoute: 'Auth' | 'Main' | 'WrongApp' = showWrongApp
+    ? 'WrongApp'
+    : showMainApp
+      ? 'Main'
+      : 'Auth';
   const navigationRef = useRef<NavigationContainerRef<RootStackParamList>>(null);
   const lastRootRoute = useRef<'Auth' | 'Main' | 'WrongApp' | null>(null);
   const lastAuthenticated = useRef<boolean | null>(null);
 
   useEffect(() => {
+    if (isLoading) return;
+
     const navigation = navigationRef.current;
     if (!navigation?.isReady()) {
       return;
     }
 
-    const nextRootRoute: 'Auth' | 'Main' | 'WrongApp' = showWrongApp
-      ? 'WrongApp'
-      : showMainApp
-        ? 'Main'
-        : 'Auth';
+    if (lastRootRoute.current === null) {
+      lastRootRoute.current = nextRootRoute;
+      lastAuthenticated.current = isAuthenticated;
+      return;
+    }
+
     const loggedOut = lastAuthenticated.current === true && !isAuthenticated;
     lastAuthenticated.current = isAuthenticated;
 
@@ -580,11 +588,23 @@ export default function AppNavigator() {
       index: 0,
       routes: [{ name: nextRootRoute }],
     });
-  }, [showMainApp, showWrongApp, isAuthenticated]);
+  }, [isLoading, showMainApp, showWrongApp, isAuthenticated, nextRootRoute]);
+
+  if (isLoading) {
+    return <View style={{ flex: 1, backgroundColor: '#FFFFFF' }} />;
+  }
 
   return (
-    <NavigationContainer ref={navigationRef} theme={navigationTheme}>
-      <RootStack.Navigator screenOptions={{ headerShown: false }}>
+    <NavigationContainer
+      ref={navigationRef}
+      theme={navigationTheme}
+      onReady={() => {
+        lastRootRoute.current = nextRootRoute;
+        lastAuthenticated.current = isAuthenticated;
+      }}>
+      <RootStack.Navigator
+        initialRouteName={nextRootRoute}
+        screenOptions={{ headerShown: false }}>
         <RootStack.Screen name="Auth" component={AuthStackNavigator} />
         <RootStack.Screen name="Main" component={MainTabNavigator} />
         <RootStack.Screen name="WrongApp" component={WrongAppRoleScreen} />

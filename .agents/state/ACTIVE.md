@@ -7,9 +7,13 @@
 
 ## Current Objective
 
-**Cloud production** is the active delivery path. Before any Render/Vercel/EAS work, read **`docs/ops/CLOUD_PRODUCTION_RUNBOOK.md`** (IDs, env names, MCP map, pre-flight checklist).
+**Customer mobile UI/UX redesign, one screen at a time.** Scope is `customer application/` only. Design rules live in `.agents/uiux/` (`SKILL.md`, `MOBILE_APP_PATTERNS.md`, `AGENT_QUICK_RULES.md`).
 
-Product work continues on `v2.5.2-development` (customer/admin/backend as requested).
+Already treated as done (do not restyle unless asked): onboarding, sign up, sign in, Home, and service pages (Services, Towing, Driver, Roadside, More, location picker).
+
+Next: wait for the user to name the next screen. Before code, write the skill’s screen contract (goal, one primary CTA, keep/remove, states).
+
+Cloud production remains documented in `docs/ops/CLOUD_PRODUCTION_RUNBOOK.md`. Do not start Render/Vercel/EAS work in this design pass.
 
 ## Active Branch
 
@@ -41,7 +45,7 @@ Cloud-hosted API (Render) + admin (Vercel) + customer Android APK (Expo EAS `@we
 
 ## Active Work
 
-Context engineering session — see `AGENTS.md` for new architecture.
+Customer app visual redesign queue. Auth + Home + service discovery are the current design baseline. Remaining work is screen-by-screen (bookings, SOS, profile, booking flows, and other named screens).
 
 ## Known Blockers
 
@@ -84,9 +88,10 @@ See `.agents/state/DECISIONS_INDEX.md` for all decisions.
 
 ## Next Action (When User Returns)
 
-1. Read `docs/ops/CLOUD_PRODUCTION_RUNBOOK.md`.
-2. For APK: `eas build:view` on latest `@webstarts/race-service` build or start new production Android build after `expo-doctor` + `eas project:info`.
-3. Do not deploy to GCP VM until user asks (see `manual-deployment.md`).
+1. User names the next customer screen.
+2. Read that screen plus shared UI/theme before editing.
+3. Apply `.agents/uiux` rules: one goal, one primary CTA, reuse existing components, no invented backend.
+4. Cloud/APK work stays paused until the user asks. Runbook: `docs/ops/CLOUD_PRODUCTION_RUNBOOK.md`.
 
 ## Do Not
 

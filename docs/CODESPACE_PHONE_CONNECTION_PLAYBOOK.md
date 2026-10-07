@@ -39,20 +39,20 @@ npm --prefix backend run dev
 ### Step 2: Launch Customer App via Tunnel
 Run this in `customer application/`:
 ```bash
-NGROK_AUTHTOKEN="3Gfqc6gVc9lFIKGMVbLq1Nnc7So_7KRKg4uorNgDLwWvY8uVN" npx expo start --tunnel --port 8081
+NGROK_AUTHTOKEN="<your-ngrok-token>" npx expo start --tunnel --port 8081
 ```
 
 ### Step 3: Launch Partner App via Tunnel
 Run this in `mobile application/`:
 ```bash
-NGROK_AUTHTOKEN="3Gfqc6gVc9lFIKGMVbLq1Nnc7So_7KRKg4uorNgDLwWvY8uVN" npx expo start --tunnel --port 8082
+NGROK_AUTHTOKEN="<your-ngrok-token>" npx expo start --tunnel --port 8082
 ```
 
 ---
 
 ## 4. Connecting on Mobile
 1. Open **Expo Go** on your phone.
-2. In **Enter URL manually**, enter the tunnel URL printed in the terminal (e.g. `exp://tgvmfee-anonymous-8081.exp.direct`) OR scan the ASCII QR code with your camera.
+2. In **Enter URL manually**, enter the **`exp://…` URL from your current terminal** (tunnel mode) **or** the Codespace URL from `docs/ops/LOCAL_CUSTOMER_UI_DEV.md` — do not reuse old `exp.direct` links from past sessions.
 3. The JavaScript bundle will download directly over the tunnel to your phone.
 
 ---

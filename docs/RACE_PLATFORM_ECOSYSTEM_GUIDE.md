@@ -145,5 +145,5 @@ sequenceDiagram
 ### Local Dev Port Map
 - **Backend API**: `3000`
 - **Admin Web**: `3001`
-- **Customer App**: `8081` (Tunnel: `exp://tgvmfee-anonymous-8081.exp.direct`)
-- **Partner App**: `8082` (Tunnel: `exp://bo69eok-anonymous-8082.exp.direct`)
+- **Customer App**: `8081` — use your Codespace forwarded URL (see `docs/ops/LOCAL_CUSTOMER_UI_DEV.md` § Codespaces), not a saved `exp.direct` link from an old session.
+- **Partner App**: `8082` — same pattern for partner Metro when needed.

@@ -1,20 +1,16 @@
 import React from 'react';
 import {
-  Image,
   Linking,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   useWindowDimensions,
   View,
 } from 'react-native';
 import {
-  ArrowLeft,
   ArrowRight,
   Calendar,
   Car,
-  CheckCircle2,
   Moon,
   Phone,
   User,
@@ -22,6 +18,8 @@ import {
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import ServiceCategoryArtCard from '../components/services/ServiceCategoryArtCard';
+import ServiceNavHeader from '../components/services/ServiceNavHeader';
 import { getServiceCategoryCard } from '../constants/serviceCategoryCards';
 import { useDriverBooking } from '../context/DriverBookingContext';
 import { useCatalogStore } from '../store/catalogStore';
@@ -29,7 +27,6 @@ import { brand } from '../theme/brand';
 import type { HomeStackParamList } from '../types/navigation';
 import type { DriverTypeId } from '../types/driverBooking';
 import { colors, shadows, typography } from '../theme';
-import { LinearGradient } from 'expo-linear-gradient';
 
 const REF_W = 390;
 
@@ -62,13 +59,6 @@ const DRIVER_OPTIONS = [
   },
 ];
 
-const WHY_CHOOSE_ITEMS = [
-  { id: 'police', label: 'Police verified' },
-  { id: 'gps', label: 'GPS tracking' },
-  { id: 'trained', label: 'Trained & experienced' },
-  { id: 'packages', label: 'Flexible packages' },
-];
-
 export default function DriverServiceScreen({ navigation }: Props) {
   const { width } = useWindowDimensions();
   const s = width / REF_W;
@@ -97,139 +87,30 @@ export default function DriverServiceScreen({ navigation }: Props) {
   };
 
   return (
-    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.pageBg }}>
-      {/* Header */}
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'center',
-          paddingHorizontal: px(20),
-          paddingTop: px(8),
-          paddingBottom: px(14),
-          position: 'relative',
-        }}>
-        <Pressable
-          onPress={() => navigation.goBack()}
-          style={{
-            position: 'absolute',
-            left: px(20),
-            width: px(36),
-            height: px(36),
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}>
-          <ArrowLeft size={px(22)} color={colors.dark} strokeWidth={2.4} />
-        </Pressable>
-        <Text
-          style={{
-            fontSize: px(18),
-            fontWeight: typography.weights.extrabold,
-            color: colors.dark,
-          }}>
-          Driver Service
-        </Text>
-      </View>
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+      <ServiceNavHeader title="Driver Service" onBack={() => navigation.goBack()} />
 
       <ScrollView
+        style={{ backgroundColor: colors.pageBg }}
         contentContainerStyle={{
-          paddingHorizontal: px(20),
+          paddingHorizontal: px(14),
+          paddingTop: px(12),
           paddingBottom: px(100),
-          gap: px(14),
+          gap: px(12),
         }}
         showsVerticalScrollIndicator={false}>
-        {/* Hero Card — same card as the Services page */}
-        <View
-          style={[
-            shadows.cardSoft,
-            {
-              borderRadius: px(22),
-              overflow: 'hidden',
-              height: px(158),
-              backgroundColor: '#FFFFFF',
-            },
-          ]}>
-          <Image
-            source={heroCard.image}
-            style={StyleSheet.absoluteFill}
-            resizeMode="cover"
-          />
-          <LinearGradient
-            colors={heroCard.gradientColors}
-            locations={[0, 0.4, 0.56, 0.74]}
-            start={{ x: 0, y: 0.5 }}
-            end={{ x: 1, y: 0.5 }}
-            style={StyleSheet.absoluteFill}
-          />
-          {/* Vertical melt: dissolve the cropped top/bottom edges into the card surface */}
-          <LinearGradient
-            colors={['#FFFFFF', 'rgba(255,255,255,0)', 'rgba(255,255,255,0)', '#FFFFFF']}
-            locations={[0, 0.13, 0.7, 1]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 0, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
-          <View
-            style={{
-              flex: 1,
-              paddingHorizontal: px(18),
-              paddingVertical: px(16),
-              justifyContent: 'space-between',
-              maxWidth: '72%',
-            }}>
-            <View>
-              <Text
-                style={{
-                  fontSize: px(20),
-                  fontWeight: typography.weights.extrabold,
-                  color: '#111827',
-                  marginBottom: px(4),
-                  letterSpacing: -0.3,
-                }}>
-                {heroCard.title}
-              </Text>
-              <Text
-                style={{
-                  fontSize: px(13),
-                  color: heroCard.subtitleColor,
-                  fontWeight: '600',
-                  lineHeight: px(18),
-                }}>
-                {heroCard.subtitle}
-              </Text>
-            </View>
-
-            {/* Drivers Available Pill */}
-            <View
-              style={{
-                alignSelf: 'flex-start',
-                flexDirection: 'row',
-                alignItems: 'center',
-                backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                paddingHorizontal: px(10),
-                paddingVertical: px(4),
-                borderRadius: px(12),
-                gap: px(6),
-              }}>
-              <View
-                style={{
-                  width: px(7),
-                  height: px(7),
-                  borderRadius: px(4),
-                  backgroundColor: '#10B981',
-                }}
-              />
-              <Text
-                style={{
-                  fontSize: px(11),
-                  fontWeight: typography.weights.bold,
-                  color: '#065F46',
-                }}>
-                Drivers Available
-              </Text>
-            </View>
-          </View>
-        </View>
+        <ServiceCategoryArtCard card={heroCard} />
+        <Text
+          style={{
+            marginTop: -px(4),
+            fontSize: px(12),
+            lineHeight: px(17),
+            color: colors.grey,
+            textAlign: 'center',
+            fontWeight: typography.weights.medium,
+          }}>
+          Verified drivers · GPS on trip
+        </Text>
 
         {/* Driver Options List */}
         <View style={{ gap: px(10) }}>
@@ -302,57 +183,6 @@ export default function DriverServiceScreen({ navigation }: Props) {
               </Pressable>
             </View>
           ))}
-        </View>
-
-        {/* Why Choose Us? Section */}
-        <View
-          style={[
-            shadows.cardSoft,
-            {
-              backgroundColor: colors.background,
-              borderRadius: px(16),
-              padding: px(16),
-              borderWidth: 1,
-              borderColor: '#F0EFEA',
-            },
-          ]}>
-          <Text
-            style={{
-              fontSize: px(15),
-              fontWeight: typography.weights.extrabold,
-              color: colors.dark,
-              marginBottom: px(12),
-            }}>
-            Why Choose Us?
-          </Text>
-          <View
-            style={{
-              flexDirection: 'row',
-              flexWrap: 'wrap',
-              rowGap: px(10),
-              justifyContent: 'space-between',
-            }}>
-            {WHY_CHOOSE_ITEMS.map(item => (
-              <View
-                key={item.id}
-                style={{
-                  width: '48%',
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: px(6),
-                }}>
-                <CheckCircle2 size={px(16)} color={colors.primary} strokeWidth={2.4} />
-                <Text
-                  style={{
-                    fontSize: px(12),
-                    color: colors.dark,
-                    fontWeight: typography.weights.semibold,
-                  }}>
-                  {item.label}
-                </Text>
-              </View>
-            ))}
-          </View>
         </View>
       </ScrollView>
 

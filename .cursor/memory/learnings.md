@@ -1,5 +1,7 @@
 # Learnings (do not repeat)
 
+- **Expo tunnel redbox (Oct 2026):** `Cannot connect to Expo CLI` on `*.exp.direct:80` is the hot-reload socket, not the API. `ExpoAsset.downloadAsync` on splash (`golden-sunrise-tow-truck-highway.png`) must be caught — a tunnel blip becomes an uncaught rejection even when Metro returns 200.
+- **Customer UI redesign (Oct 2026):** Rules are `.agents/uiux/SKILL.md` + `MOBILE_APP_PATTERNS.md` + `AGENT_QUICK_RULES.md`. `AGENT_QUICK_RULES (1).md` is a duplicate of the quick rules. Done baseline: onboarding, sign-in, sign-up, Home, service pages. Next screens are named one at a time. Customer app only. `customer application/AGENTS.md` still says Expo 54; `package.json` is SDK 57.
 - **Cloud runbook:** Full Render/Vercel/EAS IDs and agent checklists live in `docs/ops/CLOUD_PRODUCTION_RUNBOOK.md` — read before deploy/build.
 - **EAS customer project (Oct 2026):** Use `@webstarts/race-service`, projectId `277981d5-5046-4288-8c91-672aab158419`. `app.config.js` must have `owner: 'webstarts'` and `slug: 'race-service'`. Old `d2ee249a-…` / `owner: race-service` causes `eas project:info` and build failures.
 - **Release APK needs `react-native-worklets`** (Reanimated peer). `expo-doctor` must be 21/21 before `eas build`.

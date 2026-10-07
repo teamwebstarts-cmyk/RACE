@@ -1,5 +1,11 @@
 # Progress
 
+## In progress (customer UI redesign — 2026-10-07)
+
+- [x] Design skill loaded: `.agents/uiux/SKILL.md`, `MOBILE_APP_PATTERNS.md`, `AGENT_QUICK_RULES.md`
+- [x] User-confirmed done: onboarding, sign up, sign in, Home, service pages
+- [ ] Remaining screens: one at a time, only when named (bookings, SOS, profile, booking flows, and others)
+
 ## Done (wizard hero lift + stepper gap — 2026-10-04)
 
 - [x] Lifted step 1–3 heroes further above the overlapping card

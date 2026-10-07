@@ -1,21 +1,17 @@
 import React from 'react';
 import {
-  Image,
   Linking,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   useWindowDimensions,
   View,
 } from 'react-native';
 import {
   AlertTriangle,
-  ArrowLeft,
   ArrowRight,
   Calendar,
   Car,
-  CheckCircle2,
   Clock,
   Phone,
   Shield,
@@ -24,6 +20,8 @@ import {
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import ServiceCategoryArtCard from '../components/services/ServiceCategoryArtCard';
+import ServiceNavHeader from '../components/services/ServiceNavHeader';
 import { getServiceCategoryCard } from '../constants/serviceCategoryCards';
 import { useTowingBooking } from '../context/TowingBookingContext';
 import { useCatalogStore } from '../store/catalogStore';
@@ -31,7 +29,6 @@ import { brand } from '../theme/brand';
 import type { HomeStackParamList } from '../types/navigation';
 import type { TowingServiceModeId } from '../types/towingBooking';
 import { colors, shadows, typography } from '../theme';
-import { LinearGradient } from 'expo-linear-gradient';
 
 const REF_W = 390;
 
@@ -61,13 +58,6 @@ const TOWING_OPTIONS = [
   },
 ];
 
-const WHY_CHOOSE_ITEMS = [
-  { id: 'gps', label: 'GPS tracked' },
-  { id: 'verified', label: 'Verified professionals' },
-  { id: 'pricing', label: 'Transparent pricing' },
-  { id: 'support', label: '24/7 support' },
-];
-
 export default function TowingServiceScreen({ navigation }: Props) {
   const { width } = useWindowDimensions();
   const s = width / REF_W;
@@ -89,107 +79,20 @@ export default function TowingServiceScreen({ navigation }: Props) {
   };
 
   return (
-    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.pageBg }}>
-      {/* Header */}
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'center',
-          paddingHorizontal: px(20),
-          paddingTop: px(8),
-          paddingBottom: px(14),
-          position: 'relative',
-        }}>
-        <Pressable
-          onPress={() => navigation.goBack()}
-          style={{
-            position: 'absolute',
-            left: px(20),
-            width: px(36),
-            height: px(36),
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}>
-          <ArrowLeft size={px(22)} color={colors.dark} strokeWidth={2.4} />
-        </Pressable>
-        <Text
-          style={{
-            fontSize: px(18),
-            fontWeight: typography.weights.extrabold,
-            color: colors.dark,
-          }}>
-          Towing Service
-        </Text>
-      </View>
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+      <ServiceNavHeader title="Towing Service" onBack={() => navigation.goBack()} />
 
       <ScrollView
+        style={{ backgroundColor: colors.pageBg }}
         contentContainerStyle={{
-          paddingHorizontal: px(20),
+          paddingHorizontal: px(14),
+          paddingTop: px(12),
           paddingBottom: px(100),
-          gap: px(14),
+          gap: px(12),
         }}
         showsVerticalScrollIndicator={false}>
-        {/* Hero Card — same card as the Services page */}
         <View style={{ marginBottom: px(4) }}>
-          <View
-            style={[
-              shadows.cardSoft,
-              {
-                borderRadius: px(22),
-                overflow: 'hidden',
-                height: px(158),
-                backgroundColor: '#FFFFFF',
-              },
-            ]}>
-            <Image
-              source={heroCard.image}
-              style={StyleSheet.absoluteFill}
-              resizeMode="cover"
-            />
-            <LinearGradient
-              colors={heroCard.gradientColors}
-              locations={[0, 0.4, 0.56, 0.74]}
-              start={{ x: 0, y: 0.5 }}
-              end={{ x: 1, y: 0.5 }}
-              style={StyleSheet.absoluteFill}
-            />
-            {/* Vertical melt: dissolve the cropped top/bottom edges into the card surface */}
-            <LinearGradient
-              colors={['#FFFFFF', 'rgba(255,255,255,0)', 'rgba(255,255,255,0)', '#FFFFFF']}
-              locations={[0, 0.13, 0.7, 1]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 0, y: 1 }}
-              style={StyleSheet.absoluteFill}
-            />
-            <View
-              style={{
-                flex: 1,
-                paddingHorizontal: px(18),
-                justifyContent: 'center',
-                maxWidth: '65%',
-              }}>
-              <Text
-                style={{
-                  fontSize: px(20),
-                  fontWeight: typography.weights.extrabold,
-                  color: '#111827',
-                  marginBottom: px(4),
-                  letterSpacing: -0.3,
-                }}>
-                {heroCard.title}
-              </Text>
-              <Text
-                style={{
-                  fontSize: px(13),
-                  color: heroCard.subtitleColor,
-                  fontWeight: '600',
-                  lineHeight: px(18),
-                }}>
-                {heroCard.subtitle}
-              </Text>
-            </View>
-          </View>
+          <ServiceCategoryArtCard card={heroCard} />
 
           {/* Quick Trust Bar — attached to the bottom of the hero card */}
           <View
@@ -197,7 +100,7 @@ export default function TowingServiceScreen({ navigation }: Props) {
               shadows.cardSoft,
               {
                 marginHorizontal: px(10),
-                marginTop: -px(26),
+                marginTop: -px(24),
                 flexDirection: 'row',
                 justifyContent: 'space-between',
                 backgroundColor: colors.background,
@@ -340,57 +243,6 @@ export default function TowingServiceScreen({ navigation }: Props) {
               </Pressable>
             </View>
           ))}
-        </View>
-
-        {/* Why Choose Us? Section */}
-        <View
-          style={[
-            shadows.cardSoft,
-            {
-              backgroundColor: colors.background,
-              borderRadius: px(16),
-              padding: px(16),
-              borderWidth: 1,
-              borderColor: '#F0EFEA',
-            },
-          ]}>
-          <Text
-            style={{
-              fontSize: px(15),
-              fontWeight: typography.weights.extrabold,
-              color: colors.dark,
-              marginBottom: px(12),
-            }}>
-            Why Choose Us?
-          </Text>
-          <View
-            style={{
-              flexDirection: 'row',
-              flexWrap: 'wrap',
-              rowGap: px(10),
-              justifyContent: 'space-between',
-            }}>
-            {WHY_CHOOSE_ITEMS.map(item => (
-              <View
-                key={item.id}
-                style={{
-                  width: '48%',
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: px(6),
-                }}>
-                <CheckCircle2 size={px(16)} color={colors.primary} strokeWidth={2.4} />
-                <Text
-                  style={{
-                    fontSize: px(12),
-                    color: colors.dark,
-                    fontWeight: typography.weights.semibold,
-                  }}>
-                  {item.label}
-                </Text>
-              </View>
-            ))}
-          </View>
         </View>
       </ScrollView>
 

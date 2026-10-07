@@ -182,7 +182,7 @@ export default function ProfileWizardScreen({ navigation }: Props) {
 
   useEffect(() => {
     if (step >= 3) {
-      void Asset.fromModule(DONE_ROADSIDE_ART).downloadAsync();
+      void Asset.fromModule(DONE_ROADSIDE_ART).downloadAsync().catch(() => undefined);
     }
   }, [step]);
 
@@ -849,7 +849,7 @@ function SuccessView({
   const artHeight = artWidth * DONE_ROADSIDE_ASPECT;
 
   useEffect(() => {
-    void Asset.fromModule(DONE_ROADSIDE_ART).downloadAsync();
+    void Asset.fromModule(DONE_ROADSIDE_ART).downloadAsync().catch(() => undefined);
   }, []);
 
   return (

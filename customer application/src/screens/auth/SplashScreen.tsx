@@ -66,11 +66,18 @@ function SplashScreen({ onFinished }: SplashScreenProps) {
   };
 
   useEffect(() => {
-    void Asset.fromModule(images.splashBackground).downloadAsync();
-    void Asset.fromModule(images.onboarding1).downloadAsync();
-    void Asset.fromModule(images.onboarding2).downloadAsync();
-    void Asset.fromModule(images.onboarding3).downloadAsync();
-    void Asset.fromModule(images.onboarding4).downloadAsync();
+    const prefetch = [
+      images.splashBackground,
+      images.onboarding1,
+      images.onboarding2,
+      images.onboarding3,
+      images.onboarding4,
+    ];
+    for (const moduleId of prefetch) {
+      // Prefetch only. A dropped Expo tunnel must not surface as an uncaught rejection;
+      // the Image still loads from the same Metro URL.
+      void Asset.fromModule(moduleId).downloadAsync().catch(() => undefined);
+    }
   }, []);
 
   const continueFromSplash = useCallback(() => {
@@ -84,6 +91,10 @@ function SplashScreen({ onFinished }: SplashScreenProps) {
 
     const { isAuthenticated: hasSession, customerOnboardingStep: step } =
       authSnapshotRef.current;
+    if (hasSession && step === 'done') {
+      return;
+    }
+
     if (hasSession && step !== 'done') {
       navigation.navigate('Auth', {
         screen: getCustomerOnboardingRouteFromStep(step),
