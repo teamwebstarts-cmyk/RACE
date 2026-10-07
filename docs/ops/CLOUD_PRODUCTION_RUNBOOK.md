@@ -289,6 +289,7 @@ Use this so the next session does not stall on “what can we use?”.
 
 | Doc | Topic |
 |-----|--------|
+| `docs/ops/LOCAL_CUSTOMER_UI_DEV.md` | **Local customer UI only** — Expo + Render, UI preview mode |
 | `docs/MOCK_TESTING_PLAYBOOK.md` | Local mock users, universal OTP |
 | `docs/CODESPACE_PHONE_CONNECTION_PLAYBOOK.md` | Expo Go + tunnel (dev) |
 | `docs/SYSTEM_AUDIT_AND_TEST_CASES.md` | Full audit script |
