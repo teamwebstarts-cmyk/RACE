@@ -1,10 +1,10 @@
 # Active context
 
-Updated: 2026-10-05
+Updated: 2026-10-07
 
 ## Current focus
 
-Customer Android APK via EAS (`@race-service/race`), API baked to Render. Cursor Expo MCP lacks org access until user invites account or sets EXPO_TOKEN.
+**Cloud production path is documented** in `docs/ops/CLOUD_PRODUCTION_RUNBOOK.md` (Render API, Vercel admin, Expo EAS customer APK). Use that doc before any deploy/build — no re-discovery each session.
 
 ## Branch
 
@@ -12,13 +12,18 @@ Customer Android APK via EAS (`@race-service/race`), API baked to Render. Cursor
 
 ## Last done
 
-- 2026-10-07: MessageCentral `otpLength=6` deployed (`004d515`). Health 200. Latest send to 9009785315 returned SUCCESS.
+- 2026-10-07: Customer EAS `@webstarts/race-service` (`277981d5-…`), owner/slug aligned, SDK 57 + worklets, production APK build started via `eas build`. Runbook + memory updated.
 
-## Next (when the user asks)
+## Quick refs
 
-Reload the You're all set screen.
+| Surface | URL / ID |
+|---------|-----------|
+| API | `https://race-api-w361.onrender.com` |
+| Admin | `https://race-admin-six.vercel.app` |
+| EAS | `@webstarts/race-service`, projectId `277981d5-5046-4288-8c91-672aab158419` |
 
 ## Do not
 
-- Push/merge to `main` or old release branches.
-- Commit `.env` or dump secrets into memory.
+- Push/merge to `main` or old release branches without user ask.
+- Re-link old EAS project `d2ee249a-…` or set `owner: race-service` on customer app (use `webstarts`).
+- Commit `.env` or secrets into memory/docs.

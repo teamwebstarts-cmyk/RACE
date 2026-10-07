@@ -1,17 +1,15 @@
 # RACE — Active State
 
-> **Updated:** 2026-10-05
+> **Updated:** 2026-10-07
 > **Read this first in every new session.**
 
 ---
 
 ## Current Objective
 
-Customer mobile app polish — Onboarding wizard "Set up your vehicle" step improvements:
-1. Smooth upward keyboard scrolling (`~110px`) aligned above keyboard without hiding card fields.
-2. Custom vehicle type text input when "Other" is selected in `VehicleTypeChips`.
-3. Stacked Make and Model fields (top and bottom, 100% width).
-4. In-place transformation of Make & Model dropdowns into custom text inputs when "Other" is picked with "Choose from list" reset.
+**Cloud production** is the active delivery path. Before any Render/Vercel/EAS work, read **`docs/ops/CLOUD_PRODUCTION_RUNBOOK.md`** (IDs, env names, MCP map, pre-flight checklist).
+
+Product work continues on `v2.5.2-development` (customer/admin/backend as requested).
 
 ## Active Branch
 
@@ -20,7 +18,7 @@ Previous cleanup branch `v2.0.1-cleanup` was merged/superseded.
 
 ## Phase
 
-Customer mobile onboarding UX refinement.
+Cloud-hosted API (Render) + admin (Vercel) + customer Android APK (Expo EAS `@webstarts/race-service`).
 
 ## Completed Work
 

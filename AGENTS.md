@@ -53,6 +53,7 @@ Deleted (do not recreate): `customerweb/`, `partnerweb/`, `web application/`, `r
 
 | Need | File to read |
 |------|-------------|
+| **Cloud prod (Render, Vercel, EAS)** | `docs/ops/CLOUD_PRODUCTION_RUNBOOK.md` |
 | Current task / session state | `.agents/state/ACTIVE.md` |
 | Repo structure & entry points | `.agents/state/PROJECT_INDEX.md` |
 | Past decisions (index) | `.agents/state/DECISIONS_INDEX.md` |

@@ -1,10 +1,16 @@
 # Learnings (do not repeat)
 
+- **Cloud runbook:** Full Render/Vercel/EAS IDs and agent checklists live in `docs/ops/CLOUD_PRODUCTION_RUNBOOK.md` — read before deploy/build.
+- **EAS customer project (Oct 2026):** Use `@webstarts/race-service`, projectId `277981d5-5046-4288-8c91-672aab158419`. `app.config.js` must have `owner: 'webstarts'` and `slug: 'race-service'`. Old `d2ee249a-…` / `owner: race-service` causes `eas project:info` and build failures.
+- **Release APK needs `react-native-worklets`** (Reanimated peer). `expo-doctor` must be 21/21 before `eas build`.
+- **APK API URL:** Set in `customer application/eas.json` `production.env.EXPO_PUBLIC_API_URL` (base host only, no `/api/v1`). Fallback in `app.config.js` should be Render, not legacy GCP IP.
+- **EAS MCP `build_run`:** Needs GitHub linked on Expo project + monorepo path `customer application`. Otherwise use `eas build` CLI after `eas login` (webstarts).
+- **Render OTP:** `FORCE_MOCK_OTP=false` required for real MessageCentral SMS; rapid resend may delay second SMS (~60s).
 - **Two booking systems.** Mobile uses `TowingBooking` / `DriverBooking`. Admin seed/list still uses legacy `Booking`. Mixing them looks like “the booking vanished.”
 - **Admin login is env-hardcoded** (`backend/src/config/hardcoded-admin.ts`). The `Admin` Mongo model is unused.
 - On Android, `includeFontPadding: false` plus a Text `height` equal to `lineHeight` clips descenders (`g`, `y`, `p`). Leave extra line-height / padding instead.
 - Expo `app.config.js` default API is a GCP IP. Local phones need `EXPO_PUBLIC_API_URL`.
-- Expo SDK is **54**, not 56. Nested `AGENTS.md` files that said v56 were wrong.
+- Expo SDK is **57** for customer app (`customer application/package.json`). Ignore stale “SDK 54” notes in old `AGENTS.md` under customer app.
 - `CLIENT_FEATURES.md` said admin uses Redux — it uses Zustand + TanStack Query.
 - `owner: 'race-service'` and Mongo DB name `race-service` are strings, not the deleted folder.
 - Do not vendor the full Superpowers pack: TDD-always clashes with empty `__tests__`. Complementary skills only.
