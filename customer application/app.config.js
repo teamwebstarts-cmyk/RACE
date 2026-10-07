@@ -3,10 +3,14 @@ const googleMapsApiKey =
   process.env.GOOGLE_MAPS_API_KEY ??
   '';
 
+const productionApiUrl =
+  process.env.EXPO_PUBLIC_API_URL ?? 'https://race-api-w361.onrender.com';
+
 module.exports = {
   expo: {
     name: 'RACE',
     slug: 'race',
+    owner: 'race-service',
     version: '1.0.0',
     orientation: 'portrait',
     icon: './src/assets/images/logo.png',
@@ -26,7 +30,7 @@ module.exports = {
     },
     android: {
       package: 'com.racecar.customer',
-      versionCode: 4,
+      versionCode: 5,
       softwareKeyboardLayoutMode: 'resize',
       adaptiveIcon: {
         foregroundImage: './src/assets/images/logo.png',
@@ -60,8 +64,11 @@ module.exports = {
       ],
     ],
     extra: {
-      apiUrl: process.env.EXPO_PUBLIC_API_URL ?? 'http://34.93.103.86:3000',
+      apiUrl: productionApiUrl,
       googleMapsApiKey,
+      eas: {
+        projectId: 'd2ee249a-2460-48ef-8fab-0ac41d53eb49',
+      },
     },
   },
 };
