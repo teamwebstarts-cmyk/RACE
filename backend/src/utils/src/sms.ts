@@ -15,6 +15,28 @@
 import { logger } from './logger';
 import { AppError } from './errors';
 
+/** Shown to mobile/admin clients when an OTP session or SMS code is no longer valid. */
+export const OTP_EXPIRED_USER_MESSAGE =
+  'This code has expired. Tap Resend OTP for a new code.';
+
+const OTP_SEND_FAILED_USER_MESSAGE =
+  'We could not send a code right now. Please try again in a moment.';
+
+const OTP_VERIFY_FAILED_USER_MESSAGE =
+  'Could not verify the code. Tap Resend OTP and try again.';
+
+const OTP_SERVICE_UNAVAILABLE_MESSAGE =
+  'Sign-in is temporarily unavailable. Please try again shortly.';
+
+function isMcExpiredSignal(responseCode: number, rawMessage: string): boolean {
+  const msg = rawMessage.toUpperCase();
+  return (
+    responseCode === 700 ||
+    msg.includes('EXPIRED') ||
+    msg.includes('VERIFICATION_EXPIRED')
+  );
+}
+
 function getMcConfig() {
   const customerId = process.env.MC_CUSTOMER_ID;
   const authToken = process.env.MC_AUTH_TOKEN;
@@ -43,10 +65,7 @@ function extractTenDigit(mobile: string): string {
 export async function mcSendOtp(to: string): Promise<McSendResult> {
   const { customerId, authToken, baseUrl } = getMcConfig();
   if (!customerId || !authToken) {
-    throw new AppError(
-      'MessageCentral is not configured. Set MC_CUSTOMER_ID and MC_AUTH_TOKEN.',
-      503,
-    );
+    throw new AppError(OTP_SERVICE_UNAVAILABLE_MESSAGE, 503);
   }
 
   const mobile = extractTenDigit(to);
@@ -84,15 +103,22 @@ export async function mcSendOtp(to: string): Promise<McSendResult> {
   if (body.responseCode === 200 || body.responseCode === 506) {
     const verificationId = body.data?.verificationId;
     if (!verificationId) {
-      throw new AppError('MessageCentral returned no verificationId.', 502);
+      logger.error('MessageCentral send-OTP missing verificationId', {
+        mobile,
+        responseCode: body.responseCode,
+        message: body.message,
+      });
+      throw new AppError(OTP_SEND_FAILED_USER_MESSAGE, 502);
     }
     return { verificationId };
   }
 
-  throw new AppError(
-    `MessageCentral send-OTP failed: ${body.message ?? 'UNKNOWN_ERROR'}`,
-    502,
-  );
+  logger.warn('MessageCentral send-OTP failed', {
+    mobile,
+    responseCode: body.responseCode,
+    message: body.message,
+  });
+  throw new AppError(OTP_SEND_FAILED_USER_MESSAGE, 502);
 }
 
 /**
@@ -107,7 +133,7 @@ export async function mcValidateOtp(
 ): Promise<boolean> {
   const { customerId, authToken, baseUrl } = getMcConfig();
   if (!customerId || !authToken) {
-    throw new AppError('MessageCentral is not configured.', 503);
+    throw new AppError(OTP_SERVICE_UNAVAILABLE_MESSAGE, 503);
   }
 
   const mobile = extractTenDigit(to);
@@ -147,14 +173,17 @@ export async function mcValidateOtp(
     return false; // wrong OTP — caller increments attempt counter
   }
 
-  if (body.responseCode === 700) {
-    throw new AppError('OTP expired. Tap Resend OTP for a new code.', 400);
+  if (isMcExpiredSignal(body.responseCode, body.message ?? '')) {
+    throw new AppError(OTP_EXPIRED_USER_MESSAGE, 400);
   }
 
-  throw new AppError(
-    `MessageCentral validate-OTP error: ${body.message ?? 'UNKNOWN_ERROR'}`,
-    502,
-  );
+  logger.warn('MessageCentral validate-OTP unexpected response', {
+    mobile,
+    verificationId,
+    responseCode: body.responseCode,
+    message: body.message,
+  });
+  throw new AppError(OTP_VERIFY_FAILED_USER_MESSAGE, 400);
 }
 
 /**

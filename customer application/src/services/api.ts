@@ -1,4 +1,6 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
+
+import { humanizeApiErrorMessage } from '../utils/humanizeApiError';
 import * as SecureStore from 'expo-secure-store';
 
 import { API_BASE_URL, TOKEN_KEYS } from '../config/env';
@@ -126,10 +128,11 @@ export function getApiErrorMessage(error: unknown, fallback = 'Something went wr
     if (error.response?.status === 429) {
       return 'OTP limit reached. Try again in 1 hour.';
     }
-    return error.response?.data?.message ?? error.message ?? fallback;
+    const raw = error.response?.data?.message ?? error.message ?? fallback;
+    return humanizeApiErrorMessage(raw, fallback);
   }
   if (error instanceof Error) {
-    return error.message;
+    return humanizeApiErrorMessage(error.message, fallback);
   }
   return fallback;
 }

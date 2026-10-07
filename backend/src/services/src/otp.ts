@@ -16,7 +16,13 @@
 import { env } from '../../config/env';
 import { AppError, TooManyRequestsError } from '../../utils/src/errors';
 import { generateOtp } from '../../utils/src/otp';
-import { isMcConfigured, logDevOtp, mcSendOtp, mcValidateOtp } from '../../utils/src/sms';
+import {
+  OTP_EXPIRED_USER_MESSAGE,
+  isMcConfigured,
+  logDevOtp,
+  mcSendOtp,
+  mcValidateOtp,
+} from '../../utils/src/sms';
 import { authRepository } from './authRepository';
 
 export class OtpService {
@@ -122,17 +128,27 @@ export class OtpService {
 
     // ─── MessageCentral server-side verification ──────────────────────────
     if (this.useMc && log.mcVerificationId) {
-      const correct = await mcValidateOtp(mobileNumber, log.mcVerificationId, otp);
+      try {
+        const correct = await mcValidateOtp(mobileNumber, log.mcVerificationId, otp);
 
-      if (!correct) {
-        log.mobileAttempts += 1;
+        if (!correct) {
+          log.mobileAttempts += 1;
+          await log.save();
+          throw new AppError('Incorrect code. Check the SMS and try again.', 400);
+        }
+
+        log.mobileVerified = true;
         await log.save();
-        throw new AppError('Invalid OTP', 400);
+        return;
+      } catch (error) {
+        if (
+          error instanceof AppError &&
+          error.message === OTP_EXPIRED_USER_MESSAGE
+        ) {
+          await authRepository.invalidatePendingOtps(mobileNumber);
+        }
+        throw error;
       }
-
-      log.mobileVerified = true;
-      await log.save();
-      return;
     }
 
     // ─── Dev / mock verification ──────────────────────────────────────────
