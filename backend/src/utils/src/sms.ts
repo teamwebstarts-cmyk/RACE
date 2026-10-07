@@ -55,6 +55,8 @@ export async function mcSendOtp(to: string): Promise<McSendResult> {
   url.searchParams.set('customerId', customerId);
   url.searchParams.set('flowType', 'SMS');
   url.searchParams.set('mobileNumber', mobile);
+  // VerifyNow defaults to 4 digits. The customer app and API expect 6.
+  url.searchParams.set('otpLength', '6');
   url.searchParams.set('type', 'OTP');
 
   const res = await fetch(url.toString(), {
